@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -34,6 +34,7 @@ import java.math.BigDecimal;
 
 import org.apache.commons.vfs2.FileObject;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleFileException;
@@ -82,7 +83,7 @@ public class PGBulkLoader extends BaseStep implements StepInterface {
 
     String loadAction = environmentSubstitute( meta.getLoadAction() );
 
-    StringBuffer contents = new StringBuffer( 500 );
+    StringBuilder contents = new StringBuilder( 500 );
 
     String tableName =
       dm.getQuotedSchemaTableCombination(
@@ -150,7 +151,7 @@ public class PGBulkLoader extends BaseStep implements StepInterface {
    *           Upon any exception
    */
   public String createCommandLine( PGBulkLoaderMeta meta, boolean password ) throws KettleException {
-    StringBuffer sb = new StringBuffer( 300 );
+    StringBuilder sb = new StringBuilder( 300 );
 
     if ( meta.getPsqlpath() != null ) {
       try {
@@ -199,7 +200,7 @@ public class PGBulkLoader extends BaseStep implements StepInterface {
       sb.append( " " );
 
       String overrideName = environmentSubstitute( meta.getDbNameOverride() );
-      if ( Const.isEmpty( Const.rtrim( overrideName ) ) ) {
+      if ( Utils.isEmpty( Const.rtrim( overrideName ) ) ) {
         sb.append( environmentSubstitute( dns ) );
       } else {
         // if the database name override is filled in, do that one.
@@ -452,7 +453,7 @@ public class PGBulkLoader extends BaseStep implements StepInterface {
 
       data.dateFormatChoices = new int[meta.getFieldStream().length];
       for ( int i = 0; i < data.dateFormatChoices.length; i++ ) {
-        if ( Const.isEmpty( meta.getDateMask()[i] ) ) {
+        if ( Utils.isEmpty( meta.getDateMask()[i] ) ) {
           data.dateFormatChoices[i] = PGBulkLoaderMeta.NR_DATE_MASK_PASS_THROUGH;
         } else if ( meta.getDateMask()[i].equalsIgnoreCase( PGBulkLoaderMeta.DATE_MASK_DATE ) ) {
           data.dateFormatChoices[i] = PGBulkLoaderMeta.NR_DATE_MASK_DATE;

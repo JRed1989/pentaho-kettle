@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -23,6 +23,7 @@
 package org.pentaho.di.trans.steps.writetolog;
 
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.logging.LogLevel;
 import org.pentaho.di.i18n.BaseMessages;
@@ -95,13 +96,13 @@ public class WriteToLog extends BaseStep implements StepInterface {
       data.fieldnr = data.fieldnrs.length;
       data.loglevel = meta.getLogLevelByDesc();
       data.logmessage = Const.NVL( this.environmentSubstitute( meta.getLogMessage() ), "" );
-      if ( !Const.isEmpty( data.logmessage ) ) {
+      if ( !Utils.isEmpty( data.logmessage ) ) {
         data.logmessage += Const.CR + Const.CR;
       }
 
     } // end if first
 
-    StringBuffer out = new StringBuffer();
+    StringBuilder out = new StringBuilder();
     out.append( Const.CR
       + "------------> " + BaseMessages.getString( PKG, "WriteToLog.Log.NLigne", "" + getLinesRead() )
       + "------------------------------" + Const.CR );
@@ -133,7 +134,7 @@ public class WriteToLog extends BaseStep implements StepInterface {
     return true;
   }
 
-  private void setLog( LogLevel loglevel, StringBuffer msg ) {
+  private void setLog( LogLevel loglevel, StringBuilder msg ) {
     switch ( loglevel ) {
       case ERROR:
         // Output message to log

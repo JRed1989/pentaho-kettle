@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -25,6 +25,7 @@ package org.pentaho.di.trans.step;
 import java.util.List;
 
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettlePluginException;
 import org.pentaho.di.core.plugins.PartitionerPluginType;
@@ -141,16 +142,16 @@ public class StepPartitioningMeta implements XMLInterface, Cloneable {
   }
 
   public String getXML() {
-    StringBuffer xml = new StringBuffer( 150 );
+    StringBuilder xml = new StringBuilder( 150 );
 
-    xml.append( "         <partitioning>" ).append( Const.CR );
-    xml.append( "           " ).append( XMLHandler.addTagValue( "method", getMethodCode() ) );
-    xml.append( "           " ).append(
+    xml.append( "    " ).append( XMLHandler.openTag( "partitioning" ) ).append( Const.CR );
+    xml.append( "      " ).append( XMLHandler.addTagValue( "method", getMethodCode() ) );
+    xml.append( "      " ).append(
       XMLHandler.addTagValue( "schema_name", partitionSchema != null ? partitionSchema.getName() : "" ) );
     if ( partitioner != null ) {
       xml.append( partitioner.getXML() );
     }
-    xml.append( "           </partitioning>" ).append( Const.CR );
+    xml.append( "    " ).append( XMLHandler.closeTag( "partitioning" ) ).append( Const.CR );
 
     return xml.toString();
   }
@@ -189,7 +190,7 @@ public class StepPartitioningMeta implements XMLInterface, Cloneable {
   }
 
   public static final String getMethod( String name ) {
-    if ( Const.isEmpty( name ) ) {
+    if ( Utils.isEmpty( name ) ) {
       return methodCodes[PARTITIONING_METHOD_NONE];
     }
 

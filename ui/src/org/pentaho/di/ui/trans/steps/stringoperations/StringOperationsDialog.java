@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -47,9 +47,9 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.TransMeta;
@@ -295,7 +295,7 @@ public class StringOperationsDialog extends BaseStepDialog implements StepDialog
                 if ( !wFields.isDisposed() ) {
                   for ( int i = 0; i < wFields.table.getItemCount(); i++ ) {
                     TableItem it = wFields.table.getItem( i );
-                    if ( !Const.isEmpty( it.getText( 1 ) ) ) {
+                    if ( !Utils.isEmpty( it.getText( 1 ) ) ) {
                       if ( !inputFields.containsKey( it.getText( 1 ) ) ) {
                         it.setBackground( GUIResource.getInstance().getColorRed() );
                       }
@@ -403,7 +403,7 @@ public class StringOperationsDialog extends BaseStepDialog implements StepDialog
   }
 
   private void ok() {
-    if ( Const.isEmpty( wStepname.getText() ) ) {
+    if ( Utils.isEmpty( wStepname.getText() ) ) {
       return;
     }
 
@@ -419,7 +419,7 @@ public class StringOperationsDialog extends BaseStepDialog implements StepDialog
       if ( r != null ) {
         TableItemInsertListener listener = new TableItemInsertListener() {
           public boolean tableItemInserted( TableItem tableItem, ValueMetaInterface v ) {
-            if ( v.getType() == ValueMeta.TYPE_STRING ) {
+            if ( v.getType() == ValueMetaInterface.TYPE_STRING ) {
               // Only process strings
               tableItem.setText( 3, BaseMessages.getString( PKG, "StringOperationsMeta.TrimType.None" ) );
               tableItem.setText( 4, BaseMessages.getString( PKG, "StringOperationsMeta.LowerUpper.None" ) );

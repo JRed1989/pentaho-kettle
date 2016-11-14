@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -32,8 +32,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import org.apache.commons.lang.StringUtils;
+import org.pentaho.di.ExecutionConfiguration;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Props;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.encryption.Encr;
@@ -52,7 +55,7 @@ import org.pentaho.di.repository.RepositoryMeta;
 import org.pentaho.di.trans.debug.TransDebugMeta;
 import org.w3c.dom.Node;
 
-public class TransExecutionConfiguration implements Cloneable {
+public class TransExecutionConfiguration implements ExecutionConfiguration {
   public static final String XML_TAG = "transformation_execution_configuration";
 
   private final LogChannelInterface log = LogChannel.GENERAL;
@@ -89,6 +92,7 @@ public class TransExecutionConfiguration implements Cloneable {
   private boolean setAppendLogfile;
   private String logFileName;
   private boolean createParentFolder;
+  private Long passedBatchId;
 
   public TransExecutionConfiguration() {
     executingLocally = true;
@@ -345,7 +349,7 @@ public class TransExecutionConfiguration implements Cloneable {
     //
     for ( String variableName : Const.INTERNAL_JOB_VARIABLES ) {
       String value = transMeta.getVariable( variableName );
-      if ( !Const.isEmpty( value ) ) {
+      if ( !Utils.isEmpty( value ) ) {
         variables.put( variableName, value );
       }
     }
@@ -378,7 +382,7 @@ public class TransExecutionConfiguration implements Cloneable {
     //
     for ( String variableName : Const.INTERNAL_JOB_VARIABLES ) {
       String value = transMeta.getVariable( variableName );
-      if ( !Const.isEmpty( value ) ) {
+      if ( !Utils.isEmpty( value ) ) {
         variables.put( variableName, value );
       }
     }
@@ -516,6 +520,9 @@ public class TransExecutionConfiguration implements Cloneable {
     xml.append( "    " ).append( XMLHandler.addTagValue( "clear_log", clearingLog ) );
     xml.append( "    " ).append( XMLHandler.addTagValue( "gather_metrics", gatheringMetrics ) );
     xml.append( "    " ).append( XMLHandler.addTagValue( "show_subcomponents", showingSubComponents ) );
+    if ( passedBatchId != null ) {
+      xml.append( "    " ).append( XMLHandler.addTagValue( "passedBatchId", passedBatchId ) );
+    }
 
     // The source rows...
     //
@@ -567,7 +574,7 @@ public class TransExecutionConfiguration implements Cloneable {
       Node argNode = XMLHandler.getSubNodeByNr( varsNode, "variable", i );
       String name = XMLHandler.getTagValue( argNode, "name" );
       String value = XMLHandler.getTagValue( argNode, "value" );
-      if ( !Const.isEmpty( name ) ) {
+      if ( !Utils.isEmpty( name ) ) {
         variables.put( name, Const.NVL( value, "" ) );
       }
     }
@@ -580,7 +587,7 @@ public class TransExecutionConfiguration implements Cloneable {
       Node argNode = XMLHandler.getSubNodeByNr( argsNode, "argument", i );
       String name = XMLHandler.getTagValue( argNode, "name" );
       String value = XMLHandler.getTagValue( argNode, "value" );
-      if ( !Const.isEmpty( name ) && !Const.isEmpty( value ) ) {
+      if ( !Utils.isEmpty( name ) && !Utils.isEmpty( value ) ) {
         arguments.put( name, value );
       }
     }
@@ -593,7 +600,7 @@ public class TransExecutionConfiguration implements Cloneable {
       Node parmNode = XMLHandler.getSubNodeByNr( parmsNode, "parameter", i );
       String name = XMLHandler.getTagValue( parmNode, "name" );
       String value = XMLHandler.getTagValue( parmNode, "value" );
-      if ( !Const.isEmpty( name ) ) {
+      if ( !Utils.isEmpty( name ) ) {
         params.put( name, value );
       }
     }
@@ -611,6 +618,10 @@ public class TransExecutionConfiguration implements Cloneable {
     clearingLog = "Y".equalsIgnoreCase( XMLHandler.getTagValue( trecNode, "clear_log" ) );
     gatheringMetrics = "Y".equalsIgnoreCase( XMLHandler.getTagValue( trecNode, "gather_metrics" ) );
     showingSubComponents = "Y".equalsIgnoreCase( XMLHandler.getTagValue( trecNode, "show_subcomponents" ) );
+    String sPassedBatchId = XMLHandler.getTagValue( trecNode, "passedBatchId" );
+    if ( !StringUtils.isEmpty( sPassedBatchId ) ) {
+      passedBatchId = Long.parseLong( sPassedBatchId );
+    }
 
     Node resultNode = XMLHandler.getSubNode( trecNode, Result.XML_TAG );
     if ( resultNode != null ) {
@@ -630,6 +641,7 @@ public class TransExecutionConfiguration implements Cloneable {
       String password = Encr.decryptPassword( XMLHandler.getTagValue( repNode, "password" ) );
 
       RepositoriesMeta repositoriesMeta = new RepositoriesMeta();
+      repositoriesMeta.getLog().setLogLevel( log.getLogLevel() );
       try {
         repositoriesMeta.readData();
       } catch ( Exception e ) {
@@ -815,6 +827,14 @@ public class TransExecutionConfiguration implements Cloneable {
 
   public void setCreateParentFolder( boolean createParentFolder ) {
     this.createParentFolder = createParentFolder;
+  }
+
+  public Long getPassedBatchId() {
+    return passedBatchId;
+  }
+
+  public void setPassedBatchId( Long passedBatchId ) {
+    this.passedBatchId = passedBatchId;
   }
 
 }

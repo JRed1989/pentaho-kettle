@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -28,6 +28,7 @@ import java.util.Date;
 import java.util.List;
 
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleFileException;
 import org.pentaho.di.core.logging.LogChannelInterface;
@@ -43,7 +44,7 @@ import org.pentaho.di.trans.steps.fileinput.BaseFileInputStepMeta;
 
 /**
  * Some common methods for text file parsing.
- * 
+ *
  * @author Alexander Buloichik
  */
 public class TextFileInputUtils {
@@ -338,7 +339,7 @@ public class TextFileInputUtils {
       RowMetaInterface convertRowMeta, String fname, long rowNr, String delimiter, String enclosure,
       String escapeCharacter, FileErrorHandler errorHandler,
       BaseFileInputStepMeta.AdditionalOutputFields additionalOutputFields, String shortFilename, String path,
-      boolean hidden, Date modificationDateTime, String uri, String rooturi, String extension, long size )
+      boolean hidden, Date modificationDateTime, String uri, String rooturi, String extension, Long size )
         throws KettleException {
     if ( textFileLine == null || textFileLine.line == null ) {
       return null;
@@ -383,8 +384,11 @@ public class TextFileInputUtils {
         int trim_type = fieldnr < nrfields ? f.getTrimType() : ValueMetaInterface.TRIM_TYPE_NONE;
 
         if ( fieldnr < strings.length ) {
-          String pol = strings[fieldnr];
+          String pol = strings[ fieldnr ];
           try {
+            if ( valueMeta.isNull( pol ) || !Utils.isEmpty( nullif ) && nullif.equals( pol ) ) {
+              pol = null;
+            }
             value = valueMeta.convertDataFromString( pol, convertMeta, nullif, ifnull, trim_type );
           } catch ( Exception e ) {
             // OK, give some feedback!
@@ -493,7 +497,7 @@ public class TextFileInputUtils {
         }
         // Add Size
         if ( additionalOutputFields.sizeField != null ) {
-          r[index] = new Long( size );
+          r[index] = size;
           index++;
         }
         // add Hidden
@@ -676,7 +680,7 @@ public class TextFileInputUtils {
             }
           }
 
-          if ( dencl && Const.isEmpty( inf.content.escapeCharacter ) ) {
+          if ( dencl && Utils.isEmpty( inf.content.escapeCharacter ) ) {
             StringBuilder sbpol = new StringBuilder( pol );
             int idx = sbpol.indexOf( enclosure + enclosure );
             while ( idx >= 0 ) {

@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -26,14 +26,15 @@ import java.util.List;
 
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
-import org.pentaho.di.core.Const;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
 import org.pentaho.di.core.exception.KettleXMLException;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaBoolean;
+import org.pentaho.di.core.row.value.ValueMetaString;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.i18n.BaseMessages;
@@ -161,33 +162,33 @@ public class CreditCardValidatorMeta extends BaseStepMeta implements StepMetaInt
   public void getFields( RowMetaInterface inputRowMeta, String name, RowMetaInterface[] info, StepMeta nextStep,
     VariableSpace space, Repository repository, IMetaStore metaStore ) throws KettleStepException {
     String realresultfieldname = space.environmentSubstitute( resultfieldname );
-    if ( !Const.isEmpty( realresultfieldname ) ) {
-      ValueMetaInterface v = new ValueMeta( realresultfieldname, ValueMeta.TYPE_BOOLEAN );
+    if ( !Utils.isEmpty( realresultfieldname ) ) {
+      ValueMetaInterface v = new ValueMetaBoolean( realresultfieldname );
       v.setOrigin( name );
       inputRowMeta.addValueMeta( v );
     }
     String realcardtype = space.environmentSubstitute( cardtype );
-    if ( !Const.isEmpty( realcardtype ) ) {
-      ValueMetaInterface v = new ValueMeta( realcardtype, ValueMeta.TYPE_STRING );
+    if ( !Utils.isEmpty( realcardtype ) ) {
+      ValueMetaInterface v = new ValueMetaString( realcardtype );
       v.setOrigin( name );
       inputRowMeta.addValueMeta( v );
     }
     String realnotvalidmsg = space.environmentSubstitute( notvalidmsg );
-    if ( !Const.isEmpty( notvalidmsg ) ) {
-      ValueMetaInterface v = new ValueMeta( realnotvalidmsg, ValueMeta.TYPE_STRING );
+    if ( !Utils.isEmpty( notvalidmsg ) ) {
+      ValueMetaInterface v = new ValueMetaString( realnotvalidmsg );
       v.setOrigin( name );
       inputRowMeta.addValueMeta( v );
     }
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer();
+    StringBuilder retval = new StringBuilder();
 
-    retval.append( "    " + XMLHandler.addTagValue( "fieldname", fieldname ) );
-    retval.append( "    " + XMLHandler.addTagValue( "resultfieldname", resultfieldname ) );
-    retval.append( "    " + XMLHandler.addTagValue( "cardtype", cardtype ) );
+    retval.append( "    " ).append( XMLHandler.addTagValue( "fieldname", fieldname ) );
+    retval.append( "    " ).append( XMLHandler.addTagValue( "resultfieldname", resultfieldname ) );
+    retval.append( "    " ).append( XMLHandler.addTagValue( "cardtype", cardtype ) );
     retval.append( "    " ).append( XMLHandler.addTagValue( "onlydigits", onlydigits ) );
-    retval.append( "    " + XMLHandler.addTagValue( "notvalidmsg", notvalidmsg ) );
+    retval.append( "    " ).append( XMLHandler.addTagValue( "notvalidmsg", notvalidmsg ) );
 
     return retval.toString();
   }
@@ -242,7 +243,7 @@ public class CreditCardValidatorMeta extends BaseStepMeta implements StepMetaInt
     String error_message = "";
 
     String realresultfieldname = transMeta.environmentSubstitute( resultfieldname );
-    if ( Const.isEmpty( realresultfieldname ) ) {
+    if ( Utils.isEmpty( realresultfieldname ) ) {
       error_message = BaseMessages.getString( PKG, "CreditCardValidatorMeta.CheckResult.ResultFieldMissing" );
       cr = new CheckResult( CheckResult.TYPE_RESULT_ERROR, error_message, stepMeta );
       remarks.add( cr );
@@ -251,7 +252,7 @@ public class CreditCardValidatorMeta extends BaseStepMeta implements StepMetaInt
       cr = new CheckResult( CheckResult.TYPE_RESULT_OK, error_message, stepMeta );
       remarks.add( cr );
     }
-    if ( Const.isEmpty( fieldname ) ) {
+    if ( Utils.isEmpty( fieldname ) ) {
       error_message = BaseMessages.getString( PKG, "CreditCardValidatorMeta.CheckResult.CardFieldMissing" );
       cr = new CheckResult( CheckResult.TYPE_RESULT_ERROR, error_message, stepMeta );
       remarks.add( cr );

@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,12 +22,8 @@
 
 package org.pentaho.di.job.entries.ftpsput;
 
-import static org.pentaho.di.job.entry.validator.AndValidator.putValidators;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.andValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.fileExistsValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.integerValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notBlankValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notNullValidator;
+import org.pentaho.di.job.entry.validator.AndValidator;
+import org.pentaho.di.job.entry.validator.JobEntryValidatorUtils;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -38,6 +34,7 @@ import java.util.regex.Pattern;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.encryption.Encr;
@@ -111,7 +108,7 @@ public class JobEntryFTPSPUT extends JobEntryBase implements Cloneable, JobEntry
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 200 );
+    StringBuilder retval = new StringBuilder( 400 );
 
     retval.append( super.getXML() );
 
@@ -504,7 +501,7 @@ public class JobEntryFTPSPUT extends JobEntryBase implements Cloneable, JobEntry
       this.buildFTPSConnection( connection );
 
       // move to spool dir ...
-      if ( !Const.isEmpty( realRemoteDirectory ) ) {
+      if ( !Utils.isEmpty( realRemoteDirectory ) ) {
         connection.changeDirectory( realRemoteDirectory );
         if ( isDetailed() ) {
           logDetailed( BaseMessages.getString( PKG, "JobFTPSPUT.Log.ChangedDirectory", realRemoteDirectory ) );
@@ -540,7 +537,7 @@ public class JobEntryFTPSPUT extends JobEntryBase implements Cloneable, JobEntry
       }
 
       Pattern pattern = null;
-      if ( !Const.isEmpty( realWildcard ) ) {
+      if ( !Utils.isEmpty( realWildcard ) ) {
         pattern = Pattern.compile( realWildcard );
 
       } // end if
@@ -618,7 +615,7 @@ public class JobEntryFTPSPUT extends JobEntryBase implements Cloneable, JobEntry
 
   public List<ResourceReference> getResourceDependencies( JobMeta jobMeta ) {
     List<ResourceReference> references = super.getResourceDependencies( jobMeta );
-    if ( !Const.isEmpty( serverName ) ) {
+    if ( !Utils.isEmpty( serverName ) ) {
       String realServerName = jobMeta.environmentSubstitute( serverName );
       ResourceReference reference = new ResourceReference( this );
       reference.getEntries().add( new ResourceEntry( realServerName, ResourceType.SERVER ) );
@@ -630,26 +627,31 @@ public class JobEntryFTPSPUT extends JobEntryBase implements Cloneable, JobEntry
   @Override
   public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
-    andValidator().validate( this, "serverName", remarks, putValidators( notBlankValidator() ) );
-    andValidator().validate(
-      this, "localDirectory", remarks, putValidators( notBlankValidator(), fileExistsValidator() ) );
-    andValidator().validate( this, "userName", remarks, putValidators( notBlankValidator() ) );
-    andValidator().validate( this, "password", remarks, putValidators( notNullValidator() ) );
-    andValidator().validate( this, "serverPort", remarks, putValidators( integerValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "serverName", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate(
+      this, "localDirectory", remarks, AndValidator.putValidators(
+          JobEntryValidatorUtils.notBlankValidator(), JobEntryValidatorUtils.fileExistsValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "userName", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "password", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notNullValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "serverPort", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.integerValidator() ) );
   }
 
   void buildFTPSConnection( FTPSConnection connection ) throws Exception {
-    if ( !Const.isEmpty( proxyHost ) ) {
+    if ( !Utils.isEmpty( proxyHost ) ) {
       String realProxy_host = environmentSubstitute( proxyHost );
       String realProxy_username = environmentSubstitute( proxyUsername );
       String realProxy_password = environmentSubstitute( proxyPassword );
       realProxy_password = Encr.decryptPasswordOptionallyEncrypted( realProxy_password );
 
       connection.setProxyHost( realProxy_host );
-      if ( !Const.isEmpty( realProxy_username ) ) {
+      if ( !Utils.isEmpty( realProxy_username ) ) {
         connection.setProxyUser( realProxy_username );
       }
-      if ( !Const.isEmpty( realProxy_password ) ) {
+      if ( !Utils.isEmpty( realProxy_password ) ) {
         connection.setProxyPassword( realProxy_password );
       }
       if ( isDetailed() ) {

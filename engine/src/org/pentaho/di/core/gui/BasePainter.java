@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,34 +22,37 @@
 
 package org.pentaho.di.core.gui;
 
-import java.util.List;
-
+import org.pentaho.di.base.BaseHopMeta;
+import org.pentaho.di.base.BaseMeta;
 import org.pentaho.di.core.Const;
 import org.pentaho.di.core.NotePadMeta;
 import org.pentaho.di.core.gui.AreaOwner.AreaType;
 import org.pentaho.di.core.gui.PrimitiveGCInterface.EColor;
 import org.pentaho.di.core.gui.PrimitiveGCInterface.EImage;
 import org.pentaho.di.core.gui.PrimitiveGCInterface.ELineStyle;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.trans.step.errorhandling.StreamIcon;
 
-public class BasePainter {
+import java.util.List;
+
+public abstract class BasePainter<Hop extends BaseHopMeta, Part extends BaseMeta> {
 
   public final double theta = Math.toRadians( 11 ); // arrowhead sharpness
 
-  protected static final int MINI_ICON_SIZE = 16;
-  protected static final int MINI_ICON_MARGIN = 5;
-  protected static final int MINI_ICON_TRIANGLE_BASE = 20;
-  protected static final int MINI_ICON_DISTANCE = 4;
-  protected static final int MINI_ICON_SKEW = 0;
+  public static final int MINI_ICON_SIZE = 16;
+  public static final int MINI_ICON_MARGIN = 5;
+  public static final int MINI_ICON_TRIANGLE_BASE = 20;
+  public static final int MINI_ICON_DISTANCE = 4;
+  public static final int MINI_ICON_SKEW = 0;
 
-  protected static final int CONTENT_MENU_INDENT = 4;
+  public static final int CONTENT_MENU_INDENT = 4;
 
-  protected static final int CORNER_RADIUS_5 = 10;
-  protected static final int CORNER_RADIUS_4 = 8;
-  protected static final int CORNER_RADIUS_3 = 6;
-  protected static final int CORNER_RADIUS_2 = 4;
+  public static final int CORNER_RADIUS_5 = 10;
+  public static final int CORNER_RADIUS_4 = 8;
+  public static final int CORNER_RADIUS_3 = 6;
+  public static final int CORNER_RADIUS_2 = 4;
 
-  protected static final float FACTOR_1_TO_1 = 1.0f;
+  public static final float FACTOR_1_TO_1 = 1.0f;
 
   protected Point area;
 
@@ -77,6 +80,8 @@ public class BasePainter {
   private String noteFontName;
 
   private int noteFontHeight;
+
+  protected Hop candidate;
 
   public BasePainter( GCInterface gc, Object subject, Point area, ScrollBarInterface hori,
     ScrollBarInterface vert, Point drop_candidate, Rectangle selrect, List<AreaOwner> areaOwners, int iconsize,
@@ -138,7 +143,7 @@ public class BasePainter {
     }
 
     Point ext;
-    if ( Const.isEmpty( notePadMeta.getNote() ) ) {
+    if ( Utils.isEmpty( notePadMeta.getNote() ) ) {
       ext = new Point( 10, 10 ); // Empty note
     } else {
 
@@ -194,7 +199,7 @@ public class BasePainter {
     gc.fillPolygon( noteshape );
     gc.drawPolygon( noteshape );
 
-    if ( !Const.isEmpty( notePadMeta.getNote() ) ) {
+    if ( !Utils.isEmpty( notePadMeta.getNote() ) ) {
       gc.setForeground( notePadMeta.getFontColorRed(), notePadMeta.getFontColorGreen(), notePadMeta
         .getFontColorBlue() );
       gc.drawText( notePadMeta.getNote(), note.x + margin, note.y + margin, true );
@@ -466,4 +471,41 @@ public class BasePainter {
   public double getTheta() {
     return theta;
   }
+
+
+  public Hop getCandidate() {
+    return candidate;
+  }
+
+  public void setCandidate( Hop candidate ) {
+    this.candidate = candidate;
+  }
+
+  protected int[] getLine( Part fs, Part ts ) {
+    if ( fs == null || ts == null ) {
+      return null;
+    }
+
+    Point from = fs.getLocation();
+    Point to = ts.getLocation();
+
+    int x1 = from.x + iconsize / 2;
+    int y1 = from.y + iconsize / 2;
+
+    int x2 = to.x + iconsize / 2;
+    int y2 = to.y + iconsize / 2;
+
+    return new int[] { x1, y1, x2, y2 };
+  }
+
+  protected void drawArrow( EImage arrow, int[] line, Hop hop, Object startObject, Object endObject ) {
+    Point screen_from = real2screen( line[0], line[1] );
+    Point screen_to = real2screen( line[2], line[3] );
+
+    drawArrow( arrow, screen_from.x, screen_from.y, screen_to.x, screen_to.y, theta, calcArrowLength(), -1, hop,
+      startObject, endObject );
+  }
+
+  protected abstract void drawArrow( EImage arrow, int x1, int y1, int x2, int y2, double theta, int size, double factor,
+                            Hop jobHop, Object startObject, Object endObject );
 }

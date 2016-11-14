@@ -12,9 +12,8 @@
  * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU Lesser General Public License for more details.
  *
- * Copyright (c) 2002-2013 Pentaho Corporation..  All rights reserved.
+ * Copyright (c) 2002-2016 Pentaho Corporation..  All rights reserved.
  */
-
 package org.pentaho.di.trans.steps.gpload;
 
 import java.io.BufferedWriter;
@@ -28,6 +27,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.logging.LogChannel;
 import org.pentaho.di.core.logging.LogChannelInterface;
@@ -40,9 +40,9 @@ import org.pentaho.di.i18n.BaseMessages;
 /**
  * Does the opening of the output "stream". It's either a file or inter process communication which is transparent to
  * users of this class.
- * 
+ *
  * Copied from Sven Boden's Oracle version
- * 
+ *
  * @author Luke Lonergan
  * @since 28-mar-2008
  */
@@ -85,12 +85,12 @@ public class GPLoadDataOutput {
       // Else open the data file filled in.
 
       String dataFile = meta.getDataFile();
-      if ( Const.isEmpty( dataFile ) ) {
+      if ( Utils.isEmpty( dataFile ) ) {
         throw new KettleException( BaseMessages.getString( PKG, "GPload.Exception.DataFileMissing" ) );
       }
 
       dataFile = space.environmentSubstitute( dataFile );
-      if ( Const.isEmpty( dataFile ) ) {
+      if ( Utils.isEmpty( dataFile ) ) {
         throw new KettleException( BaseMessages.getString( PKG, "GPload.Exception.DataFileMissing" ) );
       }
 
@@ -99,7 +99,7 @@ public class GPLoadDataOutput {
       //
 
       String encoding = meta.getEncoding();
-      if ( Const.isEmpty( encoding ) ) {
+      if ( Utils.isEmpty( encoding ) ) {
         // Use the default encoding.
         output = new PrintWriter( new BufferedWriter( new OutputStreamWriter( os ) ) );
       } else {
@@ -119,6 +119,10 @@ public class GPLoadDataOutput {
 
   PrintWriter getOutput() {
     return output;
+  }
+
+  protected void setOutput( PrintWriter output ) {
+    this.output = output;
   }
 
   private String createEscapedString( String orig, String enclosure ) {
@@ -144,7 +148,7 @@ public class GPLoadDataOutput {
         throw new KettleException( BaseMessages.getString( PKG, "GPload.Exception.DelimiterMissing" ) );
       } else {
         delimiter = gpLoad.environmentSubstitute( delimiter );
-        if ( Const.isEmpty( delimiter ) ) {
+        if ( Utils.isEmpty( delimiter ) ) {
           throw new KettleException( BaseMessages.getString( PKG, "GPload.Exception.DelimiterMissing" ) );
         }
       }
@@ -223,13 +227,7 @@ public class GPLoadDataOutput {
           case ValueMetaInterface.TYPE_DATE:
             Date dt = mi.getDate( row, number );
             output.print( enclosure );
-            String mask = meta.getDateMask()[i];
-            if ( GPLoadMeta.DATE_MASK_DATETIME.equals( mask ) ) {
-              output.print( sdfDateTime.format( dt ) );
-            } else {
-              // Default is date format
-              output.print( sdfDate.format( dt ) );
-            }
+            output.print( sdfDate.format( dt ) );
             output.print( enclosure );
             break;
           case ValueMetaInterface.TYPE_BOOLEAN:
@@ -247,6 +245,12 @@ public class GPLoadDataOutput {
             output.print( "<startlob>" );
             output.print( byt );
             output.print( "<endlob>" );
+            break;
+          case ValueMetaInterface.TYPE_TIMESTAMP:
+            Date time = mi.getDate( row, number );
+            output.print( enclosure );
+            output.print( sdfDateTime.format( time ) );
+            output.print( enclosure );
             break;
           default:
             throw new KettleException( BaseMessages.getString( PKG, "GPLoadDataOutput.Exception.TypeNotSupported", v

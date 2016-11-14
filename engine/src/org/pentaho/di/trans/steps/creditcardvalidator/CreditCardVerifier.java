@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -25,7 +25,7 @@ package org.pentaho.di.trans.steps.creditcardvalidator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.i18n.BaseMessages;
 
 /**
@@ -65,6 +65,7 @@ public class CreditCardVerifier {
     BaseMessages.getString( PKG, "CreditCardValidator.Log.NotValidDiscover" ),
     BaseMessages.getString( PKG, "CreditCardValidator.Log.NotValidJcb1" ),
     BaseMessages.getString( PKG, "CreditCardValidator.Log.NotValidJcb2" ),
+    BaseMessages.getString( PKG, "CreditCardValidator.Log.NotValidBankCard" ),
     BaseMessages.getString( PKG, "CreditCardValidator.Log.NotValidMaestro" ),
     BaseMessages.getString( PKG, "CreditCardValidator.Log.NotValidSolo" ),
     BaseMessages.getString( PKG, "CreditCardValidator.Log.NotValidSwitch" ),
@@ -83,7 +84,7 @@ public class CreditCardVerifier {
   public static ReturnIndicator CheckCC( String CardNumber ) {
     ReturnIndicator ri = new ReturnIndicator();
 
-    if ( Const.isEmpty( CardNumber ) ) {
+    if ( Utils.isEmpty( CardNumber ) ) {
       ri.UnValidMsg = BaseMessages.getString( PKG, "CreditCardValidator.Log.EmptyNumber" );
       return ri;
     }

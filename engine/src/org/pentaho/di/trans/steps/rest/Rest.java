@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -30,16 +30,20 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
+import java.util.List;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.TrustManagerFactory;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.UriBuilder;
 
 import org.apache.commons.httpclient.auth.AuthScope;
+import org.json.simple.JSONObject;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.encryption.Encr;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowDataUtil;
@@ -66,7 +70,7 @@ import com.sun.jersey.core.util.MultivaluedMapImpl;
 /**
  * @author Samatar
  * @since 16-jan-2011
- * 
+ *
  */
 
 public class Rest extends BaseStep implements StepInterface {
@@ -87,7 +91,7 @@ public class Rest extends BaseStep implements StepInterface {
     // get dynamic method?
     if ( meta.isDynamicMethod() ) {
       data.method = data.inputRowMeta.getString( rowData, data.indexOfMethod );
-      if ( Const.isEmpty( data.method ) ) {
+      if ( Utils.isEmpty( data.method ) ) {
         throw new KettleException( BaseMessages.getString( PKG, "Rest.Error.MethodMissing" ) );
       }
     }
@@ -202,28 +206,46 @@ public class Rest extends BaseStep implements StepInterface {
 
       // Get Response
       String body;
+      String headerString = null;
       try {
         body = response.getEntity( String.class );
       } catch ( UniformInterfaceException ex ) {
         body = "";
       }
+      // get Header
+      MultivaluedMap<String, String> headers = searchForHeaders( response );
+      JSONObject json = new JSONObject();
+      for ( java.util.Map.Entry<String, List<String>> entry : headers.entrySet() ) {
+        String name = entry.getKey();
+        List<String> value = entry.getValue();
+        if ( value.size() > 1 ) {
+          json.put( name, value );
+        } else {
+          json.put( name, value.get( 0 ) );
+        }
+      }
+      headerString = json.toJSONString();
       // for output
       int returnFieldsOffset = data.inputRowMeta.size();
       // add response to output
-      if ( !Const.isEmpty( data.resultFieldName ) ) {
+      if ( !Utils.isEmpty( data.resultFieldName ) ) {
         newRow = RowDataUtil.addValueData( newRow, returnFieldsOffset, body );
         returnFieldsOffset++;
       }
 
       // add status to output
-      if ( !Const.isEmpty( data.resultCodeFieldName ) ) {
+      if ( !Utils.isEmpty( data.resultCodeFieldName ) ) {
         newRow = RowDataUtil.addValueData( newRow, returnFieldsOffset, new Long( status ) );
         returnFieldsOffset++;
       }
 
       // add response time to output
-      if ( !Const.isEmpty( data.resultResponseFieldName ) ) {
+      if ( !Utils.isEmpty( data.resultResponseFieldName ) ) {
         newRow = RowDataUtil.addValueData( newRow, returnFieldsOffset, new Long( responseTime ) );
+      }
+      // add response header to output
+      if ( !Utils.isEmpty( data.resultHeaderFieldName ) ) {
+        newRow = RowDataUtil.addValueData( newRow, returnFieldsOffset, headerString.toString() );
       }
     } catch ( Exception e ) {
       throw new KettleException( BaseMessages.getString( PKG, "Rest.Error.CanNotReadURL", data.realUrl ), e );
@@ -255,16 +277,16 @@ public class Rest extends BaseStep implements StepInterface {
       // Use ApacheHttpClient for supporting proxy authentication.
       data.config = new DefaultApacheHttpClientConfig();
 
-      if ( !Const.isEmpty( data.realProxyHost ) ) {
+      if ( !Utils.isEmpty( data.realProxyHost ) ) {
         // PROXY CONFIGURATION
         data.config.getProperties().put( DefaultApacheHttpClientConfig.PROPERTY_PROXY_URI,
             "http://" + data.realProxyHost + ":" + data.realProxyPort );
-        if ( !Const.isEmpty( data.realHttpLogin ) && !Const.isEmpty( data.realHttpPassword ) ) {
+        if ( !Utils.isEmpty( data.realHttpLogin ) && !Utils.isEmpty( data.realHttpPassword ) ) {
           data.config.getState().setProxyCredentials( AuthScope.ANY_REALM, data.realProxyHost, data.realProxyPort,
               data.realHttpLogin, data.realHttpPassword );
         }
       } else {
-        if ( !Const.isEmpty( data.realHttpLogin ) ) {
+        if ( !Utils.isEmpty( data.realHttpLogin ) ) {
           // Basic authentication
           data.basicAuthentication = new HTTPBasicAuthFilter( data.realHttpLogin, data.realHttpPassword );
         }
@@ -274,7 +296,7 @@ public class Rest extends BaseStep implements StepInterface {
       }
 
       // SSL TRUST STORE CONFIGURATION
-      if ( !Const.isEmpty( data.trustStoreFile ) ) {
+      if ( !Utils.isEmpty( data.trustStoreFile ) ) {
 
         try {
           KeyStore trustStore = KeyStore.getInstance( "JKS" );
@@ -314,6 +336,10 @@ public class Rest extends BaseStep implements StepInterface {
     }
   }
 
+
+  protected MultivaluedMap<String, String> searchForHeaders( ClientResponse response ) {
+    return response.getHeaders();
+  }
   public boolean processRow( StepMetaInterface smi, StepDataInterface sdi ) throws KettleException {
     meta = (RestMeta) smi;
     data = (RestData) sdi;
@@ -334,7 +360,7 @@ public class Rest extends BaseStep implements StepInterface {
 
       // Let's set URL
       if ( meta.isUrlInField() ) {
-        if ( Const.isEmpty( meta.getUrlField() ) ) {
+        if ( Utils.isEmpty( meta.getUrlField() ) ) {
           logError( BaseMessages.getString( PKG, "Rest.Log.NoField" ) );
           throw new KettleException( BaseMessages.getString( PKG, "Rest.Log.NoField" ) );
         }
@@ -357,7 +383,7 @@ public class Rest extends BaseStep implements StepInterface {
       // Check Method
       if ( meta.isDynamicMethod() ) {
         String field = environmentSubstitute( meta.getMethodFieldName() );
-        if ( Const.isEmpty( field ) ) {
+        if ( Utils.isEmpty( field ) ) {
           throw new KettleException( BaseMessages.getString( PKG, "Rest.Exception.MethodFieldMissing" ) );
         }
         data.indexOfMethod = data.inputRowMeta.indexOfValue( field );
@@ -378,7 +404,7 @@ public class Rest extends BaseStep implements StepInterface {
           data.headerNames[i] = environmentSubstitute( meta.getHeaderName()[i] );
           String field = environmentSubstitute( meta.getHeaderField()[i] );
 
-          if ( Const.isEmpty( field ) ) {
+          if ( Utils.isEmpty( field ) ) {
             throw new KettleException( BaseMessages.getString( PKG, "Rest.Exception.HeaderFieldEmpty" ) );
           }
           data.indexOfHeaderFields[i] = data.inputRowMeta.indexOfValue( field );
@@ -400,7 +426,7 @@ public class Rest extends BaseStep implements StepInterface {
           for ( int i = 0; i < nrparams; i++ ) {
             data.paramNames[i] = environmentSubstitute( meta.getParameterName()[i] );
             String field = environmentSubstitute( meta.getParameterField()[i] );
-            if ( Const.isEmpty( field ) ) {
+            if ( Utils.isEmpty( field ) ) {
               throw new KettleException( BaseMessages.getString( PKG, "Rest.Exception.ParamFieldEmpty" ) );
             }
             data.indexOfParamFields[i] = data.inputRowMeta.indexOfValue( field );
@@ -419,7 +445,7 @@ public class Rest extends BaseStep implements StepInterface {
           for ( int i = 0; i < nrmatrixparams; i++ ) {
             data.matrixParamNames[i] = environmentSubstitute( meta.getMatrixParameterName()[i] );
             String field = environmentSubstitute( meta.getMatrixParameterField()[i] );
-            if ( Const.isEmpty( field ) ) {
+            if ( Utils.isEmpty( field ) ) {
               throw new KettleException( BaseMessages.getString( PKG, "Rest.Exception.MatrixParamFieldEmpty" ) );
             }
             data.indexOfMatrixParamFields[i] = data.inputRowMeta.indexOfValue( field );
@@ -434,7 +460,7 @@ public class Rest extends BaseStep implements StepInterface {
       // Do we need to set body
       if ( RestMeta.isActiveBody( meta.getMethod() ) ) {
         String field = environmentSubstitute( meta.getBodyField() );
-        if ( !Const.isEmpty( field ) ) {
+        if ( !Utils.isEmpty( field ) ) {
           data.indexOfBodyField = data.inputRowMeta.indexOfValue( field );
           if ( data.indexOfBodyField < 0 ) {
             throw new KettleException( BaseMessages.getString( PKG, "Rest.Exception.ErrorFindingField", field ) );
@@ -490,6 +516,7 @@ public class Rest extends BaseStep implements StepInterface {
       data.resultFieldName = environmentSubstitute( meta.getFieldName() );
       data.resultCodeFieldName = environmentSubstitute( meta.getResultCodeFieldName() );
       data.resultResponseFieldName = environmentSubstitute( meta.getResponseTimeFieldName() );
+      data.resultHeaderFieldName = environmentSubstitute( meta.getResponseHeaderFieldName() );
 
       // get authentication settings once
       data.realProxyHost = environmentSubstitute( meta.getProxyHost() );
@@ -500,7 +527,7 @@ public class Rest extends BaseStep implements StepInterface {
 
       if ( !meta.isDynamicMethod() ) {
         data.method = environmentSubstitute( meta.getMethod() );
-        if ( Const.isEmpty( data.method ) ) {
+        if ( Utils.isEmpty( data.method ) ) {
           logError( BaseMessages.getString( PKG, "Rest.Error.MethodMissing" ) );
           return false;
         }

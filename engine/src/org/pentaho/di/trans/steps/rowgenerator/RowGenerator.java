@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -29,6 +29,7 @@ import java.util.List;
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.RowMetaAndData;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettlePluginException;
@@ -36,7 +37,6 @@ import org.pentaho.di.core.exception.KettleValueException;
 import org.pentaho.di.core.row.RowDataUtil;
 import org.pentaho.di.core.row.RowMeta;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.core.row.value.ValueMetaDate;
 import org.pentaho.di.core.row.value.ValueMetaFactory;
@@ -78,19 +78,19 @@ public class RowGenerator extends BaseStep implements StepInterface {
     int index = 0;
 
     if ( meta.isNeverEnding() ) {
-      if ( !Const.isEmpty( meta.getRowTimeField() ) ) {
+      if ( !Utils.isEmpty( meta.getRowTimeField() ) ) {
         rowMeta.addValueMeta( new ValueMetaDate( meta.getRowTimeField() ) );
         rowData[index++] = null;
       }
 
-      if ( !Const.isEmpty( meta.getLastTimeField() ) ) {
+      if ( !Utils.isEmpty( meta.getLastTimeField() ) ) {
         rowMeta.addValueMeta( new ValueMetaDate( meta.getLastTimeField() ) );
         rowData[index++] = null;
       }
     }
 
     for ( int i = 0; i < meta.getFieldName().length; i++ ) {
-      int valtype = ValueMeta.getType( meta.getFieldType()[i] );
+      int valtype = ValueMetaFactory.getIdForValueMeta( meta.getFieldType()[i] );
       if ( meta.getFieldName()[i] != null ) {
         ValueMetaInterface valueMeta = ValueMetaFactory.createValueMeta( meta.getFieldName()[i], valtype ); // build a
                                                                                                             // value!
@@ -112,7 +112,7 @@ public class RowGenerator extends BaseStep implements StepInterface {
           String stringValue = meta.getValue()[i];
 
           // If the value is empty: consider it to be NULL.
-          if ( Const.isEmpty( stringValue ) ) {
+          if ( Utils.isEmpty( stringValue ) ) {
             rowData[index] = null;
 
             if ( valueMeta.getType() == ValueMetaInterface.TYPE_NONE ) {
@@ -187,6 +187,7 @@ public class RowGenerator extends BaseStep implements StepInterface {
     return new RowMetaAndData( rowMeta, rowData );
   }
 
+  @Override
   public synchronized boolean processRow( StepMetaInterface smi, StepDataInterface sdi ) throws KettleException {
     meta = (RowGeneratorMeta) smi;
     data = (RowGeneratorData) sdi;
@@ -219,10 +220,10 @@ public class RowGenerator extends BaseStep implements StepInterface {
       data.rowDate = new Date();
 
       int index = 0;
-      if ( !Const.isEmpty( meta.getRowTimeField() ) ) {
+      if ( !Utils.isEmpty( meta.getRowTimeField() ) ) {
         r[index++] = data.rowDate;
       }
-      if ( !Const.isEmpty( meta.getLastTimeField() ) ) {
+      if ( !Utils.isEmpty( meta.getLastTimeField() ) ) {
         r[index++] = data.prevDate;
       }
     }
@@ -244,6 +245,7 @@ public class RowGenerator extends BaseStep implements StepInterface {
     return retval;
   }
 
+  @Override
   public boolean init( StepMetaInterface smi, StepDataInterface sdi ) {
     try {
       meta = (RowGeneratorMeta) smi;

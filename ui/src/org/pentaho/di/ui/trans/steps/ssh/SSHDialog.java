@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -48,6 +48,7 @@ import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.i18n.BaseMessages;
@@ -56,6 +57,7 @@ import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.TransPreviewFactory;
 import org.pentaho.di.trans.step.BaseStepMeta;
 import org.pentaho.di.trans.step.StepDialogInterface;
+import org.pentaho.di.trans.steps.ssh.SSHData;
 import org.pentaho.di.trans.steps.ssh.SSHMeta;
 import org.pentaho.di.ui.core.PropsUI;
 import org.pentaho.di.ui.core.dialog.EnterNumberDialog;
@@ -160,6 +162,7 @@ public class SSHDialog extends BaseStepDialog implements StepDialogInterface {
     input = (SSHMeta) in;
   }
 
+  @Override
   public String open() {
     Shell parent = getParent();
     Display display = parent.getDisplay();
@@ -169,6 +172,7 @@ public class SSHDialog extends BaseStepDialog implements StepDialogInterface {
     setShellImage( shell, input );
 
     ModifyListener lsMod = new ModifyListener() {
+      @Override
       public void modifyText( ModifyEvent e ) {
         input.setChanged();
       }
@@ -318,6 +322,7 @@ public class SSHDialog extends BaseStepDialog implements StepDialogInterface {
     fdUseKey.right = new FormAttachment( 100, 0 );
     wUseKey.setLayoutData( fdUseKey );
     wUseKey.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         input.setChanged();
         activateKey();
@@ -332,6 +337,7 @@ public class SSHDialog extends BaseStepDialog implements StepDialogInterface {
     fdbFilename.top = new FormAttachment( wUseKey, margin );
     wbFilename.setLayoutData( fdbFilename );
     wbFilename.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         FileDialog dialog = new FileDialog( shell, SWT.SAVE );
         dialog.setFilterExtensions( new String[] { "*.pem", "*" } );
@@ -552,6 +558,7 @@ public class SSHDialog extends BaseStepDialog implements StepDialogInterface {
     fdynamicCommand.top = new FormAttachment( wOutput, margin );
     wdynamicCommand.setLayoutData( fdynamicCommand );
     SelectionAdapter ldynamicCommand = new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent arg0 ) {
         activateDynamicCommand();
         input.setChanged();
@@ -579,9 +586,11 @@ public class SSHDialog extends BaseStepDialog implements StepDialogInterface {
     fdCommandField.right = new FormAttachment( 100, 0 );
     wCommandField.setLayoutData( fdCommandField );
     wCommandField.addFocusListener( new FocusListener() {
+      @Override
       public void focusLost( org.eclipse.swt.events.FocusEvent e ) {
       }
 
+      @Override
       public void focusGained( org.eclipse.swt.events.FocusEvent e ) {
         get();
       }
@@ -653,21 +662,25 @@ public class SSHDialog extends BaseStepDialog implements StepDialogInterface {
 
     // Add listeners
     lsOK = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         ok();
       }
     };
     lsPreview = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         preview();
       }
     };
     lsCancel = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         cancel();
       }
     };
     lsTest = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         test();
       }
@@ -679,6 +692,7 @@ public class SSHDialog extends BaseStepDialog implements StepDialogInterface {
     wTest.addListener( SWT.Selection, lsTest );
 
     lsDef = new SelectionAdapter() {
+      @Override
       public void widgetDefaultSelected( SelectionEvent e ) {
         ok();
       }
@@ -688,6 +702,7 @@ public class SSHDialog extends BaseStepDialog implements StepDialogInterface {
 
     // Detect X or ALT-F4 or something that kills this window...
     shell.addShellListener( new ShellAdapter() {
+      @Override
       public void shellClosed( ShellEvent e ) {
         cancel();
       }
@@ -792,7 +807,7 @@ public class SSHDialog extends BaseStepDialog implements StepDialogInterface {
   }
 
   private void ok() {
-    if ( Const.isEmpty( wStepname.getText() ) ) {
+    if ( Utils.isEmpty( wStepname.getText() ) ) {
       return;
     }
 
@@ -858,7 +873,7 @@ public class SSHDialog extends BaseStepDialog implements StepDialogInterface {
     Connection conn = null;
     try {
       conn =
-        SSHMeta.OpenConnection(
+        SSHData.OpenConnection(
           servername, nrPort, username, password, wUseKey.getSelection(), keyFilename, passphrase, timeOut,
           transMeta, proxyhost, proxyport, proxyusername, proxypassword );
       testOK = true;

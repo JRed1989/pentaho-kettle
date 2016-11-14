@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -38,10 +38,11 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableItem;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.RowMetaAndData;
 import org.pentaho.di.core.exception.KettleValueException;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaString;
 import org.pentaho.di.core.variables.Variables;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.ui.core.PropsUI;
@@ -154,11 +155,13 @@ public class EnterStringsDialog extends Dialog {
 
     // Add listeners
     lsOK = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         ok();
       }
     };
     lsCancel = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         cancel();
       }
@@ -169,6 +172,7 @@ public class EnterStringsDialog extends Dialog {
 
     // Detect X or ALT-F4 or something that kills this window...
     shell.addShellListener( new ShellAdapter() {
+      @Override
       public void shellClosed( ShellEvent e ) {
         cancel();
       }
@@ -213,7 +217,7 @@ public class EnterStringsDialog extends Dialog {
         }
         TableItem item = wFields.table.getItem( i );
         item.setText( 1, valueMeta.getName() );
-        if ( !Const.isEmpty( string ) ) {
+        if ( !Utils.isEmpty( string ) ) {
           item.setText( 2, string );
         }
       }
@@ -254,7 +258,7 @@ public class EnterStringsDialog extends Dialog {
         TableItem item = wFields.getNonEmpty( i );
         String name = item.getText( 1 );
         String value = item.getText( 2 );
-        strings.addValue( new ValueMeta( name, ValueMetaInterface.TYPE_STRING ), value );
+        strings.addValue( new ValueMetaString( name ), value );
       }
     }
     dispose();

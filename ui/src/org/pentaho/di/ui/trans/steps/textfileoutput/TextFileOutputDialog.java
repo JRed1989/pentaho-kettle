@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -57,6 +57,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Props;
 import org.pentaho.di.core.compress.CompressionProviderFactory;
 import org.pentaho.di.core.exception.KettleException;
@@ -1306,6 +1307,8 @@ public class TextFileOutputDialog extends BaseStepDialog implements StepDialogIn
     wDoNotOpenNewFileInit.setEnabled( enableFilename );
     wlCreateParentFolder.setEnabled( enableFilename );
     wCreateParentFolder.setEnabled( enableFilename );
+    wlFileNameField.setEnabled( enableFilename );
+    wFileNameField.setEnabled( enableFilename );
     wlExtension.setEnabled( enableFilename );
     wExtension.setEnabled( enableFilename );
     wlSplitEvery.setEnabled( enableFilename );
@@ -1332,8 +1335,6 @@ public class TextFileOutputDialog extends BaseStepDialog implements StepDialogIn
   private void activeFileNameField() {
     wlFileNameField.setEnabled( wFileNameInField.getSelection() );
     wFileNameField.setEnabled( wFileNameInField.getSelection() );
-    wlExtension.setEnabled( !wFileNameInField.getSelection() );
-    wExtension.setEnabled( !wFileNameInField.getSelection() );
     wlFilename.setEnabled( !wFileNameInField.getSelection() );
     wFilename.setEnabled( !wFileNameInField.getSelection() );
 
@@ -1613,7 +1614,7 @@ public class TextFileOutputDialog extends BaseStepDialog implements StepDialogIn
   }
 
   private void ok() {
-    if ( Const.isEmpty( wStepname.getText() ) ) {
+    if ( Utils.isEmpty( wStepname.getText() ) ) {
       return;
     }
 
@@ -1644,7 +1645,7 @@ public class TextFileOutputDialog extends BaseStepDialog implements StepDialogIn
             tableItem.setText( 9, Const.NVL( ValueMeta.getTrimTypeDesc( v.getTrimType() ), "" ) );
 
             // conversion mask
-            if ( !Const.isEmpty( v.getConversionMask() ) ) {
+            if ( !Utils.isEmpty( v.getConversionMask() ) ) {
               tableItem.setText( 3, v.getConversionMask() );
             } else {
               if ( v.isNumber() ) {

@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2014 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -25,6 +25,7 @@ package org.pentaho.di.trans.steps.monetdbbulkloader;
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.KettleAttributeInterface;
 import org.pentaho.di.core.ProvidesDatabaseConnectionInformation;
 import org.pentaho.di.core.SQLStatement;
@@ -276,10 +277,9 @@ public class MonetDBBulkLoaderMeta extends BaseStepMeta implements StepMetaInjec
 
     retval.allocate( nrvalues );
 
-    for ( int i = 0; i < nrvalues; i++ ) {
-      retval.fieldTable[i] = fieldTable[i];
-      retval.fieldStream[i] = fieldStream[i];
-    }
+    System.arraycopy( fieldTable, 0, retval.fieldTable, 0, nrvalues );
+    System.arraycopy( fieldStream, 0, retval.fieldStream, 0, nrvalues );
+    System.arraycopy( fieldFormatOk, 0, retval.fieldFormatOk, 0, nrvalues );
     return retval;
   }
 
@@ -359,7 +359,7 @@ public class MonetDBBulkLoaderMeta extends BaseStepMeta implements StepMetaInjec
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 300 );
+    StringBuilder retval = new StringBuilder( 300 );
 
     // General Settings Tab
     retval.append( "    " ).append( XMLHandler.addTagValue( "connection", dbConnectionName ) );
@@ -489,7 +489,7 @@ public class MonetDBBulkLoaderMeta extends BaseStepMeta implements StepMetaInjec
       try {
         db.connect();
 
-        if ( !Const.isEmpty( tableName ) ) {
+        if ( !Utils.isEmpty( tableName ) ) {
           cr =
               new CheckResult( CheckResultInterface.TYPE_RESULT_OK, BaseMessages.getString(
                   PKG, "MonetDBBulkLoaderMeta.CheckResult.TableNameOK" ), stepMeta );
@@ -680,7 +680,7 @@ public class MonetDBBulkLoaderMeta extends BaseStepMeta implements StepMetaInjec
           }
         }
 
-        if ( !Const.isEmpty( tableName ) ) {
+        if ( !Utils.isEmpty( tableName ) ) {
           Database db = new Database( loggingObject, databaseMeta );
           db.shareVariablesWith( transMeta );
           try {
@@ -764,7 +764,7 @@ public class MonetDBBulkLoaderMeta extends BaseStepMeta implements StepMetaInjec
       try {
         db.connect();
 
-        if ( !Const.isEmpty( realTableName ) ) {
+        if ( !Utils.isEmpty( realTableName ) ) {
           String schemaTable = databaseMeta.getQuotedSchemaTableCombination( realSchemaName, realTableName );
 
           // Check if this table exists...
@@ -974,7 +974,7 @@ public class MonetDBBulkLoaderMeta extends BaseStepMeta implements StepMetaInjec
             }
           }
         }
-        if ( !Const.isEmpty( getFieldStream() ) ) {
+        if ( !Utils.isEmpty( getFieldStream() ) ) {
           for ( int i = 0; i < getFieldStream().length; i++ ) {
             logDetailed( "row " + Integer.toString( i ) + ": stream=" + getFieldStream()[i]
                 + " : table=" + getFieldTable()[i] );
@@ -991,7 +991,7 @@ public class MonetDBBulkLoaderMeta extends BaseStepMeta implements StepMetaInjec
 
   /**
    * Returns the version of MonetDB that is used.
-   * 
+   *
    * @return The version of MonetDB
    * @throws KettleException
    *           if an error occurs
@@ -1014,7 +1014,7 @@ public class MonetDBBulkLoaderMeta extends BaseStepMeta implements StepMetaInjec
 
   /**
    * Returns <code>true</code> if used the version of MonetBD Jan2014-SP2 or later, <code>false</code> otherwise.
-   * 
+   *
    * @return the compatibilityDbVersionMode
    */
   public boolean isCompatibilityDbVersionMode() {

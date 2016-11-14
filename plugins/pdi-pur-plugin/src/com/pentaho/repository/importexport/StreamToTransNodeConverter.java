@@ -1,20 +1,19 @@
 /*!
-* Copyright 2010 - 2015 Pentaho Corporation.  All rights reserved.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*
-*/
-
+ * Copyright 2010 - 2016 Pentaho Corporation.  All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
 package com.pentaho.repository.importexport;
 
 import java.io.ByteArrayInputStream;
@@ -22,9 +21,9 @@ import java.io.InputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
-
+import java.util.Set;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,6 +31,9 @@ import org.pentaho.di.cluster.ClusterSchema;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
+import org.pentaho.di.core.extension.ExtensionPointHandler;
+import org.pentaho.di.core.extension.KettleExtensionPoint;
+import org.pentaho.di.core.logging.LogChannel;
 import org.pentaho.di.partition.PartitionSchema;
 import org.pentaho.di.repository.Repository;
 import org.pentaho.di.repository.RepositoryElementInterface;
@@ -74,29 +76,22 @@ public class StreamToTransNodeConverter implements Converter {
       // this will change in the future if PDI no longer has its
       // own repository. For now, get the reference
       if ( fileId != null ) {
-        Repository repository = PDIImportUtil.connectToRepository( null );
+        Repository repository = connectToRepository();
         RepositoryFile file = unifiedRepository.getFileById( fileId );
         if ( file != null ) {
           try {
             TransMeta transMeta = repository.loadTransformation( new StringObjectId( fileId.toString() ), null );
-            // if PrivateTransformationDatabases null than we use old format, export all datasource
-            if ( transMeta.getPrivateTransformationDatabases() != null ) {
-              //keep only private transformation databases
-              for ( ListIterator<DatabaseMeta> iter = transMeta.getDatabases().listIterator(); iter.hasNext(); ) {
-                String databaseName = iter.next().getName();
-                boolean removeDatabase = true;
-                for ( String privateDatabase : transMeta.getPrivateTransformationDatabases() ) {
-                  if ( databaseName.equalsIgnoreCase( privateDatabase ) ) {
-                    removeDatabase = false;
-                    break;
+            if ( transMeta != null ) {
+              Set<String> privateDatabases = transMeta.getPrivateDatabases();
+              if ( privateDatabases != null ) {
+                // keep only private transformation databases
+                for ( Iterator<DatabaseMeta> it = transMeta.getDatabases().iterator(); it.hasNext(); ) {
+                  String databaseName = it.next().getName();
+                  if ( !privateDatabases.contains( databaseName ) ) {
+                    it.remove();
                   }
                 }
-                if ( removeDatabase ) {
-                  iter.remove();
-                }
               }
-            }
-            if ( transMeta != null ) {
               return new ByteArrayInputStream( transMeta.getXML().getBytes() );
             }
           } catch ( KettleException e ) {
@@ -117,11 +112,16 @@ public class StreamToTransNodeConverter implements Converter {
     return null;
   }
 
+  // package-local visibility for testing purposes
+  Repository connectToRepository() throws KettleException {
+    return PDIImportUtil.connectToRepository( null );
+  }
+
   public IRepositoryFileData convert( final InputStream inputStream, final String charset, final String mimeType ) {
     try {
       long size = inputStream.available();
       TransMeta transMeta = new TransMeta();
-      Repository repository = PDIImportUtil.connectToRepository( null );
+      Repository repository = connectToRepository();
       Document doc = PDIImportUtil.loadXMLFrom( inputStream );
       transMeta.loadXML( doc.getDocumentElement(), repository, false );
       TransDelegate delegate = new TransDelegate( repository, this.unifiedRepository );
@@ -191,4 +191,20 @@ public class StreamToTransNodeConverter implements Converter {
     }
   }
 
+  public void convertPostRepoSave( RepositoryFile repositoryFile ) {
+    if ( repositoryFile != null ) {
+      try {
+        Repository repo = connectToRepository();
+        if ( repo != null ) {
+          TransMeta
+              transMeta =
+              repo.loadTransformation( new StringObjectId( repositoryFile.getId().toString() ), null );
+          ExtensionPointHandler.callExtensionPoint( new LogChannel( this ),
+              KettleExtensionPoint.TransImportAfterSaveToRepo.id, transMeta );
+        }
+      } catch ( Exception e ) {
+        logger.error( KettleExtensionPoint.TransImportAfterSaveToRepo.id, e );
+      }
+    }
+  }
 }

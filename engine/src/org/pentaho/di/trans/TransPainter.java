@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.NotePadMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.extension.ExtensionPointHandler;
@@ -41,6 +42,7 @@ import org.pentaho.di.core.gui.PrimitiveGCInterface.EImage;
 import org.pentaho.di.core.gui.PrimitiveGCInterface.ELineStyle;
 import org.pentaho.di.core.gui.Rectangle;
 import org.pentaho.di.core.gui.ScrollBarInterface;
+import org.pentaho.di.core.injection.bean.BeanInjectionInfo;
 import org.pentaho.di.core.logging.LogChannel;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.partition.PartitionSchema;
@@ -48,13 +50,13 @@ import org.pentaho.di.trans.step.BaseStepData.StepExecutionStatus;
 import org.pentaho.di.trans.step.StepIOMetaInterface;
 import org.pentaho.di.trans.step.StepInterface;
 import org.pentaho.di.trans.step.StepMeta;
-import org.pentaho.di.trans.step.StepMetaInjectionInterface;
+import org.pentaho.di.trans.step.StepMetaInterface;
 import org.pentaho.di.trans.step.StepPartitioningMeta;
 import org.pentaho.di.trans.step.StepStatus;
 import org.pentaho.di.trans.step.errorhandling.StreamInterface;
 import org.pentaho.di.trans.step.errorhandling.StreamInterface.StreamType;
 
-public class TransPainter extends BasePainter {
+public class TransPainter extends BasePainter<TransHopMeta, StepMeta> {
 
   private static Class<?> PKG = TransPainter.class; // for i18n purposes, needed by Translator2!!
 
@@ -65,12 +67,7 @@ public class TransPainter extends BasePainter {
   public static final String STRING_HOP_TYPE_COPY = "HopTypeCopy";
   public static final String STRING_ROW_DISTRIBUTION = "RowDistribution";
 
-  public static final String[] magnificationDescriptions = new String[] {
-    "  200% ", "  150% ", "  100% ", "  75% ", "  50% ", "  25% " };
-
   private TransMeta transMeta;
-
-  private TransHopMeta candidate;
 
   private Map<StepMeta, String> stepLogMap;
   private List<StepMeta> mouseOverSteps;
@@ -83,6 +80,9 @@ public class TransPainter extends BasePainter {
   private StepMeta showTargetStreamsStep;
   private Trans trans;
   private boolean slowStepIndicatorEnabled;
+
+  public static final String[] magnificationDescriptions =
+      new String[] { "  200% ", "  150% ", "  100% ", "  75% ", "  50% ", "  25% " };
 
   public TransPainter( GCInterface gc, TransMeta transMeta, Point area, ScrollBarInterface hori,
     ScrollBarInterface vert, TransHopMeta candidate, Point drop_candidate, Rectangle selrect,
@@ -264,6 +264,35 @@ public class TransPainter extends BasePainter {
       if ( stepMeta.isDrawn() ) {
         drawStepPerformanceTable( stepMeta );
       }
+    }
+
+    int selectedStepsCount = 0;
+    for ( int i = transMeta.nrSteps() - 1; i >= 0; i-- ) {
+      StepMeta stepMeta = transMeta.getStep( i );
+      if ( stepMeta.isSelected() ) {
+        selectedStepsCount++;
+      }
+    }
+
+    TransPainterFlyoutExtension extension = null;
+    for ( int i = transMeta.nrSteps() - 1; i >= 0; i-- ) {
+      StepMeta stepMeta = transMeta.getStep( i );
+      if ( stepMeta.isSelected() && stepMeta.isDrawn() && selectedStepsCount == 1 ) {
+        extension = new TransPainterFlyoutExtension(
+          gc, areaOwners, transMeta, stepMeta, translationX, translationY, magnification, area, offset );
+        break;
+      }
+    }
+    if ( extension == null ) {
+      // pass null to notify extension that nothing is selected
+      extension = new TransPainterFlyoutExtension(
+        gc, areaOwners, transMeta, null, translationX, translationY, magnification, area, offset );
+    }
+    try {
+      ExtensionPointHandler.callExtensionPoint(
+        LogChannel.GENERAL, KettleExtensionPoint.TransPainterFlyout.id, extension );
+    } catch ( Exception e ) {
+      LogChannel.GENERAL.logError( "Error calling extension point(s) for the transformation painter step", e );
     }
 
     // Display an icon on the indicated location signaling to the user that the step in question does not accept input
@@ -545,7 +574,7 @@ public class TransPainter extends BasePainter {
     boolean stepError = false;
     if ( stepLogMap != null && !stepLogMap.isEmpty() ) {
       String log = stepLogMap.get( stepMeta );
-      if ( !Const.isEmpty( log ) ) {
+      if ( !Utils.isEmpty( log ) ) {
         stepError = true;
       }
     }
@@ -696,14 +725,25 @@ public class TransPainter extends BasePainter {
     } else {
       gc.setForeground( EColor.CRYSTAL );
     }
+    if ( stepMeta.isSelected() ) {
+      gc.setForeground( 0, 93, 166 );
+    }
     gc.drawRoundRectangle( x - 1, y - 1, iconsize + 1, iconsize + 1, 8, 8 );
 
     Point namePosition = getNamePosition( name, screen, iconsize );
 
+    if ( stepMeta.isSelected() ) {
+      int tmpAlpha = gc.getAlpha();
+      gc.setAlpha( 192 );
+      gc.setBackground( 216, 230, 241 );
+      gc.fillRoundRectangle( namePosition.x - 8, namePosition.y - 2, gc.textExtent( name ).x + 15, 25,
+          BasePainter.CORNER_RADIUS_5 + 15, BasePainter.CORNER_RADIUS_5 + 15 );
+      gc.setAlpha( tmpAlpha );
+    }
+
     gc.setForeground( EColor.BLACK );
     gc.setFont( EFont.GRAPH );
-    gc.drawText( name, namePosition.x, namePosition.y, true );
-
+    gc.drawText( name, namePosition.x, namePosition.y + 2, true );
     boolean partitioned = false;
 
     StepPartitioningMeta meta = stepMeta.getStepPartitioningMeta();
@@ -759,11 +799,13 @@ public class TransPainter extends BasePainter {
     if ( mouseOverSteps.contains( stepMeta ) ) {
       gc.setTransform( translationX, translationY, 0, BasePainter.FACTOR_1_TO_1 );
 
-      StepMetaInjectionInterface injectionInterface =
-        stepMeta.getStepMetaInterface().getStepMetaInjectionInterface();
+      StepMetaInterface stepMetaInterface = stepMeta.getStepMetaInterface();
+      boolean mdiSupport =
+          stepMetaInterface.getStepMetaInjectionInterface() != null || BeanInjectionInfo.isInjectionSupported(
+              stepMetaInterface.getClass() );
 
       EImage[] miniIcons;
-      if ( injectionInterface != null ) {
+      if ( mdiSupport ) {
         miniIcons = new EImage[] { EImage.INPUT, EImage.EDIT, EImage.CONTEXT_MENU, EImage.OUTPUT, EImage.INJECT, };
       } else {
         miniIcons = new EImage[] { EImage.INPUT, EImage.EDIT, EImage.CONTEXT_MENU, EImage.OUTPUT, };
@@ -860,10 +902,11 @@ public class TransPainter extends BasePainter {
                 ioMeta ) );
             break;
           case 4: // INJECT
-            enabled = injectionInterface != null;
+            enabled = mdiSupport;
+            StepMetaInterface mdiObject = mdiSupport ? stepMetaInterface : null;
             areaOwners.add( new AreaOwner( AreaType.STEP_INJECT_ICON, translateTo1To1( xIcon ),
                 translateTo1To1( yIcon ), translateTo1To1( bounds.x ), translateTo1To1( bounds.y ), offset, stepMeta,
-                injectionInterface ) );
+                mdiObject ) );
             break;
           default:
             break;
@@ -1013,28 +1056,8 @@ public class TransPainter extends BasePainter {
     gc.setLineStyle( ELineStyle.SOLID );
   }
 
-  private int[] getLine( StepMeta fs, StepMeta ts ) {
-    Point from = fs.getLocation();
-    Point to = ts.getLocation();
-
-    int x1 = from.x + iconsize / 2;
-    int y1 = from.y + iconsize / 2;
-
-    int x2 = to.x + iconsize / 2;
-    int y2 = to.y + iconsize / 2;
-
-    return new int[] { x1, y1, x2, y2 };
-  }
-
-  private void drawArrow( EImage arrow, int[] line, TransHopMeta transHop, Object startObject, Object endObject ) {
-    Point screen_from = real2screen( line[0], line[1] );
-    Point screen_to = real2screen( line[2], line[3] );
-
-    drawArrow( arrow, screen_from.x, screen_from.y, screen_to.x, screen_to.y, theta, calcArrowLength(), -1, transHop,
-        startObject, endObject );
-  }
-
-  private void drawArrow( EImage arrow, int x1, int y1, int x2, int y2, double theta, int size, double factor,
+  @Override
+  protected void drawArrow( EImage arrow, int x1, int y1, int x2, int y2, double theta, int size, double factor,
       TransHopMeta transHop, Object startObject, Object endObject ) {
     int mx, my;
     int a, b, dist;
@@ -1160,7 +1183,7 @@ public class TransPainter extends BasePainter {
 
       // Check to see if the source step is an info step for the target step.
       //
-      if ( !Const.isEmpty( infoStepnames ) ) {
+      if ( !Utils.isEmpty( infoStepnames ) ) {
         // Check this situation, the source step can't run in multiple copies!
         //
         for ( String infoStep : infoStepnames ) {
@@ -1195,36 +1218,6 @@ public class TransPainter extends BasePainter {
     } catch ( Exception e ) {
       LogChannel.GENERAL.logError( "Error calling extension point(s) for the transformation painter arrow", e );
     }
-  }
-
-  /**
-   * @return the translationX
-   */
-  public float getTranslationX() {
-    return translationX;
-  }
-
-  /**
-   * @param translationX
-   *          the translationX to set
-   */
-  public void setTranslationX( float translationX ) {
-    this.translationX = translationX;
-  }
-
-  /**
-   * @return the translationY
-   */
-  public float getTranslationY() {
-    return translationY;
-  }
-
-  /**
-   * @param translationY
-   *          the translationY to set
-   */
-  public void setTranslationY( float translationY ) {
-    this.translationY = translationY;
   }
 
   /**
@@ -1303,14 +1296,6 @@ public class TransPainter extends BasePainter {
 
   public void setTransMeta( TransMeta transMeta ) {
     this.transMeta = transMeta;
-  }
-
-  public TransHopMeta getCandidate() {
-    return candidate;
-  }
-
-  public void setCandidate( TransHopMeta candidate ) {
-    this.candidate = candidate;
   }
 
   public List<StepMeta> getMouseOverSteps() {

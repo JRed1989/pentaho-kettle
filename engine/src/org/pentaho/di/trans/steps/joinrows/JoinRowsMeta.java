@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -33,6 +33,8 @@ import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
 import org.pentaho.di.core.exception.KettleXMLException;
+import org.pentaho.di.core.injection.Injection;
+import org.pentaho.di.core.injection.InjectionSupported;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.xml.XMLHandler;
@@ -53,18 +55,22 @@ import org.w3c.dom.Node;
  * Created on 02-jun-2003
  *
  */
-
+@InjectionSupported( localizationPrefix = "JoinRows.Injection." )
 public class JoinRowsMeta extends BaseStepMeta implements StepMetaInterface {
   private static Class<?> PKG = JoinRowsMeta.class; // for i18n purposes, needed by Translator2!!
 
+  @Injection( name = "TEMP_DIR" )
   private String directory;
+  @Injection( name = "TEMP_FILE_PREFIX" )
   private String prefix;
+  @Injection( name = "MAX_CACHE_SIZE" )
   private int cacheSize;
 
   /** Which step is providing the lookup data? */
   private StepMeta mainStep;
 
   /** Which step is providing the lookup data? */
+  @Injection( name = "MAIN_STEP" )
   private String mainStepname;
 
   /** Optional condition to limit the join (where clause) */
@@ -160,15 +166,22 @@ public class JoinRowsMeta extends BaseStepMeta implements StepMetaInterface {
     this.condition = condition;
   }
 
+  @Injection( name = "CONDITION" )
+  public void setCondition( String conditionXML ) throws Exception {
+    condition = new Condition( conditionXML );
+  }
+
   public JoinRowsMeta() {
     super(); // allocate BaseStepMeta
     condition = new Condition();
   }
 
+  @Override
   public void loadXML( Node stepnode, List<DatabaseMeta> databases, IMetaStore metaStore ) throws KettleXMLException {
     readData( stepnode );
   }
 
+  @Override
   public Object clone() {
     JoinRowsMeta retval = (JoinRowsMeta) super.clone();
 
@@ -199,6 +212,7 @@ public class JoinRowsMeta extends BaseStepMeta implements StepMetaInterface {
     }
   }
 
+  @Override
   public void setDefault() {
     directory = "%%java.io.tmpdir%%";
     prefix = "out";
@@ -207,14 +221,18 @@ public class JoinRowsMeta extends BaseStepMeta implements StepMetaInterface {
     mainStepname = null;
   }
 
+  @Override
   public String getXML() throws KettleException {
-    StringBuffer retval = new StringBuffer( 300 );
+    StringBuilder retval = new StringBuilder( 300 );
 
     retval.append( "      " ).append( XMLHandler.addTagValue( "directory", directory ) );
     retval.append( "      " ).append( XMLHandler.addTagValue( "prefix", prefix ) );
     retval.append( "      " ).append( XMLHandler.addTagValue( "cache_size", cacheSize ) );
 
-    retval.append( "      " ).append( XMLHandler.addTagValue( "main", getLookupStepname() ) );
+    if ( mainStepname == null ) {
+      mainStepname = getLookupStepname();
+    }
+    retval.append( "      " ).append( XMLHandler.addTagValue( "main", mainStepname ) );
 
     retval.append( "    <compare>" ).append( Const.CR );
 
@@ -227,6 +245,7 @@ public class JoinRowsMeta extends BaseStepMeta implements StepMetaInterface {
     return retval.toString();
   }
 
+  @Override
   public void readRep( Repository rep, IMetaStore metaStore, ObjectId id_step, List<DatabaseMeta> databases ) throws KettleException {
     try {
       directory = rep.getStepAttributeString( id_step, "directory" );
@@ -245,13 +264,17 @@ public class JoinRowsMeta extends BaseStepMeta implements StepMetaInterface {
     }
   }
 
+  @Override
   public void saveRep( Repository rep, IMetaStore metaStore, ObjectId id_transformation, ObjectId id_step ) throws KettleException {
     try {
       rep.saveStepAttribute( id_transformation, id_step, "directory", directory );
       rep.saveStepAttribute( id_transformation, id_step, "prefix", prefix );
       rep.saveStepAttribute( id_transformation, id_step, "cache_size", cacheSize );
 
-      rep.saveStepAttribute( id_transformation, id_step, "main", getLookupStepname() );
+      if ( mainStepname == null ) {
+        mainStepname = getLookupStepname();
+      }
+      rep.saveStepAttribute( id_transformation, id_step, "main", mainStepname );
 
       rep.saveConditionStepAttribute( id_transformation, id_step, "id_condition", condition );
     } catch ( Exception e ) {
@@ -261,6 +284,7 @@ public class JoinRowsMeta extends BaseStepMeta implements StepMetaInterface {
     }
   }
 
+  @Override
   public void getFields( RowMetaInterface rowMeta, String origin, RowMetaInterface[] info, StepMeta nextStep,
     VariableSpace space, Repository repository, IMetaStore metaStore ) throws KettleStepException {
     if ( space instanceof TransMeta ) {
@@ -279,6 +303,7 @@ public class JoinRowsMeta extends BaseStepMeta implements StepMetaInterface {
     }
   }
 
+  @Override
   public void check( List<CheckResultInterface> remarks, TransMeta transMeta, StepMeta stepMeta,
     RowMetaInterface prev, String[] input, String[] output, RowMetaInterface info, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
@@ -346,19 +371,23 @@ public class JoinRowsMeta extends BaseStepMeta implements StepMetaInterface {
    * @param steps
    *          optionally search the info step in a list of steps
    */
+  @Override
   public void searchInfoAndTargetSteps( List<StepMeta> steps ) {
     mainStep = StepMeta.findStep( steps, mainStepname );
   }
 
+  @Override
   public StepInterface getStep( StepMeta stepMeta, StepDataInterface stepDataInterface, int cnr,
     TransMeta transMeta, Trans trans ) {
     return new JoinRows( stepMeta, stepDataInterface, cnr, transMeta, trans );
   }
 
+  @Override
   public StepDataInterface getStepData() {
     return new JoinRowsData();
   }
 
+  @Override
   public boolean excludeFromRowLayoutVerification() {
     return true;
   }

@@ -62,7 +62,7 @@ public class ExcelWriterStepTest {
       new StepMockHelper<ExcelWriterStepMeta, ExcelWriterStepData>(
         "Excel Writer Test", ExcelWriterStepMeta.class, ExcelWriterStepData.class );
     when( mockHelper.logChannelInterfaceFactory.create( any(), any( LoggingObjectInterface.class ) ) ).thenReturn(
-      mockHelper.logChannelInterface );
+        mockHelper.logChannelInterface );
     step =
       new ExcelWriterStep(
         mockHelper.stepMeta, mockHelper.stepDataInterface, 0, mockHelper.transMeta, mockHelper.trans );
@@ -86,10 +86,16 @@ public class ExcelWriterStepTest {
       when( mockHelper.initStepMetaInterface.getSheetname() )
         .thenReturn( "12345678901234567890123456789012" ); // 32 character
       step.init( mockHelper.initStepMetaInterface, mockHelper.initStepDataInterface );
-
-      String content = baos.toString( "UTF-8" ); // e.g. ISO-8859-1
-      if ( !content.contains( "12345678901234567890123456789012" ) ) {
+      try {
+        step.prepareNextOutputFile();
         fail();
+      } catch ( KettleException expected ) {
+        String content = expected.getMessage();
+        if ( !content.contains( "12345678901234567890123456789012" ) ) {
+          fail();
+        } else {
+          // We expected this error message, the sheet name is too long for Excel
+        }
       }
     } finally {
       System.setErr( err );
@@ -101,7 +107,7 @@ public class ExcelWriterStepTest {
 
     try {
       List<StepInjectionMetaEntry> entries =
-        stepMeta.getStepMetaInjectionInterface().getStepInjectionMetadataEntries();
+          stepMeta.getStepMetaInjectionInterface().getStepInjectionMetadataEntries();
 
       String masterKeys = "FIELDS";
 
@@ -125,10 +131,10 @@ public class ExcelWriterStepTest {
 
     try {
       List<StepInjectionMetaEntry> entries =
-        stepMeta.getStepMetaInjectionInterface().getStepInjectionMetadataEntries();
+          stepMeta.getStepMetaInjectionInterface().getStepInjectionMetadataEntries();
 
       String childKeys = "NAME TYPE FORMAT STYLECELL FIELDTITLE TITLESTYLE "
-        + "FORMULA HYPERLINKFIELD CELLCOMMENT COMMENTAUTHOR";
+          + "FORMULA HYPERLINKFIELD CELLCOMMENT COMMENTAUTHOR";
 
       StepInjectionMetaEntry mappingEntry = null;
 
@@ -166,10 +172,10 @@ public class ExcelWriterStepTest {
 
     try {
       List<StepInjectionMetaEntry> entries =
-        stepMeta.getStepMetaInjectionInterface().getStepInjectionMetadataEntries();
+          stepMeta.getStepMetaInjectionInterface().getStepInjectionMetadataEntries();
 
       for ( StepInjectionMetaEntry entry : entries ) {
-        switch( entry.getValueType() ) {
+        switch ( entry.getValueType() ) {
           case ValueMetaInterface.TYPE_STRING:
             entry.setValue( "new_".concat( entry.getKey() ) );
             break;
@@ -184,7 +190,7 @@ public class ExcelWriterStepTest {
 
           List<StepInjectionMetaEntry> childEntries = entry.getDetails().get( 0 ).getDetails();
           for ( StepInjectionMetaEntry childEntry : childEntries ) {
-            switch( childEntry.getValueType() ) {
+            switch ( childEntry.getValueType() ) {
               case ValueMetaInterface.TYPE_STRING:
                 childEntry.setValue( "new_".concat( childEntry.getKey() ) );
                 break;
@@ -201,19 +207,19 @@ public class ExcelWriterStepTest {
       stepMeta.getStepMetaInjectionInterface().injectStepMetadataEntries( entries );
 
       assertEquals( "Cell comment not properly injected... ", "new_CELLCOMMENT",
-        stepMeta.getOutputFields()[ 0 ].getCommentField() );
+          stepMeta.getOutputFields()[ 0 ].getCommentField() );
       assertEquals( "Format not properly injected... ", "new_FORMAT", stepMeta.getOutputFields()[ 0 ].getFormat() );
       assertEquals( "Hyperlink not properly injected... ", "new_HYPERLINKFIELD",
-        stepMeta.getOutputFields()[ 0 ].getHyperlinkField() );
+          stepMeta.getOutputFields()[ 0 ].getHyperlinkField() );
       assertEquals( "Name not properly injected... ", "new_NAME", stepMeta.getOutputFields()[ 0 ].getName() );
       assertEquals( "Style cell not properly injected... ", "new_STYLECELL",
-        stepMeta.getOutputFields()[ 0 ].getStyleCell() );
+          stepMeta.getOutputFields()[ 0 ].getStyleCell() );
       assertEquals( "Title not properly injected... ", "new_FIELDTITLE", stepMeta.getOutputFields()[ 0 ].getTitle() );
       assertEquals( "Title style cell not properly injected... ", "new_TITLESTYLE",
-        stepMeta.getOutputFields()[ 0 ].getTitleStyleCell() );
-      assertEquals( "Type not properly injected... ", "-", stepMeta.getOutputFields()[ 0 ].getTypeDesc() );
+          stepMeta.getOutputFields()[ 0 ].getTitleStyleCell() );
+      assertEquals( "Type not properly injected... ", 0, stepMeta.getOutputFields()[ 0 ].getType() );
       assertEquals( "Comment author not properly injected... ", "new_COMMENTAUTHOR",
-        stepMeta.getOutputFields()[ 0 ].getCommentAuthorField() );
+          stepMeta.getOutputFields()[ 0 ].getCommentAuthorField() );
 
     } catch ( KettleException e ) {
       fail( e.getMessage() );

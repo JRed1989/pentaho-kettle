@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -23,14 +23,13 @@
 package org.pentaho.di.trans.steps.excelinput;
 
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
 
 import org.apache.commons.vfs2.FileObject;
-import org.apache.poi.ss.usermodel.DateUtil;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.ResultFile;
 import org.pentaho.di.core.RowSet;
 import org.pentaho.di.core.exception.KettleException;
@@ -39,8 +38,8 @@ import org.pentaho.di.core.fileinput.FileInputList;
 import org.pentaho.di.core.playlist.FilePlayListAll;
 import org.pentaho.di.core.playlist.FilePlayListReplay;
 import org.pentaho.di.core.row.RowMeta;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaNumber;
 import org.pentaho.di.core.spreadsheet.KCell;
 import org.pentaho.di.core.spreadsheet.KCellType;
 import org.pentaho.di.core.spreadsheet.KSheet;
@@ -57,7 +56,6 @@ import org.pentaho.di.trans.step.errorhandling.CompositeFileErrorHandler;
 import org.pentaho.di.trans.step.errorhandling.FileErrorHandler;
 import org.pentaho.di.trans.step.errorhandling.FileErrorHandlerContentLineNumber;
 import org.pentaho.di.trans.step.errorhandling.FileErrorHandlerMissingFiles;
-import org.pentaho.di.trans.steps.excelinput.staxpoi.StaxPoiCell;
 
 /**
  * This class reads data from one or more Microsoft Excel files.
@@ -105,14 +103,6 @@ public class ExcelInput extends BaseStep implements StepInterface {
 
       ValueMetaInterface targetMeta = data.outputRowMeta.getValueMeta( rowcolumn );
       ValueMetaInterface sourceMeta = null;
-
-      if ( meta.getSpreadSheetType() == SpreadSheetType.SAX_POI ) {
-        if ( targetMeta.isDate() ) {
-          Double dateValue = Double.valueOf( cell.getContents() );
-          Calendar calendar = DateUtil.getJavaCalendarUTC( dateValue, false );
-          cell = new StaxPoiCell( calendar.getTime(), KCellType.DATE, cell.getRow() );
-        }
-      }
 
       try {
         checkType( cell, targetMeta );
@@ -204,7 +194,7 @@ public class ExcelInput extends BaseStep implements StepInterface {
                 case ValueMetaInterface.TYPE_DATE:
                   // number to string conversion (20070522.00 --> "20070522")
                   //
-                  ValueMetaInterface valueMetaNumber = new ValueMeta( "num", ValueMetaInterface.TYPE_NUMBER );
+                  ValueMetaInterface valueMetaNumber = new ValueMetaNumber( "num" );
                   valueMetaNumber.setConversionMask( "#" );
                   Object string = sourceMetaCopy.convertData( valueMetaNumber, r[rowcolumn] );
 
@@ -232,8 +222,8 @@ public class ExcelInput extends BaseStep implements StepInterface {
           logBasic( BaseMessages.getString( PKG, "ExcelInput.Log.WarningProcessingExcelFile", "" + targetMeta, ""
             + data.filename, ex.toString() ) );
         }
-        if ( !errorHandled ) // check if we didn't log an error already for this one.
-        {
+        if ( !errorHandled ) {
+          // check if we didn't log an error already for this one.
           data.errorHandler.handleLineError( excelInputRow.rownr, excelInputRow.sheetName );
           errorHandled = true;
         }
@@ -249,65 +239,65 @@ public class ExcelInput extends BaseStep implements StepInterface {
     int rowIndex = meta.getField().length;
 
     // Do we need to include the filename?
-    if ( !Const.isEmpty( meta.getFileField() ) ) {
+    if ( !Utils.isEmpty( meta.getFileField() ) ) {
       r[rowIndex] = data.filename;
       rowIndex++;
     }
 
     // Do we need to include the sheetname?
-    if ( !Const.isEmpty( meta.getSheetField() ) ) {
+    if ( !Utils.isEmpty( meta.getSheetField() ) ) {
       r[rowIndex] = excelInputRow.sheetName;
       rowIndex++;
     }
 
     // Do we need to include the sheet rownumber?
-    if ( !Const.isEmpty( meta.getSheetRowNumberField() ) ) {
+    if ( !Utils.isEmpty( meta.getSheetRowNumberField() ) ) {
       r[rowIndex] = new Long( data.rownr );
       rowIndex++;
     }
 
     // Do we need to include the rownumber?
-    if ( !Const.isEmpty( meta.getRowNumberField() ) ) {
+    if ( !Utils.isEmpty( meta.getRowNumberField() ) ) {
       r[rowIndex] = new Long( getLinesWritten() + 1 );
       rowIndex++;
     }
     // Possibly add short filename...
-    if ( !Const.isEmpty( meta.getShortFileNameField() ) ) {
+    if ( !Utils.isEmpty( meta.getShortFileNameField() ) ) {
       r[rowIndex] = data.shortFilename;
       rowIndex++;
     }
     // Add Extension
-    if ( !Const.isEmpty( meta.getExtensionField() ) ) {
+    if ( !Utils.isEmpty( meta.getExtensionField() ) ) {
       r[rowIndex] = data.extension;
       rowIndex++;
     }
     // add path
-    if ( !Const.isEmpty( meta.getPathField() ) ) {
+    if ( !Utils.isEmpty( meta.getPathField() ) ) {
       r[rowIndex] = data.path;
       rowIndex++;
     }
     // Add Size
-    if ( !Const.isEmpty( meta.getSizeField() ) ) {
+    if ( !Utils.isEmpty( meta.getSizeField() ) ) {
       r[rowIndex] = new Long( data.size );
       rowIndex++;
     }
     // add Hidden
-    if ( !Const.isEmpty( meta.isHiddenField() ) ) {
+    if ( !Utils.isEmpty( meta.isHiddenField() ) ) {
       r[rowIndex] = new Boolean( data.hidden );
       rowIndex++;
     }
     // Add modification date
-    if ( !Const.isEmpty( meta.getLastModificationDateField() ) ) {
+    if ( !Utils.isEmpty( meta.getLastModificationDateField() ) ) {
       r[rowIndex] = data.lastModificationDateTime;
       rowIndex++;
     }
     // Add Uri
-    if ( !Const.isEmpty( meta.getUriField() ) ) {
+    if ( !Utils.isEmpty( meta.getUriField() ) ) {
       r[rowIndex] = data.uriName;
       rowIndex++;
     }
     // Add RootUri
-    if ( !Const.isEmpty( meta.getRootUriField() ) ) {
+    if ( !Utils.isEmpty( meta.getRootUriField() ) ) {
       r[rowIndex] = data.rootUriName;
       rowIndex++;
     }
@@ -689,7 +679,7 @@ public class ExcelInput extends BaseStep implements StepInterface {
 
     boolean isEmpty = true;
     for ( int i = 0; i < line.length && isEmpty; i++ ) {
-      if ( line[i] != null && !Const.isEmpty( line[i].getContents() ) ) {
+      if ( line[i] != null && !Utils.isEmpty( line[i].getContents() ) ) {
         isEmpty = false;
       }
     }

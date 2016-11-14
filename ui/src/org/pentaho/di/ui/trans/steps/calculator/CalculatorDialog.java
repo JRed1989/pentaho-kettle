@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -47,9 +47,10 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
+import org.pentaho.di.core.row.value.ValueMetaFactory;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.BaseStepMeta;
@@ -88,6 +89,7 @@ public class CalculatorDialog extends BaseStepDialog implements StepDialogInterf
     inputFields = new HashMap<String, Integer>();
   }
 
+  @Override
   public String open() {
     Shell parent = getParent();
     Display display = parent.getDisplay();
@@ -97,6 +99,7 @@ public class CalculatorDialog extends BaseStepDialog implements StepDialogInterf
     setShellImage( shell, currentMeta );
 
     ModifyListener lsMod = new ModifyListener() {
+      @Override
       public void modifyText( ModifyEvent e ) {
         currentMeta.setChanged();
       }
@@ -161,7 +164,7 @@ public class CalculatorDialog extends BaseStepDialog implements StepDialogInterf
           ColumnInfo.COLUMN_TYPE_CCOMBO, new String[] { "" }, false ),
         new ColumnInfo(
           BaseMessages.getString( PKG, "CalculatorDialog.ValueTypeColumn.Column" ),
-          ColumnInfo.COLUMN_TYPE_CCOMBO, ValueMeta.getTypes() ),
+          ColumnInfo.COLUMN_TYPE_CCOMBO, ValueMetaFactory.getValueMetaNames() ),
         new ColumnInfo(
           BaseMessages.getString( PKG, "CalculatorDialog.LengthColumn.Column" ),
           ColumnInfo.COLUMN_TYPE_TEXT, false ),
@@ -187,6 +190,7 @@ public class CalculatorDialog extends BaseStepDialog implements StepDialogInterf
           ColumnInfo.COLUMN_TYPE_TEXT, false ), };
 
     colinf[1].setSelectionAdapter( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         EnterSelectionDialog esd =
           new EnterSelectionDialog( shell, CalculatorMetaFunction.calcLongDesc,
@@ -216,6 +220,7 @@ public class CalculatorDialog extends BaseStepDialog implements StepDialogInterf
     // Search the fields in the background
     //
     final Runnable runnable = new Runnable() {
+      @Override
       public void run() {
         StepMeta stepMeta = transMeta.findStep( stepname );
         if ( stepMeta != null ) {
@@ -237,9 +242,11 @@ public class CalculatorDialog extends BaseStepDialog implements StepDialogInterf
     new Thread( runnable ).start();
 
     wFields.addModifyListener( new ModifyListener() {
+      @Override
       public void modifyText( ModifyEvent arg0 ) {
         // Now set the combo's
         shell.getDisplay().asyncExec( new Runnable() {
+          @Override
           public void run() {
             setComboBoxes();
           }
@@ -259,11 +266,13 @@ public class CalculatorDialog extends BaseStepDialog implements StepDialogInterf
 
     // Add listeners
     lsCancel = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         cancel();
       }
     };
     lsOK = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         ok();
       }
@@ -273,6 +282,7 @@ public class CalculatorDialog extends BaseStepDialog implements StepDialogInterf
     wOK.addListener( SWT.Selection, lsOK );
 
     lsDef = new SelectionAdapter() {
+      @Override
       public void widgetDefaultSelected( SelectionEvent e ) {
         ok();
       }
@@ -282,6 +292,7 @@ public class CalculatorDialog extends BaseStepDialog implements StepDialogInterf
 
     // Detect X or ALT-F4 or something that kills this window...
     shell.addShellListener( new ShellAdapter() {
+      @Override
       public void shellClosed( ShellEvent e ) {
         cancel();
       }
@@ -311,6 +322,7 @@ public class CalculatorDialog extends BaseStepDialog implements StepDialogInterf
     fields.putAll( inputFields );
 
     shell.getDisplay().syncExec( new Runnable() {
+      @Override
       public void run() {
         // Add the newly create fields.
         //
@@ -347,7 +359,7 @@ public class CalculatorDialog extends BaseStepDialog implements StepDialogInterf
         item.setText( 3, Const.NVL( fn.getFieldA(), "" ) );
         item.setText( 4, Const.NVL( fn.getFieldB(), "" ) );
         item.setText( 5, Const.NVL( fn.getFieldC(), "" ) );
-        item.setText( 6, Const.NVL( ValueMeta.getTypeDesc( fn.getValueType() ), "" ) );
+        item.setText( 6, Const.NVL( ValueMetaFactory.getValueMetaName( fn.getValueType() ), "" ) );
         if ( fn.getValueLength() >= 0 ) {
           item.setText( 7, "" + fn.getValueLength() );
         }
@@ -379,7 +391,7 @@ public class CalculatorDialog extends BaseStepDialog implements StepDialogInterf
   }
 
   private void ok() {
-    if ( Const.isEmpty( wStepname.getText() ) ) {
+    if ( Utils.isEmpty( wStepname.getText() ) ) {
       return;
     }
 
@@ -396,7 +408,7 @@ public class CalculatorDialog extends BaseStepDialog implements StepDialogInterf
       String fieldA = item.getText( 3 );
       String fieldB = item.getText( 4 );
       String fieldC = item.getText( 5 );
-      int valueType = ValueMeta.getType( item.getText( 6 ) );
+      int valueType = ValueMetaFactory.getIdForValueMeta( item.getText( 6 ) );
       int valueLength = Const.toInt( item.getText( 7 ), -1 );
       int valuePrecision = Const.toInt( item.getText( 8 ), -1 );
       boolean removed = BaseMessages.getString( PKG, "System.Combo.Yes" ).equalsIgnoreCase( item.getText( 9 ) );

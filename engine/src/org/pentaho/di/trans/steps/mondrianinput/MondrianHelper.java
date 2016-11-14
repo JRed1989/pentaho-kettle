@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -40,6 +40,20 @@ import java.util.List;
 
 import javax.sql.DataSource;
 
+import org.pentaho.di.core.DBCache;
+import org.pentaho.di.core.DBCacheEntry;
+import org.pentaho.di.core.database.DatabaseMeta;
+import org.pentaho.di.core.database.util.DatabaseUtil;
+import org.pentaho.di.core.exception.KettleDatabaseException;
+import org.pentaho.di.core.row.RowMeta;
+import org.pentaho.di.core.row.RowMetaInterface;
+import org.pentaho.di.core.row.ValueMeta;
+import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaFactory;
+import org.pentaho.di.core.row.value.ValueMetaString;
+import org.pentaho.di.core.util.Utils;
+import org.pentaho.di.core.variables.VariableSpace;
+
 import mondrian.olap.Axis;
 import mondrian.olap.Cell;
 import mondrian.olap.Connection;
@@ -49,20 +63,6 @@ import mondrian.olap.Member;
 import mondrian.olap.Position;
 import mondrian.olap.Query;
 import mondrian.olap.Result;
-
-import org.pentaho.di.core.Const;
-import org.pentaho.di.core.DBCache;
-import org.pentaho.di.core.DBCacheEntry;
-import org.pentaho.di.core.database.DataSourceProviderFactory;
-import org.pentaho.di.core.database.DatabaseMeta;
-import org.pentaho.di.core.database.util.DatabaseUtil;
-import org.pentaho.di.core.exception.KettleDatabaseException;
-import org.pentaho.di.core.row.RowMeta;
-import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
-import org.pentaho.di.core.row.ValueMetaInterface;
-import org.pentaho.di.core.row.value.ValueMetaFactory;
-import org.pentaho.di.core.variables.VariableSpace;
 
 /**
  * <code>Mondrian Helper class</code> ...
@@ -105,7 +105,7 @@ public class MondrianHelper {
       propList.put( "Provider", "mondrian" );
       propList.put( "Catalog", space.environmentSubstitute( catalog ) );
 
-      if ( !Const.isEmpty( realRole ) ) {
+      if ( !Utils.isEmpty( realRole ) ) {
         propList.put( "Role", realRole );
       }
 
@@ -118,14 +118,16 @@ public class MondrianHelper {
           + space.environmentSubstitute( catalog ) + "';" + "JdbcDrivers="
           + space.environmentSubstitute( databaseMeta.getDriverClass() ) + ";";
 
-      if ( !Const.isEmpty( databaseMeta.getUsername() ) ) {
+      if ( !Utils.isEmpty( databaseMeta.getUsername() ) ) {
         connectString += "JdbcUser=" + space.environmentSubstitute( databaseMeta.getUsername() ) + ";";
       }
-      if ( !Const.isEmpty( databaseMeta.getPassword() ) ) {
-        connectString += "JdbcPassword=" + space.environmentSubstitute( databaseMeta.getPassword() ) + ";";
+      String password = databaseMeta.getPassword();
+      if ( !Utils.isEmpty( password ) ) {
+        String realPassword = Utils.resolvePassword( space, password );
+        connectString += "JdbcPassword=" + space.environmentSubstitute( realPassword ) + ";";
       }
 
-      if ( !Const.isEmpty( realRole ) ) {
+      if ( !Utils.isEmpty( realRole ) ) {
         connectString += "Role=" + realRole + ";";
       }
 
@@ -289,7 +291,7 @@ public class MondrianHelper {
         } else {
           // If the entire column is null, assume the missing data as String.
           // Irrelevant, anyway
-          ValueMetaInterface valueMeta = new ValueMeta( headings.get( c ), ValueMetaInterface.TYPE_STRING );
+          ValueMetaInterface valueMeta = new ValueMetaString( headings.get( c ) );
           valueMetaList.add( valueMeta );
         }
 

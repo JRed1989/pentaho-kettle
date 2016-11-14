@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,9 +22,8 @@
 
 package org.pentaho.di.job.entries.sql;
 
-import static org.pentaho.di.job.entry.validator.AndValidator.putValidators;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.andValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notBlankValidator;
+import org.pentaho.di.job.entry.validator.AndValidator;
+import org.pentaho.di.job.entry.validator.JobEntryValidatorUtils;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -36,6 +35,7 @@ import org.apache.commons.vfs2.FileObject;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.database.Database;
 import org.pentaho.di.core.database.DatabaseMeta;
@@ -90,7 +90,7 @@ public class JobEntrySQL extends JobEntryBase implements Cloneable, JobEntryInte
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 200 );
+    StringBuilder retval = new StringBuilder( 200 );
 
     retval.append( super.getXML() );
 
@@ -239,7 +239,7 @@ public class JobEntrySQL extends JobEntryBase implements Cloneable, JobEntryInte
       FileObject SQLfile = null;
       db.shareVariablesWith( this );
       try {
-        String mySQL = null;
+        String theSQL = null;
         db.connect( parentJob.getTransactionId(), null );
 
         if ( sqlfromfile ) {
@@ -262,18 +262,18 @@ public class JobEntrySQL extends JobEntryBase implements Cloneable, JobEntryInte
             InputStream IS = KettleVFS.getInputStream( SQLfile );
             try {
               InputStreamReader BIS = new InputStreamReader( new BufferedInputStream( IS, 500 ) );
-              StringBuffer lineStringBuffer = new StringBuffer( 256 );
-              lineStringBuffer.setLength( 0 );
+              StringBuilder lineSB = new StringBuilder( 256 );
+              lineSB.setLength( 0 );
 
               BufferedReader buff = new BufferedReader( BIS );
               String sLine = null;
-              mySQL = Const.CR;
+              theSQL = Const.CR;
 
               while ( ( sLine = buff.readLine() ) != null ) {
-                if ( Const.isEmpty( sLine ) ) {
-                  mySQL = mySQL + Const.CR;
+                if ( Utils.isEmpty( sLine ) ) {
+                  theSQL = theSQL + Const.CR;
                 } else {
-                  mySQL = mySQL + Const.CR + sLine;
+                  theSQL = theSQL + Const.CR + sLine;
                 }
               }
             } finally {
@@ -284,20 +284,20 @@ public class JobEntrySQL extends JobEntryBase implements Cloneable, JobEntryInte
           }
 
         } else {
-          mySQL = sql;
+          theSQL = sql;
         }
-        if ( !Const.isEmpty( mySQL ) ) {
+        if ( !Utils.isEmpty( theSQL ) ) {
           // let it run
           if ( useVariableSubstitution ) {
-            mySQL = environmentSubstitute( mySQL );
+            theSQL = environmentSubstitute( theSQL );
           }
           if ( isDetailed() ) {
-            logDetailed( BaseMessages.getString( PKG, "JobSQL.Log.SQlStatement", mySQL ) );
+            logDetailed( BaseMessages.getString( PKG, "JobSQL.Log.SQlStatement", theSQL ) );
           }
           if ( sendOneStatement ) {
-            db.execStatement( mySQL );
+            db.execStatement( theSQL );
           } else {
-            db.execStatements( mySQL );
+            db.execStatements( theSQL );
           }
         }
       } catch ( KettleDatabaseException je ) {
@@ -353,7 +353,8 @@ public class JobEntrySQL extends JobEntryBase implements Cloneable, JobEntryInte
   @Override
   public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
-    andValidator().validate( this, "SQL", remarks, putValidators( notBlankValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "SQL", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
   }
 
 }

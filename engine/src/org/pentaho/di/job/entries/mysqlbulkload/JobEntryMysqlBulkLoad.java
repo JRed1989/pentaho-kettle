@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,11 +22,9 @@
 
 package org.pentaho.di.job.entries.mysqlbulkload;
 
-import static org.pentaho.di.job.entry.validator.AbstractFileValidator.putVariableSpace;
-import static org.pentaho.di.job.entry.validator.AndValidator.putValidators;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.andValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.fileExistsValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notBlankValidator;
+import org.pentaho.di.job.entry.validator.AbstractFileValidator;
+import org.pentaho.di.job.entry.validator.AndValidator;
+import org.pentaho.di.job.entry.validator.JobEntryValidatorUtils;
 
 import java.io.File;
 import java.util.List;
@@ -36,6 +34,7 @@ import org.apache.commons.vfs2.provider.local.LocalFile;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.ResultFile;
 import org.pentaho.di.core.database.Database;
@@ -114,7 +113,7 @@ public class JobEntryMysqlBulkLoad extends JobEntryBase implements Cloneable, Jo
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 200 );
+    StringBuilder retval = new StringBuilder( 200 );
 
     retval.append( super.getXML() );
     retval.append( "      " ).append( XMLHandler.addTagValue( "schemaname", schemaname ) );
@@ -265,7 +264,7 @@ public class JobEntryMysqlBulkLoad extends JobEntryBase implements Cloneable, Jo
     String vfsFilename = environmentSubstitute( filename );
 
     // Let's check the filename ...
-    if ( !Const.isEmpty( vfsFilename ) ) {
+    if ( !Utils.isEmpty( vfsFilename ) ) {
       try {
         // User has specified a file, We can continue ...
         //
@@ -619,11 +618,12 @@ public class JobEntryMysqlBulkLoad extends JobEntryBase implements Cloneable, Jo
   public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
     ValidatorContext ctx = new ValidatorContext();
-    putVariableSpace( ctx, getVariables() );
-    putValidators( ctx, notBlankValidator(), fileExistsValidator() );
-    andValidator().validate( this, "filename", remarks, ctx );
+    AbstractFileValidator.putVariableSpace( ctx, getVariables() );
+    AndValidator.putValidators( ctx, JobEntryValidatorUtils.notBlankValidator(), JobEntryValidatorUtils.fileExistsValidator() );
+    JobEntryValidatorUtils.andValidator().validate( this, "filename", remarks, ctx );
 
-    andValidator().validate( this, "tablename", remarks, putValidators( notBlankValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "tablename", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
   }
 
 }

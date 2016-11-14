@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -23,7 +23,7 @@
 package org.pentaho.di.trans.steps.ssh;
 
 import org.pentaho.di.core.Const;
-import org.pentaho.di.core.encryption.Encr;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowMeta;
 import org.pentaho.di.core.row.RowMetaInterface;
@@ -56,6 +56,7 @@ public class SSH extends BaseStep implements StepInterface {
     super( stepMeta, stepDataInterface, copyNr, transMeta, trans );
   }
 
+  @Override
   public boolean processRow( StepMetaInterface smi, StepDataInterface sdi ) throws KettleException {
     meta = (SSHMeta) smi;
     data = (SSHData) sdi;
@@ -76,7 +77,7 @@ public class SSH extends BaseStep implements StepInterface {
 
         // Check if commands field is provided
         if ( meta.isDynamicCommand() ) {
-          if ( Const.isEmpty( meta.getcommandfieldname() ) ) {
+          if ( Utils.isEmpty( meta.getcommandfieldname() ) ) {
             throw new KettleException( BaseMessages.getString( PKG, "SSH.Error.CommandFieldMissing" ) );
           }
           // cache the position of the source filename field
@@ -124,7 +125,7 @@ public class SSH extends BaseStep implements StepInterface {
       if ( meta.isDynamicCommand() ) {
         // get commands
         data.commands = data.outputRowMeta.getString( row, data.indexOfCommand );
-        if ( Const.isEmpty( data.commands ) ) {
+        if ( Utils.isEmpty( data.commands ) ) {
           throw new KettleException( BaseMessages.getString( PKG, "SSH.Error.MessageEmpty" ) );
         }
       }
@@ -151,7 +152,7 @@ public class SSH extends BaseStep implements StepInterface {
       // Add stdout to output
       rowData[index++] = sessionresult.getStd();
 
-      if ( !Const.isEmpty( data.stdTypeField ) ) {
+      if ( !Utils.isEmpty( data.stdTypeField ) ) {
         // Add stdtype to output
         rowData[index++] = sessionresult.isStdTypeErr();
       }
@@ -198,6 +199,7 @@ public class SSH extends BaseStep implements StepInterface {
     return true;
   }
 
+  @Override
   public boolean init( StepMetaInterface smi, StepDataInterface sdi ) {
     meta = (SSHMeta) smi;
     data = (SSHData) sdi;
@@ -206,7 +208,7 @@ public class SSH extends BaseStep implements StepInterface {
       String servername = environmentSubstitute( meta.getServerName() );
       int nrPort = Const.toInt( environmentSubstitute( meta.getPort() ), 22 );
       String username = environmentSubstitute( meta.getuserName() );
-      String password = Encr.decryptPasswordOptionallyEncrypted( environmentSubstitute( meta.getpassword() ) );
+      String password = Utils.resolvePassword( variables, meta.getpassword() );
       String keyFilename = environmentSubstitute( meta.getKeyFileName() );
       String passphrase = environmentSubstitute( meta.getPassphrase() );
       int timeOut = Const.toInt( environmentSubstitute( meta.getTimeOut() ), 0 );
@@ -216,19 +218,19 @@ public class SSH extends BaseStep implements StepInterface {
       String proxypassword = environmentSubstitute( meta.getProxyPassword() );
 
       // Check target server
-      if ( Const.isEmpty( servername ) ) {
+      if ( Utils.isEmpty( servername ) ) {
         logError( BaseMessages.getString( PKG, "SSH.MissingServerName" ) );
       }
 
       // Check if username field is provided
-      if ( Const.isEmpty( meta.getuserName() ) ) {
+      if ( Utils.isEmpty( meta.getuserName() ) ) {
         logError( BaseMessages.getString( PKG, "SSH.Error.UserNamedMissing" ) );
         return false;
       }
 
       // Get output fields
       data.stdOutField = environmentSubstitute( meta.getStdOutFieldName() );
-      if ( Const.isEmpty( data.stdOutField ) ) {
+      if ( Utils.isEmpty( data.stdOutField ) ) {
         logError( BaseMessages.getString( PKG, "SSH.Error.StdOutFieldNameMissing" ) );
         return false;
       }
@@ -237,7 +239,7 @@ public class SSH extends BaseStep implements StepInterface {
       try {
         // Open connection
         data.conn =
-          SSHMeta.OpenConnection(
+          SSHData.OpenConnection(
             servername, nrPort, username, password, meta.isusePrivateKey(), keyFilename, passphrase, timeOut,
             this, proxyhost, proxyport, proxyusername, proxypassword );
 
@@ -255,6 +257,7 @@ public class SSH extends BaseStep implements StepInterface {
     return false;
   }
 
+  @Override
   public void dispose( StepMetaInterface smi, StepDataInterface sdi ) {
     meta = (SSHMeta) smi;
     data = (SSHData) sdi;

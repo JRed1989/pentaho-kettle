@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -23,10 +23,11 @@
 package org.pentaho.di.trans.steps.stringcut;
 
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
+import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.Trans;
 import org.pentaho.di.trans.TransMeta;
@@ -57,7 +58,7 @@ public class StringCut extends BaseStep implements StepInterface {
   private String CutString( String string, int cutFrom, int cutTo ) {
     String rcode = string;
 
-    if ( !Const.isEmpty( rcode ) ) {
+    if ( !Utils.isEmpty( rcode ) ) {
       int lenCode = rcode.length();
 
       if ( ( cutFrom >= 0 && cutTo >= 0 ) && cutFrom > lenCode ) {
@@ -104,7 +105,7 @@ public class StringCut extends BaseStep implements StepInterface {
     for ( int i = 0; i < length; i++ ) {
       String valueIn = getInputRowMeta().getString( row, data.inStreamNrs[i] );
       String value = CutString( valueIn, data.cutFrom[i], data.cutTo[i] );
-      if ( Const.isEmpty( data.outStreamNrs[i] ) ) {
+      if ( Utils.isEmpty( data.outStreamNrs[i] ) ) {
         RowData[data.inStreamNrs[i]] = value;
       } else {
         RowData[data.inputFieldsNr + j] = value;
@@ -141,7 +142,7 @@ public class StringCut extends BaseStep implements StepInterface {
         }
 
         // check field type
-        if ( getInputRowMeta().getValueMeta( data.inStreamNrs[i] ).getType() != ValueMeta.TYPE_STRING ) {
+        if ( getInputRowMeta().getValueMeta( data.inStreamNrs[i] ).getType() != ValueMetaInterface.TYPE_STRING ) {
           throw new KettleStepException( BaseMessages.getString(
             PKG, "StringCut.Exception.FieldTypeNotString", meta.getFieldInStream()[i] ) );
         }
@@ -155,13 +156,13 @@ public class StringCut extends BaseStep implements StepInterface {
       data.cutFrom = new int[meta.getFieldInStream().length];
       data.cutTo = new int[meta.getFieldInStream().length];
       for ( int i = 0; i < meta.getFieldInStream().length; i++ ) {
-        if ( Const.isEmpty( environmentSubstitute( meta.getCutFrom()[i] ) ) ) {
+        if ( Utils.isEmpty( environmentSubstitute( meta.getCutFrom()[i] ) ) ) {
           data.cutFrom[i] = 0;
         } else {
           data.cutFrom[i] = Const.toInt( environmentSubstitute( meta.getCutFrom()[i] ), 0 );
         }
 
-        if ( Const.isEmpty( environmentSubstitute( meta.getCutTo()[i] ) ) ) {
+        if ( Utils.isEmpty( environmentSubstitute( meta.getCutTo()[i] ) ) ) {
           data.cutTo[i] = 0;
         } else {
           data.cutTo[i] = Const.toInt( environmentSubstitute( meta.getCutTo()[i] ), 0 );

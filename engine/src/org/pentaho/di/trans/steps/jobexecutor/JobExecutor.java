@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -24,7 +24,10 @@ package org.pentaho.di.trans.steps.jobexecutor;
 
 import java.util.ArrayList;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.ResultFile;
 import org.pentaho.di.core.RowMetaAndData;
@@ -32,14 +35,17 @@ import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.extension.ExtensionPointHandler;
 import org.pentaho.di.core.extension.KettleExtensionPoint;
 import org.pentaho.di.core.logging.KettleLogStore;
+import org.pentaho.di.core.logging.LoggingObjectInterface;
 import org.pentaho.di.core.logging.LoggingRegistry;
 import org.pentaho.di.core.row.RowDataUtil;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaFactory;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.job.DelegationListener;
 import org.pentaho.di.job.Job;
 import org.pentaho.di.job.JobExecutionConfiguration;
+import org.pentaho.di.job.JobMeta;
+import org.pentaho.di.repository.Repository;
 import org.pentaho.di.trans.Trans;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.BaseStep;
@@ -49,7 +55,13 @@ import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaInterface;
 
 /**
- * Execute a job for every input row
+ * Execute a job for every input row.
+ * <p>
+ *     <b>Note:</b><br/>
+ *     Be aware, logic of the classes methods is very similar to corresponding methods of
+ *     {@link org.pentaho.di.trans.steps.transexecutor.TransExecutor TransExecutor}.
+ *     If you change something in this class, consider copying your changes to TransExecutor as well.
+ * </p>
  *
  * @author Matt
  * @since 22-nov-2005
@@ -118,7 +130,7 @@ public class JobExecutor extends BaseStep implements StepInterface {
         // Remember which column to group on, if any...
         //
         data.groupFieldIndex = -1;
-        if ( !Const.isEmpty( data.groupField ) ) {
+        if ( !Utils.isEmpty( data.groupField ) ) {
           data.groupFieldIndex = getInputRowMeta().indexOfValue( data.groupField );
           if ( data.groupFieldIndex < 0 ) {
             throw new KettleException( BaseMessages.getString(
@@ -128,37 +140,36 @@ public class JobExecutor extends BaseStep implements StepInterface {
         }
       }
 
-      boolean newGroup = false;
-      if ( data.groupSize >= 0 ) {
-        // Pass the input rows in blocks to the job result rows...
-        //
-        if ( data.groupSize != 0 ) {
-          // Pass all input rows...
-          if ( data.groupBuffer.size() >= data.groupSize ) {
-            newGroup = true;
+      // Grouping by field and execution time works ONLY if grouping by size is disabled.
+      if ( data.groupSize < 0 ) {
+        if ( data.groupFieldIndex >= 0 ) { // grouping by field
+          Object groupFieldData = row[data.groupFieldIndex];
+          if ( data.prevGroupFieldData != null ) {
+            if ( data.groupFieldMeta.compare( data.prevGroupFieldData, groupFieldData ) != 0 ) {
+              executeJob();
+            }
           }
-        }
-      } else if ( data.groupFieldIndex >= 0 ) {
-        Object groupFieldData = row[data.groupFieldIndex];
-        if ( data.prevGroupFieldData != null ) {
-          if ( data.groupFieldMeta.compare( data.prevGroupFieldData, groupFieldData ) != 0 ) {
-            newGroup = true;
+          data.prevGroupFieldData = groupFieldData;
+        } else if ( data.groupTime > 0 ) { // grouping by execution time
+          long now = System.currentTimeMillis();
+          if ( now - data.groupTimeStart >= data.groupTime ) {
+            executeJob();
           }
-        }
-
-        data.prevGroupFieldData = groupFieldData;
-      } else if ( data.groupTime > 0 ) {
-        long now = System.currentTimeMillis();
-        if ( now - data.groupTimeStart >= data.groupTime ) {
-          newGroup = true;
         }
       }
 
-      if ( newGroup ) {
-        executeJob();
-      }
-
+      // Add next value AFTER job execution, in case we are grouping by field (see PDI-14958),
+      // and BEFORE checking size of a group, in case we are grouping by size (see PDI-14121).
       data.groupBuffer.add( new RowMetaAndData( getInputRowMeta(), row ) ); // should we clone for safety?
+
+      // Grouping by size.
+      // If group buffer size exceeds specified limit, then execute job and flush group buffer.
+      if ( data.groupSize > 0 ) {
+        // Pass all input rows...
+        if ( data.groupBuffer.size() >= data.groupSize ) {
+          executeJob();
+        }
+      }
 
       return true;
     } catch ( Exception e ) {
@@ -176,15 +187,9 @@ public class JobExecutor extends BaseStep implements StepInterface {
 
     data.groupTimeStart = System.currentTimeMillis();
 
-    // Keep the strain on the logging back-end conservative.
-    // TODO: make this optional/user-defined later
-    //
-    if ( data.executorJob != null ) {
-      KettleLogStore.discardLines( data.executorJob.getLogChannelId(), false );
-      LoggingRegistry.getInstance().removeIncludingChildren( data.executorJob.getLogChannelId() );
-    }
+    discardLogLines( data );
 
-    data.executorJob = new Job( meta.getRepository(), data.executorJobMeta, this );
+    data.executorJob = createJob( meta.getRepository(), data.executorJobMeta, this );
 
     data.executorJob.setParentTrans( getTrans() );
     data.executorJob.setLogLevel( getLogLevel() );
@@ -256,48 +261,48 @@ public class JobExecutor extends BaseStep implements StepInterface {
       Object[] outputRow = RowDataUtil.allocateRowData( data.executionResultsOutputRowMeta.size() );
       int idx = 0;
 
-      if ( !Const.isEmpty( meta.getExecutionTimeField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionTimeField() ) ) {
         outputRow[idx++] = Long.valueOf( System.currentTimeMillis() - data.groupTimeStart );
       }
-      if ( !Const.isEmpty( meta.getExecutionResultField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionResultField() ) ) {
         outputRow[idx++] = Boolean.valueOf( result.getResult() );
       }
-      if ( !Const.isEmpty( meta.getExecutionNrErrorsField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionNrErrorsField() ) ) {
         outputRow[idx++] = Long.valueOf( result.getNrErrors() );
       }
-      if ( !Const.isEmpty( meta.getExecutionLinesReadField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionLinesReadField() ) ) {
         outputRow[idx++] = Long.valueOf( result.getNrLinesRead() );
       }
-      if ( !Const.isEmpty( meta.getExecutionLinesWrittenField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionLinesWrittenField() ) ) {
         outputRow[idx++] = Long.valueOf( result.getNrLinesWritten() );
       }
-      if ( !Const.isEmpty( meta.getExecutionLinesInputField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionLinesInputField() ) ) {
         outputRow[idx++] = Long.valueOf( result.getNrLinesInput() );
       }
-      if ( !Const.isEmpty( meta.getExecutionLinesOutputField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionLinesOutputField() ) ) {
         outputRow[idx++] = Long.valueOf( result.getNrLinesOutput() );
       }
-      if ( !Const.isEmpty( meta.getExecutionLinesRejectedField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionLinesRejectedField() ) ) {
         outputRow[idx++] = Long.valueOf( result.getNrLinesRejected() );
       }
-      if ( !Const.isEmpty( meta.getExecutionLinesUpdatedField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionLinesUpdatedField() ) ) {
         outputRow[idx++] = Long.valueOf( result.getNrLinesUpdated() );
       }
-      if ( !Const.isEmpty( meta.getExecutionLinesDeletedField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionLinesDeletedField() ) ) {
         outputRow[idx++] = Long.valueOf( result.getNrLinesDeleted() );
       }
-      if ( !Const.isEmpty( meta.getExecutionFilesRetrievedField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionFilesRetrievedField() ) ) {
         outputRow[idx++] = Long.valueOf( result.getNrFilesRetrieved() );
       }
-      if ( !Const.isEmpty( meta.getExecutionExitStatusField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionExitStatusField() ) ) {
         outputRow[idx++] = Long.valueOf( result.getExitStatus() );
       }
-      if ( !Const.isEmpty( meta.getExecutionLogTextField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionLogTextField() ) ) {
         String channelId = data.executorJob.getLogChannelId();
         String logText = KettleLogStore.getAppender().getBuffer( channelId, false ).toString();
         outputRow[idx++] = logText;
       }
-      if ( !Const.isEmpty( meta.getExecutionLogChannelIdField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionLogChannelIdField() ) ) {
         outputRow[idx++] = data.executorJob.getLogChannelId();
       }
 
@@ -315,8 +320,8 @@ public class JobExecutor extends BaseStep implements StepInterface {
           ValueMetaInterface valueMeta = row.getRowMeta().getValueMeta( i );
           if ( valueMeta.getType() != meta.getResultRowsType()[i] ) {
             throw new KettleException( BaseMessages.getString(
-              PKG, "JobExecutor.IncorrectDataTypePassed", valueMeta.getTypeDesc(), ValueMeta.getTypeDesc( meta
-                .getResultRowsType()[i] ) ) );
+              PKG, "JobExecutor.IncorrectDataTypePassed", valueMeta.getTypeDesc(),
+              ValueMetaFactory.getValueMetaName( meta.getResultRowsType()[i] ) ) );
           }
 
           targetRow[i] = row.getData()[i];
@@ -340,6 +345,21 @@ public class JobExecutor extends BaseStep implements StepInterface {
     data.groupBuffer.clear();
   }
 
+  @VisibleForTesting
+  Job createJob( Repository repository, JobMeta jobMeta, LoggingObjectInterface parentLogging ) {
+    return new Job( repository, jobMeta, parentLogging );
+  }
+
+  @VisibleForTesting
+  void discardLogLines( JobExecutorData data ) {
+    // Keep the strain on the logging back-end conservative.
+    // TODO: make this optional/user-defined later
+    if ( data.executorJob != null ) {
+      KettleLogStore.discardLines( data.executorJob.getLogChannelId(), false );
+      LoggingRegistry.getInstance().removeIncludingChildren( data.executorJob.getLogChannelId() );
+    }
+  }
+
   private void passParametersToJob() throws KettleException {
     // Set parameters, when fields are used take the first row in the set.
     //
@@ -354,7 +374,7 @@ public class JobExecutor extends BaseStep implements StepInterface {
       String value;
       // Take the value from an input row or from a static value?
       //
-      if ( !Const.isEmpty( fieldName ) ) {
+      if ( !Utils.isEmpty( fieldName ) ) {
         int idx = getInputRowMeta().indexOfValue( fieldName );
         if ( idx < 0 ) {
           throw new KettleException( BaseMessages.getString(
@@ -398,14 +418,14 @@ public class JobExecutor extends BaseStep implements StepInterface {
           // How many rows do we group together for the job?
           //
           data.groupSize = -1;
-          if ( !Const.isEmpty( meta.getGroupSize() ) ) {
+          if ( !Utils.isEmpty( meta.getGroupSize() ) ) {
             data.groupSize = Const.toInt( environmentSubstitute( meta.getGroupSize() ), -1 );
           }
 
           // Is there a grouping time set?
           //
           data.groupTime = -1;
-          if ( !Const.isEmpty( meta.getGroupTime() ) ) {
+          if ( !Utils.isEmpty( meta.getGroupTime() ) ) {
             data.groupTime = Const.toInt( environmentSubstitute( meta.getGroupTime() ), -1 );
           }
           data.groupTimeStart = System.currentTimeMillis();
@@ -413,7 +433,7 @@ public class JobExecutor extends BaseStep implements StepInterface {
           // Is there a grouping field set?
           //
           data.groupField = null;
-          if ( !Const.isEmpty( meta.getGroupField() ) ) {
+          if ( !Utils.isEmpty( meta.getGroupField() ) ) {
             data.groupField = environmentSubstitute( meta.getGroupField() );
           }
 

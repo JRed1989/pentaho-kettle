@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -35,6 +35,8 @@ import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.repository.ObjectId;
 import org.pentaho.di.repository.Repository;
+import org.pentaho.di.repository.RepositoryElementMetaInterface;
+import org.pentaho.di.repository.RepositoryObjectType;
 import org.pentaho.di.ui.core.database.dialog.DatabaseDialog;
 import org.pentaho.di.ui.core.dialog.ErrorDialog;
 import org.pentaho.di.ui.repository.repositoryexplorer.ContextChangeVetoer;
@@ -92,11 +94,13 @@ public class ConnectionsController extends LazilyInitializedController implement
     return "connectionsController";
   }
 
+  @Override
   public void init( Repository repository ) throws ControllerInitializationException {
     this.repository = repository;
   }
 
-  private DatabaseDialog getDatabaseDialog() {
+  // package-local visibility for testing purposes
+  DatabaseDialog getDatabaseDialog() {
     if ( databaseDialog != null ) {
       return databaseDialog;
     }
@@ -187,18 +191,27 @@ public class ConnectionsController extends LazilyInitializedController implement
     return isRepReadOnly;
   }
 
-  private void refreshConnectionList() {
+  // package-local visibility for testing purposes
+  void refreshConnectionList() {
     final List<UIDatabaseConnection> tmpList = new ArrayList<UIDatabaseConnection>();
     Runnable r = new Runnable() {
+      @Override
       public void run() {
         try {
           ObjectId[] dbIdList = repository.getDatabaseIDs( false );
           for ( ObjectId dbId : dbIdList ) {
             DatabaseMeta dbMeta = repository.loadDatabaseMeta( dbId, null );
+            RepositoryElementMetaInterface repoMeta =
+              repository.getObjectInformation( dbId, RepositoryObjectType.DATABASE );
+            UIDatabaseConnection conn = null;
             try {
-              tmpList.add( UIObjectRegistry.getInstance().constructUIDatabaseConnection( dbMeta, repository ) );
+              conn = UIObjectRegistry.getInstance().constructUIDatabaseConnection( dbMeta, repository );
             } catch ( UIObjectCreationException uoe ) {
-              tmpList.add( new UIDatabaseConnection( dbMeta, repository ) );
+              conn = new UIDatabaseConnection( dbMeta, repository );
+            }
+            if ( conn != null ) {
+              conn.setRepositoryElementMetaInterface( repoMeta );
+              tmpList.add( conn );
             }
           }
         } catch ( KettleException e ) {
@@ -220,21 +233,19 @@ public class ConnectionsController extends LazilyInitializedController implement
       getDatabaseDialog().setDatabaseMeta( databaseMeta );
 
       String dbName = getDatabaseDialog().open();
-      if ( dbName != null && !dbName.equals( "" ) ) {
-        // See if this user connection exists...
-        ObjectId idDatabase = repository.getDatabaseID( dbName );
-        if ( idDatabase == null ) {
-          repository.insertLogEntry( BaseMessages.getString(
-            PKG, "ConnectionsController.Message.CreatingDatabase", getDatabaseDialog()
-              .getDatabaseMeta().getName() ) );
-          repository.save( getDatabaseDialog().getDatabaseMeta(), Const.VERSION_COMMENT_INITIAL_VERSION, null );
-        } else {
-          MessageBox mb = new MessageBox( shell, SWT.ICON_ERROR | SWT.OK );
-          mb.setMessage( BaseMessages.getString(
-            PKG, "RepositoryExplorerDialog.Connection.Create.AlreadyExists.Message" ) );
-          mb.setText( BaseMessages.getString(
-            PKG, "RepositoryExplorerDialog.Connection.Create.AlreadyExists.Title" ) );
-          mb.open();
+      if ( dbName != null ) {
+        dbName = dbName.trim();
+        if ( !dbName.isEmpty() ) {
+          // See if this user connection exists...
+          ObjectId idDatabase = repository.getDatabaseID( dbName );
+          if ( idDatabase == null ) {
+            repository.insertLogEntry( BaseMessages.getString(
+              PKG, "ConnectionsController.Message.CreatingDatabase", getDatabaseDialog()
+                .getDatabaseMeta().getName() ) );
+            repository.save( getDatabaseDialog().getDatabaseMeta(), Const.VERSION_COMMENT_INITIAL_VERSION, null );
+          } else {
+            showAlreadyExistsMessage();
+          }
         }
       }
       // We should be able to tell the difference between a cancel and an empty database name
@@ -254,6 +265,16 @@ public class ConnectionsController extends LazilyInitializedController implement
     } finally {
       refreshConnectionList();
     }
+  }
+
+  // package-local visibility for testing purposes
+  void showAlreadyExistsMessage() {
+    MessageBox mb = new MessageBox( shell, SWT.ICON_ERROR | SWT.OK );
+    mb.setMessage( BaseMessages.getString(
+      PKG, "RepositoryExplorerDialog.Connection.Create.AlreadyExists.Message" ) );
+    mb.setText( BaseMessages.getString(
+      PKG, "RepositoryExplorerDialog.Connection.Create.AlreadyExists.Title" ) );
+    mb.open();
   }
 
   /**
@@ -324,17 +345,26 @@ public class ConnectionsController extends LazilyInitializedController implement
           MessageBox mb = new MessageBox( shell, SWT.ICON_ERROR | SWT.OK );
           mb.setMessage( BaseMessages.getString(
             PKG, "RepositoryExplorerDialog.Connection.Edit.DoesNotExists.Message" ) );
-          mb
-            .setText( BaseMessages.getString(
-              PKG, "RepositoryExplorerDialog.Connection.Edit.DoesNotExists.Title" ) );
+          mb.setText( BaseMessages.getString(
+            PKG, "RepositoryExplorerDialog.Connection.Edit.DoesNotExists.Title" ) );
           mb.open();
         } else {
           getDatabaseDialog().setDatabaseMeta( databaseMeta );
           String dbName = getDatabaseDialog().open();
-          if ( dbName != null && !dbName.equals( "" ) ) {
-            repository.insertLogEntry( BaseMessages.getString(
-              PKG, "ConnectionsController.Message.UpdatingDatabase", databaseMeta.getName() ) );
-            repository.save( databaseMeta, Const.VERSION_COMMENT_EDIT_VERSION, null );
+          if ( dbName != null ) {
+            dbName = dbName.trim();
+            if ( !dbName.isEmpty() ) {
+              ObjectId idRenamed = repository.getDatabaseID( dbName );
+              if ( idRenamed == null || idRenamed.equals( idDatabase ) ) {
+                // renaming to non-existing name or updating the current
+                repository.insertLogEntry( BaseMessages.getString(
+                  PKG, "ConnectionsController.Message.UpdatingDatabase", databaseMeta.getName() ) );
+                repository.save( databaseMeta, Const.VERSION_COMMENT_EDIT_VERSION, null );
+              } else {
+                // trying to rename to an existing name - show error dialog
+                showAlreadyExistsMessage();
+              }
+            }
           }
           // We should be able to tell the difference between a cancel and an empty database name
           //

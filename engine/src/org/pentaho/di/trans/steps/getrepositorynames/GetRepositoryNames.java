@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -25,10 +25,10 @@ package org.pentaho.di.trans.steps.getrepositorynames;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.pentaho.di.core.Const;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowDataUtil;
 import org.pentaho.di.core.row.RowMeta;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.repository.Repository;
 import org.pentaho.di.repository.RepositoryDirectoryInterface;
@@ -71,6 +71,7 @@ public class GetRepositoryNames extends BaseStep implements StepInterface {
     return rowData;
   }
 
+  @Override
   public boolean processRow( StepMetaInterface smi, StepDataInterface sdi ) throws KettleException {
     if ( first ) {
       first = false;
@@ -120,6 +121,7 @@ public class GetRepositoryNames extends BaseStep implements StepInterface {
     return true;
   }
 
+  @Override
   public boolean init( StepMetaInterface smi, StepDataInterface sdi ) {
     meta = (GetRepositoryNamesMeta) smi;
     data = (GetRepositoryNamesData) sdi;
@@ -164,11 +166,11 @@ public class GetRepositoryNames extends BaseStep implements StepInterface {
       //
       for ( int i = 0; i < meta.getDirectory().length; i++ ) {
 
-        RepositoryDirectoryInterface dir = tree.findDirectory( meta.getDirectory()[i] );
+        RepositoryDirectoryInterface dir = tree.findDirectory( environmentSubstitute( meta.getDirectory()[i] ) );
         if ( dir != null ) {
           List<RepositoryElementMetaInterface> objects =
-            getRepositoryObjects( repository, dir, meta.getIncludeSubFolders()[i], meta.getNameMask()[i], meta
-              .getExcludeNameMask()[i] );
+            getRepositoryObjects( repository, dir, meta.getIncludeSubFolders()[i],
+              environmentSubstitute( meta.getNameMask()[i] ), environmentSubstitute( meta.getExcludeNameMask()[i] ) );
           list.addAll( objects );
         }
       }
@@ -192,10 +194,10 @@ public class GetRepositoryNames extends BaseStep implements StepInterface {
 
     for ( RepositoryElementMetaInterface object : objects ) {
       boolean add = false;
-      if ( Const.isEmpty( nameMask ) || object.getName().matches( nameMask ) ) {
+      if ( Utils.isEmpty( nameMask ) || object.getName().matches( nameMask ) ) {
         add = true;
       }
-      if ( !Const.isEmpty( excludeNameMask ) && object.getName().matches( excludeNameMask ) ) {
+      if ( !Utils.isEmpty( excludeNameMask ) && object.getName().matches( excludeNameMask ) ) {
         add = false;
       }
       if ( add ) {

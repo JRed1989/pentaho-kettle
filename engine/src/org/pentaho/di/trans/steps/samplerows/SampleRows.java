@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2015 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,11 +22,9 @@
 
 package org.pentaho.di.trans.steps.samplerows;
 
-import com.google.common.collect.ImmutableRangeSet;
-import com.google.common.collect.Range;
-import org.pentaho.di.core.Const;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowDataUtil;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.Trans;
 import org.pentaho.di.trans.TransMeta;
@@ -35,6 +33,9 @@ import org.pentaho.di.trans.step.StepDataInterface;
 import org.pentaho.di.trans.step.StepInterface;
 import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaInterface;
+
+import com.google.common.collect.ImmutableRangeSet;
+import com.google.common.collect.Range;
 
 /**
  * Sample rows. Filter rows based on line number
@@ -68,7 +69,7 @@ public class SampleRows extends BaseStep implements StepInterface {
       first = false;
 
       String realRange = environmentSubstitute( meta.getLinesRange() );
-      data.addlineField = ( !Const.isEmpty( environmentSubstitute( meta.getLineNumberField() ) ) );
+      data.addlineField = ( !Utils.isEmpty( environmentSubstitute( meta.getLineNumberField() ) ) );
 
       // get the RowMeta
       data.previousRowMeta = getInputRowMeta().clone();
@@ -101,11 +102,6 @@ public class SampleRows extends BaseStep implements StepInterface {
         }
       }
       data.rangeSet = setBuilder.build();
-      // Return now if no rows are to be sampled
-      if ( data.rangeSet.isEmpty() ) {
-        setOutputDone();
-        return false;
-      }
     } // end if first
 
     if ( data.addlineField ) {
@@ -134,11 +130,12 @@ public class SampleRows extends BaseStep implements StepInterface {
     }
 
     // Check if maximum value has been exceeded
-    boolean done = linesRead >= data.rangeSet.span().upperEndpoint();
-    if ( done ) {
+    if ( data.rangeSet.isEmpty() || linesRead >= data.rangeSet.span().upperEndpoint() ) {
       setOutputDone();
     }
-    return !done;
+
+    // Allowed to continue to read in data
+    return true;
   }
 
   public boolean init( StepMetaInterface smi, StepDataInterface sdi ) {

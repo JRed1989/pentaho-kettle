@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -32,8 +32,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import org.apache.commons.lang.StringUtils;
+import org.pentaho.di.ExecutionConfiguration;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.encryption.Encr;
 import org.pentaho.di.core.exception.KettleException;
@@ -45,12 +48,16 @@ import org.pentaho.di.core.plugins.RepositoryPluginType;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.variables.Variables;
 import org.pentaho.di.core.xml.XMLHandler;
+import org.pentaho.di.job.entries.trans.JobEntryTrans;
+import org.pentaho.di.job.entry.JobEntryCopy;
 import org.pentaho.di.repository.RepositoriesMeta;
 import org.pentaho.di.repository.Repository;
 import org.pentaho.di.repository.RepositoryMeta;
+import org.pentaho.di.trans.TransMeta;
+import org.pentaho.metastore.api.IMetaStore;
 import org.w3c.dom.Node;
 
-public class JobExecutionConfiguration implements Cloneable {
+public class JobExecutionConfiguration implements ExecutionConfiguration {
   public static final String XML_TAG = "job_execution_configuration";
 
   private final LogChannelInterface log = LogChannel.GENERAL;
@@ -90,6 +97,8 @@ public class JobExecutionConfiguration implements Cloneable {
   private boolean expandingRemoteJob;
 
   private Map<String, String> extensionOptions;
+
+  private Long passedBatchId;
 
   public JobExecutionConfiguration() {
     executingLocally = true;
@@ -311,7 +320,7 @@ public class JobExecutionConfiguration implements Cloneable {
   }
 
   public String getXML() throws IOException {
-    StringBuffer xml = new StringBuffer( 160 );
+    StringBuilder xml = new StringBuilder( 160 );
 
     xml.append( "  <" + XML_TAG + ">" ).append( Const.CR );
 
@@ -375,6 +384,9 @@ public class JobExecutionConfiguration implements Cloneable {
 
     xml.append( "    " ).append( XMLHandler.addTagValue( "gather_metrics", gatheringMetrics ) );
     xml.append( "    " ).append( XMLHandler.addTagValue( "expand_remote_job", expandingRemoteJob ) );
+    if ( passedBatchId != null ) {
+      xml.append( "    " ).append( XMLHandler.addTagValue( "passedBatchId", passedBatchId ) );
+    }
 
     // The source rows...
     //
@@ -421,7 +433,7 @@ public class JobExecutionConfiguration implements Cloneable {
       Node argNode = XMLHandler.getSubNodeByNr( varsNode, "variable", i );
       String name = XMLHandler.getTagValue( argNode, "name" );
       String value = XMLHandler.getTagValue( argNode, "value" );
-      if ( !Const.isEmpty( name ) && !Const.isEmpty( value ) ) {
+      if ( !Utils.isEmpty( name ) && !Utils.isEmpty( value ) ) {
         variables.put( name, value );
       }
     }
@@ -434,7 +446,7 @@ public class JobExecutionConfiguration implements Cloneable {
       Node argNode = XMLHandler.getSubNodeByNr( argsNode, "argument", i );
       String name = XMLHandler.getTagValue( argNode, "name" );
       String value = XMLHandler.getTagValue( argNode, "value" );
-      if ( !Const.isEmpty( name ) && !Const.isEmpty( value ) ) {
+      if ( !Utils.isEmpty( name ) && !Utils.isEmpty( value ) ) {
         arguments.put( name, value );
       }
     }
@@ -447,7 +459,7 @@ public class JobExecutionConfiguration implements Cloneable {
       Node parmNode = XMLHandler.getSubNodeByNr( parmsNode, "parameter", i );
       String name = XMLHandler.getTagValue( parmNode, "name" );
       String value = XMLHandler.getTagValue( parmNode, "value" );
-      if ( !Const.isEmpty( name ) ) {
+      if ( !Utils.isEmpty( name ) ) {
         params.put( name, value );
       }
     }
@@ -461,6 +473,11 @@ public class JobExecutionConfiguration implements Cloneable {
     startCopyNr = Const.toInt( XMLHandler.getTagValue( trecNode, "start_copy_nr" ), 0 );
 
     gatheringMetrics = "Y".equalsIgnoreCase( XMLHandler.getTagValue( trecNode, "gather_metrics" ) );
+
+    String sPassedBatchId = XMLHandler.getTagValue( trecNode, "passedBatchId" );
+    if ( !StringUtils.isEmpty( sPassedBatchId ) ) {
+      passedBatchId = Long.parseLong( sPassedBatchId );
+    }
 
     Node resultNode = XMLHandler.getSubNode( trecNode, Result.XML_TAG );
     if ( resultNode != null ) {
@@ -487,6 +504,7 @@ public class JobExecutionConfiguration implements Cloneable {
     // Verify that the repository exists on the slave server...
     //
     RepositoriesMeta repositoriesMeta = new RepositoriesMeta();
+    repositoriesMeta.getLog().setLogLevel( log.getLogLevel() );
     try {
       repositoriesMeta.readData();
     } catch ( Exception e ) {
@@ -652,5 +670,31 @@ public class JobExecutionConfiguration implements Cloneable {
 
   public void setExtensionOptions( Map<String, String> extensionOptions ) {
     this.extensionOptions = extensionOptions;
+  }
+
+  public Long getPassedBatchId() {
+    return passedBatchId;
+  }
+
+  public void setPassedBatchId( Long passedBatchId ) {
+    this.passedBatchId = passedBatchId;
+  }
+
+  public void getUsedArguments( JobMeta jobMeta, String[] commandLineArguments, IMetaStore metaStore )
+    throws KettleException {
+
+    for ( JobEntryCopy jobEntryCopy : jobMeta.jobcopies ) {
+      if ( jobEntryCopy.isTransformation() ) {
+        JobEntryTrans jobEntryTrans = (JobEntryTrans) jobEntryCopy.getEntry();
+        TransMeta transMeta = jobEntryTrans.getTransMeta( repository, metaStore, jobMeta );
+        Map<String, String> map = transMeta.getUsedArguments( commandLineArguments );
+        for ( String key : map.keySet() ) {
+          String value = map.get( key );
+          if ( !arguments.containsKey( key ) ) {
+            arguments.put( key, value );
+          }
+        }
+      }
+    }
   }
 }

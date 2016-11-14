@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -27,14 +27,15 @@ import java.util.List;
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
 import org.pentaho.di.core.exception.KettleValueException;
 import org.pentaho.di.core.exception.KettleXMLException;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaString;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.i18n.BaseMessages;
@@ -143,15 +144,15 @@ public class ConcatFieldsMeta extends TextFileOutputMeta implements StepMetaInte
     }
 
     // Check Target Field Name
-    if ( Const.isEmpty( targetFieldName ) ) {
+    if ( Utils.isEmpty( targetFieldName ) ) {
       throw new KettleStepException( BaseMessages.getString(
         PKG, "ConcatFieldsMeta.CheckResult.TargetFieldNameMissing" ) );
     }
     // add targetFieldName
-    ValueMetaInterface vValue =
-      new ValueMeta( targetFieldName, ValueMetaInterface.TYPE_STRING, targetFieldLength, 0 );
+    ValueMetaInterface vValue = new ValueMetaString( targetFieldName );
+    vValue.setLength( targetFieldLength, 0 );
     vValue.setOrigin( name );
-    if ( !Const.isEmpty( getEncoding() ) ) {
+    if ( !Utils.isEmpty( getEncoding() ) ) {
       vValue.setStringEncoding( getEncoding() );
     }
     row.addValueMeta( vValue );
@@ -208,7 +209,7 @@ public class ConcatFieldsMeta extends TextFileOutputMeta implements StepMetaInte
     CheckResult cr;
 
     // Check Target Field Name
-    if ( Const.isEmpty( targetFieldName ) ) {
+    if ( Utils.isEmpty( targetFieldName ) ) {
       cr =
         new CheckResult( CheckResultInterface.TYPE_RESULT_ERROR, BaseMessages.getString(
           PKG, "ConcatFieldsMeta.CheckResult.TargetFieldNameMissing" ), stepMeta );

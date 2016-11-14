@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -38,14 +38,16 @@ public class TabItem {
   private String id;
   private String text;
   private Object control;
+  private int[] sashWeights;
   private boolean changed;
   private List<TabListener> listeners = new ArrayList<TabListener>();
 
-  public TabItem( TabSet tabset, String text, String id ) {
+  public TabItem( TabSet tabset, String text, String id, int[] sashWeights ) {
     super();
     this.tabset = tabset;
     this.id = id;
-    item = new CTabItem( tabset.getSwtTabset(), SWT.CLOSE );
+    this.sashWeights = sashWeights;
+    item = createTabItem( tabset );
     setText( text );
     tabset.addTab( this );
   }
@@ -151,4 +153,15 @@ public class TabItem {
     return changed;
   }
 
+  protected CTabItem createTabItem( TabSet tabset ) {
+    return new CTabItem( tabset.getSwtTabset(), SWT.CLOSE );
+  }
+
+  public int[] getSashWeights() {
+    return sashWeights;
+  }
+
+  public void setSashWeights( int[] guiSizes ) {
+    this.sashWeights = guiSizes;
+  }
 }

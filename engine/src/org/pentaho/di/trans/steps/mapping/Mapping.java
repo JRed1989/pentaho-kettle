@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -33,6 +33,7 @@ import java.util.Set;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.RowSet;
 import org.pentaho.di.core.exception.KettleException;
@@ -57,7 +58,7 @@ import org.pentaho.di.trans.steps.mappingoutput.MappingOutput;
 
 /**
  * Execute a mapping: a re-usuable transformation
- * 
+ *
  * @author Matt
  * @since 22-nov-2005
  */
@@ -374,7 +375,7 @@ public class Mapping extends BaseStep implements StepInterface {
     for ( MappingIODefinition inputDefinition : meta.getInputMappings() ) {
       // If we have a single step to read from, we use this
       //
-      if ( !Const.isEmpty( inputDefinition.getInputStepname() ) ) {
+      if ( !Utils.isEmpty( inputDefinition.getInputStepname() ) ) {
         StepInterface sourceStep = getTrans().findRunThread( inputDefinition.getInputStepname() );
         if ( sourceStep == null ) {
           throw new KettleException( BaseMessages.getString( PKG, "MappingDialog.Exception.StepNameNotFound",
@@ -404,7 +405,7 @@ public class Mapping extends BaseStep implements StepInterface {
       // What step are we writing to?
       MappingInput mappingInputTarget = null;
       MappingInput[] mappingInputSteps = mappingData.getMappingTrans().findMappingInput();
-      if ( Const.isEmpty( inputDefinition.getOutputStepname() ) ) {
+      if ( Utils.isEmpty( inputDefinition.getOutputStepname() ) ) {
         // No target was specifically specified.
         // That means we only expect one "mapping input" step in the mapping...
 
@@ -496,18 +497,18 @@ public class Mapping extends BaseStep implements StepInterface {
     // Finally, add the mapping transformation to the active sub-transformations
     // map in the parent transformation
     //
-    getTrans().getActiveSubtransformations().put( getStepname(), getData().getMappingTrans() );
+    getTrans().addActiveSubTransformation( getStepname(), getData().getMappingTrans() );
   }
 
   @VisibleForTesting StepInterface[] pickupTargetStepsFor( MappingIODefinition outputDefinition )
     throws KettleException {
     List<StepInterface> result;
-    if ( !Const.isEmpty( outputDefinition.getOutputStepname() ) ) {
+    if ( !Utils.isEmpty( outputDefinition.getOutputStepname() ) ) {
       // If we have a target step specification for the output of the mapping,
       // we need to send it over there...
       //
       result = getTrans().findStepInterfaces( outputDefinition.getOutputStepname() );
-      if ( Const.isEmpty( result ) ) {
+      if ( Utils.isEmpty( result ) ) {
         throw new KettleException( BaseMessages.getString( PKG, "MappingDialog.Exception.StepNameNotFound",
           outputDefinition.getOutputStepname() ) );
       }
@@ -623,7 +624,7 @@ public class Mapping extends BaseStep implements StepInterface {
 
       // Remove it from the list of active sub-transformations...
       //
-      getTrans().getActiveSubtransformations().remove( getStepname() );
+      getTrans().removeActiveSubTransformation( getStepname() );
 
       // See if there was an error in the sub-transformation, in that case, flag error etc.
       if ( getData().getMappingTrans().getErrors() > 0 ) {
@@ -774,8 +775,8 @@ public class Mapping extends BaseStep implements StepInterface {
     /*
      * if (mappingOutputs.length==1) { mappingOutputs[0].addRowListener(rowListener); } else { // Find the main data
      * path... //
-     * 
-     * 
+     *
+     *
      * }
      */
 

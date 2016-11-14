@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -54,6 +54,7 @@ import org.eclipse.swt.widgets.TreeColumn;
 import org.eclipse.swt.widgets.TreeItem;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.EngineMetaInterface;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.logging.LogChannelInterface;
@@ -296,7 +297,8 @@ public class SpoonSlave extends Composite implements TabItemInterface {
       new ColumnInfo( BaseMessages.getString( PKG, "SpoonSlave.Column.Time" ), ColumnInfo.COLUMN_TYPE_TEXT, false, true ),
       new ColumnInfo( BaseMessages.getString( PKG, "SpoonSlave.Column.Speed" ), ColumnInfo.COLUMN_TYPE_TEXT, false, true ),
       new ColumnInfo( BaseMessages.getString( PKG, "SpoonSlave.Column.PriorityBufferSizes" ), ColumnInfo.COLUMN_TYPE_TEXT, false, true ),
-      new ColumnInfo( BaseMessages.getString( PKG, "SpoonSlave.Column.CarteObjectId" ), ColumnInfo.COLUMN_TYPE_TEXT, false, true ), };
+      new ColumnInfo( BaseMessages.getString( PKG, "SpoonSlave.Column.CarteObjectId" ), ColumnInfo.COLUMN_TYPE_TEXT, false, true ),
+      new ColumnInfo( BaseMessages.getString( PKG, "SpoonSlave.Column.LogDate" ), ColumnInfo.COLUMN_TYPE_TEXT, false, true ), };
 
     colinf[1].setAllignement( SWT.RIGHT );
     colinf[2].setAllignement( SWT.RIGHT );
@@ -310,6 +312,7 @@ public class SpoonSlave extends Composite implements TabItemInterface {
     colinf[10].setAllignement( SWT.RIGHT );
     colinf[11].setAllignement( SWT.RIGHT );
     colinf[12].setAllignement( SWT.RIGHT );
+    colinf[13].setAllignement( SWT.RIGHT );
 
     wTree = new Tree( sash, SWT.SINGLE | SWT.V_SCROLL | SWT.H_SCROLL );
     wTree.setHeaderVisible( true );
@@ -567,7 +570,7 @@ public class SpoonSlave extends Composite implements TabItemInterface {
     TreeEntry treeEntry = getTreeEntry();
     boolean isTrans = treeEntry != null && treeEntry.isTransformation();
     boolean isJob = treeEntry != null && treeEntry.isJob();
-    boolean hasId = treeEntry != null && !Const.isEmpty( treeEntry.id );
+    boolean hasId = treeEntry != null && !Utils.isEmpty( treeEntry.id );
     boolean isRunning = treeEntry != null && treeEntry.isRunning();
     boolean isStopped = treeEntry != null && treeEntry.isStopped();
     boolean isFinished = treeEntry != null && treeEntry.isFinished();
@@ -639,12 +642,12 @@ public class SpoonSlave extends Composite implements TabItemInterface {
       SlaveServerTransStatus transStatus = slaveServerStatus.findTransStatus( treeEntry.name, treeEntry.id );
       StringBuilder message = new StringBuilder();
       String errorDescription = transStatus.getErrorDescription();
-      if ( !Const.isEmpty( errorDescription ) ) {
+      if ( !Utils.isEmpty( errorDescription ) ) {
         message.append( errorDescription ).append( Const.CR ).append( Const.CR );
       }
 
       String logging = loggingMap.get( transStatus.getId() );
-      if ( !Const.isEmpty( logging ) ) {
+      if ( !Utils.isEmpty( logging ) ) {
         message.append( logging ).append( Const.CR );
       }
 
@@ -656,12 +659,12 @@ public class SpoonSlave extends Composite implements TabItemInterface {
       SlaveServerJobStatus jobStatus = slaveServerStatus.findJobStatus( treeEntry.name, treeEntry.id );
       StringBuilder message = new StringBuilder();
       String errorDescription = jobStatus.getErrorDescription();
-      if ( !Const.isEmpty( errorDescription ) ) {
+      if ( !Utils.isEmpty( errorDescription ) ) {
         message.append( errorDescription ).append( Const.CR ).append( Const.CR );
       }
 
       String logging = loggingMap.get( jobStatus.getId() );
-      if ( !Const.isEmpty( logging ) ) {
+      if ( !Utils.isEmpty( logging ) ) {
         message.append( logging ).append( Const.CR );
       }
 
@@ -917,6 +920,7 @@ public class SpoonSlave extends Composite implements TabItemInterface {
       transItem.setText( 0, transStatus.getTransName() );
       transItem.setText( 9, transStatus.getStatusDescription() );
       transItem.setText( 13, Const.NVL( transStatus.getId(), "" ) );
+      transItem.setText( 14, Const.NVL( XMLHandler.date2string( transStatus.getLogDate() ), "" ) );
       transItem.setImage( GUIResource.getInstance().getImageTransGraph() );
       transItem.setData( "transStatus", transStatus );
     }
@@ -927,6 +931,7 @@ public class SpoonSlave extends Composite implements TabItemInterface {
       jobItem.setText( 0, jobStatus.getJobName() );
       jobItem.setText( 9, jobStatus.getStatusDescription() );
       jobItem.setText( 13, Const.NVL( jobStatus.getId(), "" ) );
+      jobItem.setText( 14, Const.NVL( XMLHandler.date2string( jobStatus.getLogDate() ), "" ) );
       jobItem.setImage( GUIResource.getInstance().getImageJobGraph() );
       jobItem.setData( "jobStatus", jobStatus );
     }
@@ -1201,7 +1206,7 @@ public class SpoonSlave extends Composite implements TabItemInterface {
   }
 
   /**
-   * Cancels current timer task if any and schedules new one to be executed immediatelly and then every UPDATE_TIME_VIEW
+   * Cancels current timer task if any and schedules new one to be executed immediately and then every UPDATE_TIME_VIEW
    * milliseconds.
    */
   private void engageViewAndLogUpdateTimer() {

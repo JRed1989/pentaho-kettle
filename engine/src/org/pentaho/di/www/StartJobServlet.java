@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -34,6 +34,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.owasp.esapi.ESAPI;
 import org.owasp.esapi.Encoder;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.logging.KettleLogStore;
 import org.pentaho.di.core.logging.LoggingObjectType;
@@ -185,7 +186,7 @@ public class StartJobServlet extends BaseHttpServlet implements CartePluginInter
       //
       Job job;
       CarteObjectEntry entry;
-      if ( Const.isEmpty( id ) ) {
+      if ( Utils.isEmpty( id ) ) {
         // get the first job that matches...
         //
         entry = getJobMap().getFirstCarteObjectEntry( jobName );
@@ -223,7 +224,7 @@ public class StartJobServlet extends BaseHttpServlet implements CartePluginInter
           // Create a new job object to start from a sane state. Then replace
           // the new job in the job map
           //
-          synchronized ( getJobMap() ) {
+          synchronized ( this ) {
             JobConfiguration jobConfiguration = getJobMap().getConfiguration( jobName );
 
             String carteObjectId = UUID.randomUUID().toString();

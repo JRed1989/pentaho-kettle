@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,10 +22,8 @@
 
 package org.pentaho.di.job.entries.waitforfile;
 
-import static org.pentaho.di.job.entry.validator.AndValidator.putValidators;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.andValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.integerValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notBlankValidator;
+import org.pentaho.di.job.entry.validator.AndValidator;
+import org.pentaho.di.job.entry.validator.JobEntryValidatorUtils;
 
 import java.util.List;
 
@@ -34,6 +32,7 @@ import org.apache.commons.vfs2.FileType;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.ResultFile;
 import org.pentaho.di.core.database.DatabaseMeta;
@@ -95,7 +94,7 @@ public class JobEntryWaitForFile extends JobEntryBase implements Cloneable, JobE
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 50 );
+    StringBuilder retval = new StringBuilder( 100 );
 
     retval.append( super.getXML() );
     retval.append( "      " ).append( XMLHandler.addTagValue( "filename", filename ) );
@@ -384,7 +383,7 @@ public class JobEntryWaitForFile extends JobEntryBase implements Cloneable, JobE
 
   public List<ResourceReference> getResourceDependencies( JobMeta jobMeta ) {
     List<ResourceReference> references = super.getResourceDependencies( jobMeta );
-    if ( !Const.isEmpty( filename ) ) {
+    if ( !Utils.isEmpty( filename ) ) {
       String realFileName = jobMeta.environmentSubstitute( filename );
       ResourceReference reference = new ResourceReference( this );
       reference.getEntries().add( new ResourceEntry( realFileName, ResourceType.FILE ) );
@@ -396,9 +395,12 @@ public class JobEntryWaitForFile extends JobEntryBase implements Cloneable, JobE
   @Override
   public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
-    andValidator().validate( this, "filename", remarks, putValidators( notBlankValidator() ) );
-    andValidator().validate( this, "maximumTimeout", remarks, putValidators( integerValidator() ) );
-    andValidator().validate( this, "checkCycleTime", remarks, putValidators( integerValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "filename", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "maximumTimeout", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.integerValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "checkCycleTime", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.integerValidator() ) );
   }
 
 }

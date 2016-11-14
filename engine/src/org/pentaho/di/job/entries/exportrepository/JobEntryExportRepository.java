@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,12 +22,9 @@
 
 package org.pentaho.di.job.entries.exportrepository;
 
-import static org.pentaho.di.job.entry.validator.AbstractFileValidator.putVariableSpace;
-import static org.pentaho.di.job.entry.validator.AndValidator.putValidators;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.andValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.fileExistsValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notBlankValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notNullValidator;
+import org.pentaho.di.job.entry.validator.AbstractFileValidator;
+import org.pentaho.di.job.entry.validator.AndValidator;
+import org.pentaho.di.job.entry.validator.JobEntryValidatorUtils;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -39,6 +36,7 @@ import org.apache.commons.vfs2.FileType;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.ResultFile;
 import org.pentaho.di.core.database.DatabaseMeta;
@@ -152,7 +150,7 @@ public class JobEntryExportRepository extends JobEntryBase implements Cloneable,
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 50 );
+    StringBuilder retval = new StringBuilder( 400 ); // 300 chars in just tag names and spaces
 
     retval.append( super.getXML() );
     retval.append( "      " ).append( XMLHandler.addTagValue( "repositoryname", repositoryname ) );
@@ -394,7 +392,7 @@ public class JobEntryExportRepository extends JobEntryBase implements Cloneable,
 
   public String buildFilename( String filename ) {
     String retval = "";
-    if ( Const.isEmpty( filename ) ) {
+    if ( Utils.isEmpty( filename ) ) {
       return null;
     }
 
@@ -409,7 +407,7 @@ public class JobEntryExportRepository extends JobEntryBase implements Cloneable,
     SimpleDateFormat daf = new SimpleDateFormat();
     Date now = new Date();
 
-    if ( isSpecifyFormat() && !Const.isEmpty( getDateTimeFormat() ) ) {
+    if ( isSpecifyFormat() && !Utils.isEmpty( getDateTimeFormat() ) ) {
       daf.applyPattern( getDateTimeFormat() );
       String dt = daf.format( now );
       retval += dt;
@@ -431,7 +429,7 @@ public class JobEntryExportRepository extends JobEntryBase implements Cloneable,
 
   public String buildUniqueFilename( String filename ) {
     String retval = "";
-    if ( Const.isEmpty( filename ) ) {
+    if ( Utils.isEmpty( filename ) ) {
       return null;
     }
 
@@ -757,6 +755,7 @@ public class JobEntryExportRepository extends JobEntryBase implements Cloneable,
 
   private void connectRep( LogChannelInterface log, String realrepName, String realusername, String realpassword ) throws Exception {
     this.repsinfo = new RepositoriesMeta();
+    this.repsinfo.getLog().setLogLevel( log.getLogLevel() );
     try {
       this.repsinfo.readData();
     } catch ( Exception e ) {
@@ -804,15 +803,19 @@ public class JobEntryExportRepository extends JobEntryBase implements Cloneable,
   @Override
   public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
-    andValidator().validate( this, "repositoryname", remarks, putValidators( notBlankValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "repositoryname", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
 
     ValidatorContext ctx = new ValidatorContext();
-    putVariableSpace( ctx, getVariables() );
-    putValidators( ctx, notBlankValidator(), fileExistsValidator() );
-    andValidator().validate( this, "targetfilename", remarks, ctx );
+    AbstractFileValidator.putVariableSpace( ctx, getVariables() );
+    AndValidator.putValidators( ctx, JobEntryValidatorUtils.notBlankValidator(),
+        JobEntryValidatorUtils.fileExistsValidator() );
+    JobEntryValidatorUtils.andValidator().validate( this, "targetfilename", remarks, ctx );
 
-    andValidator().validate( this, "username", remarks, putValidators( notBlankValidator() ) );
-    andValidator().validate( this, "password", remarks, putValidators( notNullValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "username", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "password", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notNullValidator() ) );
   }
 
   public static void main( String[] args ) {

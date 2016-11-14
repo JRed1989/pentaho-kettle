@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -27,6 +27,7 @@ import java.util.List;
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.database.Database;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
@@ -223,11 +224,9 @@ public class DBProcMeta extends BaseStepMeta implements StepMetaInterface {
 
     retval.allocate( nrargs );
 
-    for ( int i = 0; i < nrargs; i++ ) {
-      retval.argument[i] = argument[i];
-      retval.argumentDirection[i] = argumentDirection[i];
-      retval.argumentType[i] = argumentType[i];
-    }
+    System.arraycopy( argument, 0, retval.argument, 0, nrargs );
+    System.arraycopy( argumentDirection, 0, retval.argumentDirection, 0, nrargs );
+    System.arraycopy( argumentType, 0, retval.argumentType, 0, nrargs );
 
     return retval;
   }
@@ -257,7 +256,7 @@ public class DBProcMeta extends BaseStepMeta implements StepMetaInterface {
   public void getFields( RowMetaInterface r, String name, RowMetaInterface[] info, StepMeta nextStep,
     VariableSpace space, Repository repository, IMetaStore metaStore ) throws KettleStepException {
 
-    if ( !Const.isEmpty( resultName ) ) {
+    if ( !Utils.isEmpty( resultName ) ) {
       ValueMetaInterface v = new ValueMeta( resultName, resultType );
       v.setOrigin( name );
       r.addValueMeta( v );
@@ -275,7 +274,7 @@ public class DBProcMeta extends BaseStepMeta implements StepMetaInterface {
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 500 );
+    StringBuilder retval = new StringBuilder( 500 );
 
     retval
       .append( "    " ).append( XMLHandler.addTagValue( "connection", database == null ? "" : database.getName() ) );

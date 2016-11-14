@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -36,6 +36,7 @@ import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSelectInfo;
 import org.apache.commons.vfs2.FileType;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.logging.LogChannel;
 import org.pentaho.di.core.logging.LogChannelInterface;
 import org.pentaho.di.core.variables.VariableSpace;
@@ -91,7 +92,7 @@ public class FileInputList {
   private static final String YES = "Y";
 
   public static String getRequiredFilesDescription( List<FileObject> nonExistantFiles ) {
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     for ( Iterator<FileObject> iter = nonExistantFiles.iterator(); iter.hasNext(); ) {
       FileObject file = iter.next();
       buffer.append( file.getName().getURI() );
@@ -161,14 +162,14 @@ public class FileInputList {
         ( ( fileTypeFilters == null || fileTypeFilters[i] == null )
           ? FileTypeFilter.ONLY_FILES : fileTypeFilters[i] );
 
-      if ( Const.isEmpty( onefile ) ) {
+      if ( Utils.isEmpty( onefile ) ) {
         continue;
       }
 
       //
       // If a wildcard is set we search for files
       //
-      if ( !Const.isEmpty( onemask ) || !Const.isEmpty( excludeonemask ) ) {
+      if ( !Utils.isEmpty( onemask ) || !Utils.isEmpty( excludeonemask ) ) {
         try {
           FileObject directoryFileObject = KettleVFS.getFileObject( onefile, space );
           boolean processFolder = true;
@@ -188,8 +189,7 @@ public class FileInputList {
           // Find all file names that match the wildcard in this directory
           //
           if ( processFolder ) {
-            if ( directoryFileObject != null && directoryFileObject.getType() == FileType.FOLDER ) // it's a directory
-            {
+            if ( directoryFileObject != null && directoryFileObject.getType() == FileType.FOLDER ) { // it's a directory
               FileObject[] fileObjects = directoryFileObject.findFiles( new AllFileSelector() {
                 @Override
                 public boolean traverseDescendents( FileSelectInfo info ) {
@@ -208,11 +208,11 @@ public class FileInputList {
                     if ( fileObject != null && filter.isFileTypeAllowed( fileObject.getType() ) ) {
                       String name = info.getFile().getName().getBaseName();
                       boolean matches = true;
-                      if ( !Const.isEmpty( onemask ) ) {
+                      if ( !Utils.isEmpty( onemask ) ) {
                         matches = Pattern.matches( onemask, name );
                       }
                       boolean excludematches = false;
-                      if ( !Const.isEmpty( excludeonemask ) ) {
+                      if ( !Utils.isEmpty( excludeonemask ) ) {
                         excludematches = Pattern.matches( excludeonemask, name );
                       }
                       return ( matches && !excludematches );
@@ -231,7 +231,7 @@ public class FileInputList {
                   }
                 }
               }
-              if ( Const.isEmpty( fileObjects ) ) {
+              if ( Utils.isEmpty( fileObjects ) ) {
                 if ( onerequired ) {
                   fileInputList.addNonAccessibleFile( directoryFileObject );
                 }
@@ -245,11 +245,11 @@ public class FileInputList {
                 // See if the wildcard (regexp) matches...
                 String name = children[j].getName().getBaseName();
                 boolean matches = true;
-                if ( !Const.isEmpty( onemask ) ) {
+                if ( !Utils.isEmpty( onemask ) ) {
                   matches = Pattern.matches( onemask, name );
                 }
                 boolean excludematches = false;
-                if ( !Const.isEmpty( excludeonemask ) ) {
+                if ( !Utils.isEmpty( excludeonemask ) ) {
                   excludematches = Pattern.matches( excludeonemask, name );
                 }
                 if ( matches && !excludematches ) {
@@ -307,7 +307,7 @@ public class FileInputList {
       final boolean subdirs = true;
       final FileTypeFilter filter = FileTypeFilter.ONLY_FOLDERS;
 
-      if ( Const.isEmpty( onefile ) ) {
+      if ( Utils.isEmpty( onefile ) ) {
         continue;
       }
       FileObject directoryFileObject = null;
@@ -316,9 +316,7 @@ public class FileInputList {
         // Find all folder names in this directory
         //
         directoryFileObject = KettleVFS.getFileObject( onefile, space );
-        if ( directoryFileObject != null && directoryFileObject.getType() == FileType.FOLDER ) // it's a directory
-        {
-
+        if ( directoryFileObject != null && directoryFileObject.getType() == FileType.FOLDER ) { // it's a directory
           FileObject[] fileObjects = directoryFileObject.findFiles( new AllFileSelector() {
             @Override
             public boolean traverseDescendents( FileSelectInfo info ) {
@@ -351,7 +349,7 @@ public class FileInputList {
               }
             }
           }
-          if ( Const.isEmpty( fileObjects ) ) {
+          if ( Utils.isEmpty( fileObjects ) ) {
             if ( onerequired ) {
               fileInputList.addNonAccessibleFile( directoryFileObject );
             }

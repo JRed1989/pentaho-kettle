@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,12 +22,6 @@
 
 package org.pentaho.di.trans.steps.tableoutput;
 
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
-
 import org.pentaho.di.core.Const;
 import org.pentaho.di.core.RowMetaAndData;
 import org.pentaho.di.core.database.Database;
@@ -40,6 +34,7 @@ import org.pentaho.di.core.row.RowDataUtil;
 import org.pentaho.di.core.row.RowMeta;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.Trans;
 import org.pentaho.di.trans.TransMeta;
@@ -48,6 +43,12 @@ import org.pentaho.di.trans.step.StepDataInterface;
 import org.pentaho.di.trans.step.StepInterface;
 import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaInterface;
+
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
 
 /**
  * Writes rows to a database table.
@@ -72,12 +73,18 @@ public class TableOutput extends BaseStep implements StepInterface {
 
     Object[] r = getRow(); // this also waits for a previous step to be finished.
     if ( r == null ) { // no more input to be expected...
-
+      // truncate the table if there are no rows at all coming into this step
+      if ( first && meta.truncateTable() ) {
+        truncateTable();
+      }
       return false;
     }
 
     if ( first ) {
       first = false;
+      if ( meta.truncateTable() ) {
+        truncateTable();
+      }
       data.outputRowMeta = getInputRowMeta().clone();
       meta.getFields( data.outputRowMeta, getStepname(), null, null, this, repository, metaStore );
 
@@ -228,7 +235,7 @@ public class TableOutput extends BaseStep implements StepInterface {
       }
     }
 
-    if ( Const.isEmpty( tableName ) ) {
+    if ( Utils.isEmpty( tableName ) ) {
       throw new KettleStepException( "The tablename is not defined (empty)" );
     }
 
@@ -330,7 +337,7 @@ public class TableOutput extends BaseStep implements StepInterface {
       } else {
         data.db.clearBatch( insertStatement );
         data.db.rollback();
-        StringBuffer msg = new StringBuffer( "Error batch inserting rows into table [" + tableName + "]." );
+        StringBuilder msg = new StringBuilder( "Error batch inserting rows into table [" + tableName + "]." );
         msg.append( Const.CR );
         msg.append( "Errors encountered (first 10):" ).append( Const.CR );
         for ( int x = 0; x < be.getExceptionsList().size() && x < 10; x++ ) {
@@ -401,8 +408,7 @@ public class TableOutput extends BaseStep implements StepInterface {
         data.batchBuffer.add( outputRowData );
         outputRowData = null;
 
-        if ( rowIsSafe ) // A commit was done and the rows are all safe (no error)
-        {
+        if ( rowIsSafe ) { // A commit was done and the rows are all safe (no error)
           for ( int i = 0; i < data.batchBuffer.size(); i++ ) {
             Object[] row = data.batchBuffer.get( i );
             putRow( data.outputRowMeta, row );
@@ -536,14 +542,6 @@ public class TableOutput extends BaseStep implements StepInterface {
 
         if ( !meta.isPartitioningEnabled() && !meta.isTableNameInField() ) {
           data.tableName = environmentSubstitute( meta.getTableName() );
-
-          // Only the first one truncates in a non-partitioned step copy
-          //
-          if ( meta.truncateTable()
-            && ( ( getCopy() == 0 && getUniqueStepNrAcrossSlaves() == 0 ) || !Const.isEmpty( getPartitionID() ) ) ) {
-            data.db.truncateTable( environmentSubstitute( meta.getSchemaName() ), environmentSubstitute( meta
-              .getTableName() ) );
-          }
         }
 
         return true;
@@ -554,6 +552,19 @@ public class TableOutput extends BaseStep implements StepInterface {
       }
     }
     return false;
+  }
+
+  void truncateTable() throws KettleDatabaseException {
+    if ( !meta.isPartitioningEnabled() && !meta.isTableNameInField() ) {
+      // Only the first one truncates in a non-partitioned step copy
+      //
+      if ( meta.truncateTable()
+        && ( ( getCopy() == 0 && getUniqueStepNrAcrossSlaves() == 0 ) || !Utils.isEmpty( getPartitionID() ) ) ) {
+        data.db.truncateTable( environmentSubstitute( meta.getSchemaName() ), environmentSubstitute( meta
+          .getTableName() ) );
+
+      }
+    }
   }
 
   public void dispose( StepMetaInterface smi, StepDataInterface sdi ) {

@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -33,6 +33,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CCombo;
 import org.eclipse.swt.custom.CTabFolder;
 import org.eclipse.swt.custom.CTabItem;
+import org.eclipse.swt.events.FocusEvent;
 import org.eclipse.swt.events.FocusListener;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
@@ -56,20 +57,20 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Props;
 import org.pentaho.di.core.SourceToTargetMapping;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowMeta;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaNone;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.TransMeta;
-import org.pentaho.di.trans.step.BaseStepMeta;
-import org.pentaho.di.trans.step.StepDialogInterface;
 import org.pentaho.di.trans.step.StepMeta;
-import org.pentaho.di.trans.steps.salesforceinput.SalesforceConnection;
-import org.pentaho.di.trans.steps.salesforceinput.SalesforceConnectionUtils;
+import org.pentaho.di.trans.steps.salesforce.SalesforceConnection;
+import org.pentaho.di.trans.steps.salesforce.SalesforceConnectionUtils;
+import org.pentaho.di.trans.steps.salesforce.SalesforceStepMeta;
 import org.pentaho.di.trans.steps.salesforceupsert.SalesforceUpsertMeta;
 import org.pentaho.di.ui.core.dialog.EnterMappingDialog;
 import org.pentaho.di.ui.core.dialog.ErrorDialog;
@@ -81,8 +82,9 @@ import org.pentaho.di.ui.core.widget.TableView;
 import org.pentaho.di.ui.core.widget.TextVar;
 import org.pentaho.di.ui.trans.step.BaseStepDialog;
 import org.pentaho.di.ui.trans.step.TableItemInsertListener;
+import org.pentaho.di.ui.trans.steps.salesforce.SalesforceStepDialog;
 
-public class SalesforceUpsertDialog extends BaseStepDialog implements StepDialogInterface {
+public class SalesforceUpsertDialog extends SalesforceStepDialog {
 
   private static Class<?> PKG = SalesforceUpsertMeta.class; // for i18n purposes, needed by Translator2!!
 
@@ -172,10 +174,12 @@ public class SalesforceUpsertDialog extends BaseStepDialog implements StepDialog
    * List of ColumnInfo that should have the field names of the selected database table
    */
   private static List<ColumnInfo> tableFieldColumns = new ArrayList<ColumnInfo>();
-  private boolean gotFields = false;
+  private String[] moduleFields;
+
+  private boolean excludeNonUpdatableFields = true;
 
   public SalesforceUpsertDialog( Shell parent, Object in, TransMeta transMeta, String sname ) {
-    super( parent, (BaseStepMeta) in, transMeta, sname );
+    super( parent, in, transMeta, sname );
     input = (SalesforceUpsertMeta) in;
     inputFields = new HashMap<String, Integer>();
   }
@@ -196,13 +200,13 @@ public class SalesforceUpsertDialog extends BaseStepDialog implements StepDialog
     ModifyListener lsTableMod = new ModifyListener() {
       public void modifyText( ModifyEvent arg0 ) {
         input.setChanged();
-        setModuleFieldCombo();
+        moduleFields = null;
       }
     };
     SelectionAdapter lsSelection = new SelectionAdapter() {
       public void widgetSelected( SelectionEvent e ) {
         input.setChanged();
-        setModuleFieldCombo();
+        moduleFields = null;
       }
     };
     changed = input.hasChanged();
@@ -430,14 +434,12 @@ public class SalesforceUpsertDialog extends BaseStepDialog implements StepDialog
     wModule.setLayoutData( fdModule );
     wModule.addFocusListener( new FocusListener() {
       public void focusLost( org.eclipse.swt.events.FocusEvent e ) {
-        getModulesListError = false;
       }
 
       public void focusGained( org.eclipse.swt.events.FocusEvent e ) {
         // check if the URL and login credentials passed and not just had error
-        if ( Const.isEmpty( wURL.getText() )
-          || Const.isEmpty( wUserName.getText() ) || Const.isEmpty( wPassword.getText() )
-          || ( getModulesListError ) ) {
+        if ( skipFetchModules() ) {
+          getModulesListError = false;
           return;
         }
 
@@ -561,6 +563,18 @@ public class SalesforceUpsertDialog extends BaseStepDialog implements StepDialog
     wReturn =
       new TableView( transMeta, wGeneralComp, SWT.BORDER
         | SWT.FULL_SELECTION | SWT.MULTI | SWT.V_SCROLL | SWT.H_SCROLL, ciReturn, UpInsRows, lsMod, props );
+    wReturn.getTable().addFocusListener( new FocusListener() {
+
+      @Override
+      public void focusGained( FocusEvent e ) {
+        setModuleFieldCombo();
+      }
+
+      @Override
+      public void focusLost( FocusEvent e ) {
+      }
+
+    } );
 
     wGetLU = new Button( wGeneralComp, SWT.PUSH );
     wGetLU.setText( BaseMessages.getString( PKG, "SalesforceUpsertDialog.GetAndUpdateFields.Label" ) );
@@ -612,7 +626,7 @@ public class SalesforceUpsertDialog extends BaseStepDialog implements StepDialog
                 if ( !wReturn.isDisposed() ) {
                   for ( int i = 0; i < wReturn.table.getItemCount(); i++ ) {
                     TableItem it = wReturn.table.getItem( i );
-                    if ( !Const.isEmpty( it.getText( 2 ) ) ) {
+                    if ( !Utils.isEmpty( it.getText( 2 ) ) ) {
                       if ( !inputFields.containsKey( it.getText( 2 ) ) ) {
                         it.setBackground( GUIResource.getInstance().getColorRed() );
                       }
@@ -732,62 +746,13 @@ public class SalesforceUpsertDialog extends BaseStepDialog implements StepDialog
     }
   }
 
-  private void test() {
-    boolean successConnection = true;
-    String msgError = null;
-    SalesforceConnection connection = null;
-    try {
-      SalesforceUpsertMeta meta = new SalesforceUpsertMeta();
-      getInfo( meta );
-
-      // check if the user is given
-      if ( !checkUser() ) {
-        return;
-      }
-
-      connection =
-        new SalesforceConnection( log, transMeta.environmentSubstitute( meta.getTargetURL() ), transMeta
-          .environmentSubstitute( meta.getUserName() ), transMeta.environmentSubstitute( meta.getPassword() ) );
-      connection.connect();
-
-      successConnection = true;
-
-    } catch ( Exception e ) {
-      successConnection = false;
-      msgError = e.getMessage();
-    } finally {
-      if ( connection != null ) {
-        try {
-          connection.close();
-        } catch ( Exception e ) { /* Ignore */
-        }
-      }
-    }
-
-    if ( successConnection ) {
-      MessageBox mb = new MessageBox( shell, SWT.OK | SWT.ICON_INFORMATION );
-      mb.setMessage( BaseMessages.getString( PKG, "SalesforceUpsertDialog.Connected.OK", wUserName.getText() )
-        + Const.CR );
-      mb.setText( BaseMessages.getString( PKG, "SalesforceUpsertDialog.Connected.Title.Ok" ) );
-      mb.open();
-    } else {
-      new ErrorDialog(
-        shell,
-        BaseMessages.getString( PKG, "SalesforceUpsertDialog.Connected.Title.Error" ),
-        BaseMessages.getString( PKG, "SalesforceUpsertDialog.Connected.NOK", wUserName.getText() ),
-        new Exception( msgError ) );
-    }
-
-  }
-
   private void getFieldsList() {
     try {
       String selectedField = wUpsertField.getText();
       wUpsertField.removeAll();
-
       wUpsertField.setItems( getModuleFields() );
 
-      if ( !Const.isEmpty( selectedField ) ) {
+      if ( !Utils.isEmpty( selectedField ) ) {
         wUpsertField.setText( selectedField );
       }
     } catch ( Exception e ) {
@@ -806,7 +771,7 @@ public class SalesforceUpsertDialog extends BaseStepDialog implements StepDialog
    */
   public void getData( SalesforceUpsertMeta in ) {
     wURL.setText( Const.NVL( in.getTargetURL(), "" ) );
-    wUserName.setText( Const.NVL( in.getUserName(), "" ) );
+    wUserName.setText( Const.NVL( in.getUsername(), "" ) );
     wPassword.setText( Const.NVL( in.getPassword(), "" ) );
     wBatchSize.setText( in.getBatchSize() );
     wModule.setText( Const.NVL( in.getModule(), "Account" ) );
@@ -837,8 +802,8 @@ public class SalesforceUpsertDialog extends BaseStepDialog implements StepDialog
     wReturn.removeEmptyRows();
     wReturn.setRowNums();
     wReturn.optWidth( true );
-    wTimeOut.setText( Const.NVL( in.getTimeOut(), SalesforceConnectionUtils.DEFAULT_TIMEOUT ) );
-    wUseCompression.setSelection( in.isUsingCompression() );
+    wTimeOut.setText( Const.NVL( in.getTimeout(), SalesforceConnectionUtils.DEFAULT_TIMEOUT ) );
+    wUseCompression.setSelection( in.isCompression() );
     wRollbackAllChangesOnError.setSelection( in.isRollbackAllChangesOnError() );
 
     wStepname.selectAll();
@@ -862,37 +827,39 @@ public class SalesforceUpsertDialog extends BaseStepDialog implements StepDialog
     dispose();
   }
 
-  private void getInfo( SalesforceUpsertMeta in ) throws KettleException {
+  @Override
+  protected void getInfo( SalesforceStepMeta in ) throws KettleException {
+    SalesforceUpsertMeta meta = (SalesforceUpsertMeta) in;
     stepname = wStepname.getText(); // return value
 
     // copy info to SalesforceUpsertMeta class (input)
-    in.setTargetURL( Const.NVL( wURL.getText(), SalesforceConnectionUtils.TARGET_DEFAULT_URL ) );
-    in.setUserName( wUserName.getText() );
-    in.setPassword( wPassword.getText() );
-    in.setModule( Const.NVL( wModule.getText(), "Account" ) );
-    in.setUpsertField( Const.NVL( wUpsertField.getText(), "Id" ) );
-    in.setSalesforceIDFieldName( wSalesforceIDFieldName.getText() );
-    in.setBatchSize( wBatchSize.getText() );
+    meta.setTargetURL( Const.NVL( wURL.getText(), SalesforceConnectionUtils.TARGET_DEFAULT_URL ) );
+    meta.setUsername( wUserName.getText() );
+    meta.setPassword( wPassword.getText() );
+    meta.setModule( Const.NVL( wModule.getText(), "Account" ) );
+    meta.setUpsertField( Const.NVL( wUpsertField.getText(), "Id" ) );
+    meta.setSalesforceIDFieldName( wSalesforceIDFieldName.getText() );
+    meta.setBatchSize( wBatchSize.getText() );
 
     int nrfields = wReturn.nrNonEmpty();
 
-    in.allocate( nrfields );
+    meta.allocate( nrfields );
 
     //CHECKSTYLE:Indentation:OFF
     for ( int i = 0; i < nrfields; i++ ) {
       TableItem item = wReturn.getNonEmpty( i );
-      in.getUpdateLookup()[i] = item.getText( 1 );
-      in.getUpdateStream()[i] = item.getText( 2 );
-      in.getUseExternalId()[i] = Boolean.valueOf( "Y".equals( item.getText( 3 ) ) );
+      meta.getUpdateLookup()[i] = item.getText( 1 );
+      meta.getUpdateStream()[i] = item.getText( 2 );
+      meta.getUseExternalId()[i] = Boolean.valueOf( "Y".equals( item.getText( 3 ) ) );
     }
-    in.setUseCompression( wUseCompression.getSelection() );
-    in.setTimeOut( Const.NVL( wTimeOut.getText(), "0" ) );
-    in.setRollbackAllChangesOnError( wRollbackAllChangesOnError.getSelection() );
+    meta.setCompression( wUseCompression.getSelection() );
+    meta.setTimeout( Const.NVL( wTimeOut.getText(), "0" ) );
+    meta.setRollbackAllChangesOnError( wRollbackAllChangesOnError.getSelection() );
   }
 
   // check if module, username is given
   private boolean checkInput() {
-    if ( Const.isEmpty( wModule.getText() ) ) {
+    if ( Utils.isEmpty( wModule.getText() ) ) {
       MessageBox mb = new MessageBox( shell, SWT.OK | SWT.ICON_ERROR );
       mb.setMessage( BaseMessages.getString( PKG, "SalesforceUpsertDialog.ModuleMissing.DialogMessage" ) );
       mb.setText( BaseMessages.getString( PKG, "System.Dialog.Error.Title" ) );
@@ -905,7 +872,7 @@ public class SalesforceUpsertDialog extends BaseStepDialog implements StepDialog
   // check if module, username is given
   private boolean checkUser() {
 
-    if ( Const.isEmpty( wUserName.getText() ) ) {
+    if ( Utils.isEmpty( wUserName.getText() ) ) {
       MessageBox mb = new MessageBox( shell, SWT.OK | SWT.ICON_ERROR );
       mb.setMessage( BaseMessages.getString( PKG, "SalesforceUpsertDialog.UsernameMissing.DialogMessage" ) );
       mb.setText( BaseMessages.getString( PKG, "System.Dialog.Error.Title" ) );
@@ -917,25 +884,33 @@ public class SalesforceUpsertDialog extends BaseStepDialog implements StepDialog
   }
 
   private String[] getModuleFields() throws KettleException {
+    if ( moduleFields != null ) {
+      return moduleFields;
+    } else if ( skipFetchModules() || Utils.isEmpty( wModule.getText() ) ) {
+      getModulesListError = false;
+      return new String[0];
+    }
+
+    getModulesListError = true;
     SalesforceUpsertMeta meta = new SalesforceUpsertMeta();
     getInfo( meta );
-
-    SalesforceConnection connection = null;
     String url = transMeta.environmentSubstitute( meta.getTargetURL() );
+    String selectedModule = transMeta.environmentSubstitute( meta.getModule() );
+    // Define a new Salesforce connection
+    SalesforceConnection connection =
+      new SalesforceConnection( log, url, transMeta.environmentSubstitute( meta.getUsername() ),
+              Utils.resolvePassword( transMeta, meta.getPassword() ) );
+    int realTimeOut = Const.toInt( transMeta.environmentSubstitute( meta.getTimeout() ), 0 );
+    connection.setTimeOut( realTimeOut );
+    Cursor busy = new Cursor( shell.getDisplay(), SWT.CURSOR_WAIT );
     try {
-      String selectedModule = transMeta.environmentSubstitute( meta.getModule() );
-      // Define a new Salesforce connection
-      connection =
-        new SalesforceConnection( log, url, transMeta.environmentSubstitute( meta.getUserName() ), transMeta
-          .environmentSubstitute( meta.getPassword() ) );
-      int realTimeOut = Const.toInt( transMeta.environmentSubstitute( meta.getTimeOut() ), 0 );
-      connection.setTimeOut( realTimeOut );
+      shell.setCursor( busy );
+
       // connect to Salesforce
       connection.connect();
-      // return fieldsname for the module
-      return connection.getFields( selectedModule );
-    } catch ( Exception e ) {
-      throw new KettleException( "Erreur getting fields from module [" + url + "]!", e );
+      moduleFields = connection.getFields( selectedModule, excludeNonUpdatableFields );
+      getModulesListError = false;
+      return moduleFields;
     } finally {
       if ( connection != null ) {
         try {
@@ -943,7 +918,16 @@ public class SalesforceUpsertDialog extends BaseStepDialog implements StepDialog
         } catch ( Exception e ) { /* Ignore */
         }
       }
+      shell.setCursor( null );
+      busy.dispose();
     }
+  }
+
+  private boolean skipFetchModules() {
+    return Utils.isEmpty( wURL.getText() )
+      || Utils.isEmpty( wUserName.getText() )
+      || Utils.isEmpty( wPassword.getText() )
+      || getModulesListError;
   }
 
   /**
@@ -972,7 +956,7 @@ public class SalesforceUpsertDialog extends BaseStepDialog implements StepDialog
 
       String[] fields = getModuleFields();
       for ( int i = 0; i < fields.length; i++ ) {
-        targetFields.addValueMeta( new ValueMeta( fields[i] ) );
+        targetFields.addValueMeta( new ValueMetaNone( fields[i] ) );
       }
     } catch ( Exception e ) {
       new ErrorDialog( shell, BaseMessages.getString(
@@ -1097,14 +1081,14 @@ public class SalesforceUpsertDialog extends BaseStepDialog implements StepDialog
 
         // Define a new Salesforce connection
         connection =
-          new SalesforceConnection( log, url, transMeta.environmentSubstitute( meta.getUserName() ), transMeta
-            .environmentSubstitute( meta.getPassword() ) );
+          new SalesforceConnection( log, url, transMeta.environmentSubstitute( meta.getUsername() ),
+            Utils.resolvePassword( transMeta, meta.getPassword() ) );
         // connect to Salesforce
         connection.connect();
         // return
         wModule.setItems( connection.getAllAvailableObjects( false ) );
 
-        if ( !Const.isEmpty( selectedField ) ) {
+        if ( !Utils.isEmpty( selectedField ) ) {
           wModule.setText( selectedField );
         }
 
@@ -1128,46 +1112,31 @@ public class SalesforceUpsertDialog extends BaseStepDialog implements StepDialog
   }
 
   public void setModuleFieldCombo() {
-    if ( gotFields ) {
-      return;
+    // clear
+    for ( int i = 0; i < tableFieldColumns.size(); i++ ) {
+      ColumnInfo colInfo = tableFieldColumns.get( i );
+      colInfo.setComboValues( new String[] {} );
     }
-    gotFields = true;
-    Display display = shell.getDisplay();
-    if ( !( display == null || display.isDisposed() ) ) {
-      display.asyncExec( new Runnable() {
-        public void run() {
-          // clear
+    String selectedModule = transMeta.environmentSubstitute( wModule.getText() );
+    if ( !Utils.isEmpty( selectedModule ) ) {
+      try {
+        // loop through the objects and find build the list of fields
+        String[] fieldsName = getModuleFields();
+
+        if ( fieldsName != null ) {
           for ( int i = 0; i < tableFieldColumns.size(); i++ ) {
             ColumnInfo colInfo = tableFieldColumns.get( i );
-            colInfo.setComboValues( new String[] {} );
+            colInfo.setComboValues( fieldsName );
           }
-          if ( wModule.isDisposed() ) {
-            return;
-          }
-          String selectedModule = transMeta.environmentSubstitute( wModule.getText() );
-          if ( !Const.isEmpty( selectedModule ) ) {
-            try {
-              // loop through the objects and find build the list of fields
-              String[] fieldsName = getModuleFields();
-
-              if ( fieldsName != null ) {
-                for ( int i = 0; i < tableFieldColumns.size(); i++ ) {
-                  ColumnInfo colInfo = tableFieldColumns.get( i );
-                  colInfo.setComboValues( fieldsName );
-                }
-              }
-            } catch ( Exception e ) {
-              for ( int i = 0; i < tableFieldColumns.size(); i++ ) {
-                ColumnInfo colInfo = tableFieldColumns.get( i );
-                colInfo.setComboValues( new String[] {} );
-              }
-              // ignore any errors here. drop downs will not be
-              // filled, but no problem for the user
-            }
-          }
-
         }
-      } );
+      } catch ( Exception e ) {
+        for ( int i = 0; i < tableFieldColumns.size(); i++ ) {
+          ColumnInfo colInfo = tableFieldColumns.get( i );
+          colInfo.setComboValues( new String[] {} );
+        }
+        // ignore any errors here. drop downs will not be
+        // filled, but no problem for the user
+      }
     }
   }
 

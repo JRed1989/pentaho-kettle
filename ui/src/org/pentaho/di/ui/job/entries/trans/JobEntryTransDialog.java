@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -53,6 +53,7 @@ import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.ObjectLocationSpecificationMethod;
 import org.pentaho.di.core.Props;
 import org.pentaho.di.core.exception.KettleException;
@@ -1170,12 +1171,13 @@ public class JobEntryTransDialog extends JobEntryDialog implements JobEntryDialo
       boolean saved = false;
       try {
         if ( rep != null ) {
-          if ( !Const.isEmpty( newTransMeta.getName() ) ) {
+          if ( !Utils.isEmpty( newTransMeta.getName() ) ) {
             wName.setText( newTransMeta.getName() );
           }
           saved = spoon.saveToRepository( newTransMeta, false );
           if ( rep.getRepositoryMeta().getRepositoryCapabilities().supportsReferences() ) {
             specificationMethod = ObjectLocationSpecificationMethod.REPOSITORY_BY_REFERENCE;
+            referenceObjectId = newTransMeta.getObjectId();
           } else {
             specificationMethod = ObjectLocationSpecificationMethod.REPOSITORY_BY_NAME;
           }
@@ -1188,7 +1190,7 @@ public class JobEntryTransDialog extends JobEntryDialog implements JobEntryDialo
       }
       if ( saved ) {
         setRadioButtons();
-        switch( specificationMethod ) {
+        switch ( specificationMethod ) {
           case FILENAME:
             wFilename.setText( Const.NVL( newTransMeta.getFilename(), "" ) );
             break;
@@ -1285,17 +1287,14 @@ public class JobEntryTransDialog extends JobEntryDialog implements JobEntryDialo
     } catch ( Exception e ) {
       // not that important
     }
-    if ( !Const.isEmpty( prevName ) ) {
+    if ( !Utils.isEmpty( prevName ) ) {
       try {
         if ( KettleVFS.fileExists( prevName ) ) {
           dialog.setFilterPath( KettleVFS.getFilename( KettleVFS.getFileObject( prevName ).getParent() ) );
         } else {
 
           if ( !prevName.endsWith( ".ktr" ) ) {
-            prevName =
-              "${"
-                + Const.INTERNAL_VARIABLE_JOB_FILENAME_DIRECTORY + "}/" + Const.trim( wFilename.getText() )
-                + ".ktr";
+            prevName = getEntryName( Const.trim( wFilename.getText() ) + ".ktr" );
           }
           if ( KettleVFS.fileExists( prevName ) ) {
             specificationMethod = ObjectLocationSpecificationMethod.FILENAME;
@@ -1327,7 +1326,7 @@ public class JobEntryTransDialog extends JobEntryDialog implements JobEntryDialo
       } catch ( Exception e ) {
         dialog.setFilterPath( parentFolder );
       }
-    } else if ( !Const.isEmpty( parentFolder ) ) {
+    } else if ( !Utils.isEmpty( parentFolder ) ) {
       dialog.setFilterPath( parentFolder );
     }
 
@@ -1337,13 +1336,18 @@ public class JobEntryTransDialog extends JobEntryDialog implements JobEntryDialo
       String name = file.getName();
       String parentFolderSelection = file.getParentFile().toString();
 
-      if ( !Const.isEmpty( parentFolder ) && parentFolder.equals( parentFolderSelection ) ) {
-        wFilename.setText( "${" + Const.INTERNAL_VARIABLE_JOB_FILENAME_DIRECTORY + "}/" + name );
+      if ( !Utils.isEmpty( parentFolder ) && parentFolder.equals( parentFolderSelection ) ) {
+        wFilename.setText( getEntryName( name ) );
       } else {
         wFilename.setText( fname );
       }
 
     }
+  }
+
+  String getEntryName( String name ) {
+    return "${"
+      + Const.INTERNAL_VARIABLE_ENTRY_CURRENT_DIRECTORY + "}/" + name;
   }
 
   public void dispose() {
@@ -1394,13 +1398,13 @@ public class JobEntryTransDialog extends JobEntryDialog implements JobEntryDialo
     wSlaveServer.setEnabled( !wCluster.getSelection() );
     wlSlaveServer.setEnabled( !wCluster.getSelection() );
 
-    wlWaitingToFinish.setEnabled( !wCluster.getSelection() && !Const.isEmpty( wSlaveServer.getText() ) );
-    wWaitingToFinish.setEnabled( !wCluster.getSelection() && !Const.isEmpty( wSlaveServer.getText() ) );
+    wlWaitingToFinish.setEnabled( !wCluster.getSelection() && !Utils.isEmpty( wSlaveServer.getText() ) );
+    wWaitingToFinish.setEnabled( !wCluster.getSelection() && !Utils.isEmpty( wSlaveServer.getText() ) );
 
     wlFollowingAbortRemotely.setEnabled( !wCluster.getSelection()
-      && wWaitingToFinish.getSelection() && !Const.isEmpty( wSlaveServer.getText() ) );
+      && wWaitingToFinish.getSelection() && !Utils.isEmpty( wSlaveServer.getText() ) );
     wFollowingAbortRemotely.setEnabled( !wCluster.getSelection()
-      && wWaitingToFinish.getSelection() && !Const.isEmpty( wSlaveServer.getText() ) );
+      && wWaitingToFinish.getSelection() && !Utils.isEmpty( wSlaveServer.getText() ) );
 
     wlLogRemoteWork.setEnabled( wCluster.getSelection() );
     wLogRemoteWork.setEnabled( wCluster.getSelection() );
@@ -1410,7 +1414,7 @@ public class JobEntryTransDialog extends JobEntryDialog implements JobEntryDialo
     wName.setText( Const.NVL( jobEntry.getName(), "" ) );
 
     specificationMethod = jobEntry.getSpecificationMethod();
-    switch( specificationMethod ) {
+    switch ( specificationMethod ) {
       case FILENAME:
         wFilename.setText( Const.NVL( jobEntry.getFilename(), "" ) );
         break;
@@ -1446,7 +1450,7 @@ public class JobEntryTransDialog extends JobEntryDialog implements JobEntryDialo
     if ( jobEntry.parameters != null ) {
       for ( int i = 0; i < jobEntry.parameters.length; i++ ) {
         TableItem ti = wParameters.table.getItem( i );
-        if ( !Const.isEmpty( jobEntry.parameters[ i ] ) ) {
+        if ( !Utils.isEmpty( jobEntry.parameters[ i ] ) ) {
           ti.setText( 1, Const.NVL( jobEntry.parameters[ i ], "" ) );
           ti.setText( 2, Const.NVL( jobEntry.parameterFieldNames[ i ], "" ) );
           ti.setText( 3, Const.NVL( jobEntry.parameterValues[ i ], "" ) );
@@ -1516,7 +1520,7 @@ public class JobEntryTransDialog extends JobEntryDialog implements JobEntryDialo
   private void getInfo( JobEntryTrans jet ) throws KettleException {
     jet.setName( wName.getText() );
     jet.setSpecificationMethod( specificationMethod );
-    switch( specificationMethod ) {
+    switch ( specificationMethod ) {
       case FILENAME:
         jet.setFileName( wFilename.getText() );
         if ( jet.getFilename().isEmpty() ) {
@@ -1592,13 +1596,13 @@ public class JobEntryTransDialog extends JobEntryDialog implements JobEntryDialo
 
       jet.parameters[ nr ] = param;
 
-      if ( !Const.isEmpty( Const.trim( fieldName ) ) ) {
+      if ( !Utils.isEmpty( Const.trim( fieldName ) ) ) {
         jet.parameterFieldNames[ nr ] = fieldName;
       } else {
         jet.parameterFieldNames[ nr ] = "";
       }
 
-      if ( !Const.isEmpty( Const.trim( value ) ) ) {
+      if ( !Utils.isEmpty( Const.trim( value ) ) ) {
         jet.parameterValues[ nr ] = value;
       } else {
         jet.parameterValues[ nr ] = "";
@@ -1638,7 +1642,7 @@ public class JobEntryTransDialog extends JobEntryDialog implements JobEntryDialo
   }
 
   private void ok() {
-    if ( Const.isEmpty( wName.getText() ) ) {
+    if ( Utils.isEmpty( wName.getText() ) ) {
       MessageBox mb = new MessageBox( shell, SWT.OK | SWT.ICON_ERROR );
       mb.setText( BaseMessages.getString( PKG, "System.StepJobEntryNameMissing.Title" ) );
       mb.setMessage( BaseMessages.getString( PKG, "System.JobEntryNameMissing.Msg" ) );

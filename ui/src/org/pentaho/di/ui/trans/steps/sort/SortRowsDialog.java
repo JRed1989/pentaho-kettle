@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -50,6 +50,7 @@ import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.core.row.ValueMetaInterface;
@@ -109,6 +110,7 @@ public class SortRowsDialog extends BaseStepDialog implements StepDialogInterfac
     inputFields = new HashMap<String, Integer>();
   }
 
+  @Override
   public String open() {
     Shell parent = getParent();
     Display display = parent.getDisplay();
@@ -118,6 +120,7 @@ public class SortRowsDialog extends BaseStepDialog implements StepDialogInterfac
     setShellImage( shell, input );
 
     ModifyListener lsMod = new ModifyListener() {
+      @Override
       public void modifyText( ModifyEvent e ) {
         input.setChanged();
       }
@@ -182,6 +185,7 @@ public class SortRowsDialog extends BaseStepDialog implements StepDialogInterfac
     wSortDir.setLayoutData( fdSortDir );
 
     wbSortDir.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent arg0 ) {
         DirectoryDialog dd = new DirectoryDialog( shell, SWT.NONE );
         dd.setFilterPath( wSortDir.getText() );
@@ -194,6 +198,7 @@ public class SortRowsDialog extends BaseStepDialog implements StepDialogInterfac
 
     // Whenever something changes, set the tooltip to the expanded version:
     wSortDir.addModifyListener( new ModifyListener() {
+      @Override
       public void modifyText( ModifyEvent e ) {
         wSortDir.setToolTipText( transMeta.environmentSubstitute( wSortDir.getText() ) );
       }
@@ -273,6 +278,7 @@ public class SortRowsDialog extends BaseStepDialog implements StepDialogInterfac
     fdCompress.right = new FormAttachment( 100, 0 );
     wCompress.setLayoutData( fdCompress );
     wCompress.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         log.logDetailed( "SortRowsDialog", "Selection Listener for compress: " + wCompress.getSelection() );
         input.setChanged();
@@ -333,6 +339,18 @@ public class SortRowsDialog extends BaseStepDialog implements StepDialogInterfac
             BaseMessages.getString( PKG, "System.Combo.Yes" ),
             BaseMessages.getString( PKG, "System.Combo.No" ) } ),
         new ColumnInfo(
+          BaseMessages.getString( PKG, "SortRowsDialog.CollatorDisabled.Column" ),
+          ColumnInfo.COLUMN_TYPE_CCOMBO, new String[] {
+            BaseMessages.getString( PKG, "System.Combo.Yes" ),
+            BaseMessages.getString( PKG, "System.Combo.No" ) } ),
+        new ColumnInfo(
+          BaseMessages.getString( PKG, "SortRowsDialog.CollatorStrength.Column" ),
+          ColumnInfo.COLUMN_TYPE_CCOMBO, new String[] {
+            BaseMessages.getString( PKG, "System.Combo.Primary" ),
+            BaseMessages.getString( PKG, "System.Combo.Secondary" ),
+            BaseMessages.getString( PKG, "System.Combo.Tertiary" ),
+            BaseMessages.getString( PKG, "System.Combo.Identical" ) }, true ),
+        new ColumnInfo(
           BaseMessages.getString( PKG, "SortRowsDialog.PreSortedField.Column" ),
           ColumnInfo.COLUMN_TYPE_CCOMBO, new String[] {
             BaseMessages.getString( PKG, "System.Combo.Yes" ),
@@ -353,6 +371,7 @@ public class SortRowsDialog extends BaseStepDialog implements StepDialogInterfac
     // Search the fields in the background
 
     final Runnable runnable = new Runnable() {
+      @Override
       public void run() {
         StepMeta stepMeta = transMeta.findStep( stepname );
         if ( stepMeta != null ) {
@@ -374,16 +393,19 @@ public class SortRowsDialog extends BaseStepDialog implements StepDialogInterfac
 
     // Add listeners
     lsOK = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         ok();
       }
     };
     lsGet = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         get();
       }
     };
     lsCancel = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         cancel();
       }
@@ -394,6 +416,7 @@ public class SortRowsDialog extends BaseStepDialog implements StepDialogInterfac
     wCancel.addListener( SWT.Selection, lsCancel );
 
     lsDef = new SelectionAdapter() {
+      @Override
       public void widgetDefaultSelected( SelectionEvent e ) {
         ok();
       }
@@ -407,12 +430,14 @@ public class SortRowsDialog extends BaseStepDialog implements StepDialogInterfac
 
     // Detect X or ALT-F4 or something that kills this window...
     shell.addShellListener( new ShellAdapter() {
+      @Override
       public void shellClosed( ShellEvent e ) {
         cancel();
       }
     } );
 
     lsResize = new Listener() {
+      @Override
       public void handleEvent( Event event ) {
         Point size = shell.getSize();
         wFields.setSize( size.x - 10, size.y - 50 );
@@ -482,7 +507,11 @@ public class SortRowsDialog extends BaseStepDialog implements StepDialogInterfac
         .getString( PKG, "System.Combo.No" ) );
       ti.setText( 3, input.getCaseSensitive()[i]
         ? BaseMessages.getString( PKG, "System.Combo.Yes" ) : BaseMessages.getString( PKG, "System.Combo.No" ) );
-      ti.setText( 4, input.getPreSortedField()[i]
+      ti.setText( 4, input.getCollatorEnabled()[i]
+        ? BaseMessages.getString( PKG, "System.Combo.Yes" ) : BaseMessages.getString( PKG, "System.Combo.No" ) );
+      ti.setText( 5, input.getCollatorStrength()[i] == 0
+        ? BaseMessages.getString( PKG, "System.Combo.Primary" ) : Integer.toString( input.getCollatorStrength()[i] ) );
+      ti.setText( 6, input.getPreSortedField()[i]
         ? BaseMessages.getString( PKG, "System.Combo.Yes" ) : BaseMessages.getString( PKG, "System.Combo.No" ) );
     }
 
@@ -500,7 +529,7 @@ public class SortRowsDialog extends BaseStepDialog implements StepDialogInterfac
   }
 
   private void ok() {
-    if ( Const.isEmpty( wStepname.getText() ) ) {
+    if ( Utils.isEmpty( wStepname.getText() ) ) {
       return;
     }
 
@@ -526,9 +555,15 @@ public class SortRowsDialog extends BaseStepDialog implements StepDialogInterfac
     for ( int i = 0; i < nrfields; i++ ) {
       TableItem ti = wFields.getNonEmpty( i );
       input.getFieldName()[i] = ti.getText( 1 );
-      input.getAscending()[i] = Const.isEmpty( ti.getText( 2 ) ) || BaseMessages.getString( PKG, "System.Combo.Yes" ).equalsIgnoreCase( ti.getText( 2 ) );
+      input.getAscending()[i] = Utils.isEmpty( ti.getText( 2 ) ) || BaseMessages.getString( PKG, "System.Combo.Yes" ).equalsIgnoreCase( ti.getText( 2 ) );
       input.getCaseSensitive()[i] = BaseMessages.getString( PKG, "System.Combo.Yes" ).equalsIgnoreCase( ti.getText( 3 ) );
-      input.getPreSortedField()[i] = BaseMessages.getString( PKG, "System.Combo.Yes" ).equalsIgnoreCase( ti.getText( 4 ) );
+      input.getCollatorEnabled()[i] = BaseMessages.getString( PKG, "System.Combo.Yes" ).equalsIgnoreCase( ti.getText( 4 ) );
+      if ( ti.getText( 5 ) == "" ) {
+        input.getCollatorStrength()[i] = Integer.parseInt( BaseMessages.getString( PKG, "System.Combo.Primary" ) );
+      } else {
+        input.getCollatorStrength()[i] = Integer.parseInt( ti.getText( 5 ) );
+      }
+      input.getPreSortedField()[i] = BaseMessages.getString( PKG, "System.Combo.Yes" ).equalsIgnoreCase( ti.getText( 6 ) );
     }
 
     dispose();
@@ -539,6 +574,7 @@ public class SortRowsDialog extends BaseStepDialog implements StepDialogInterfac
       RowMetaInterface r = transMeta.getPrevStepFields( stepname );
       if ( r != null ) {
         TableItemInsertListener insertListener = new TableItemInsertListener() {
+          @Override
           public boolean tableItemInserted( TableItem tableItem, ValueMetaInterface v ) {
             tableItem.setText( 2, BaseMessages.getString( PKG, "System.Combo.Yes" ) );
             return true;

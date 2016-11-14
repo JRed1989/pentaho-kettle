@@ -1,27 +1,28 @@
 /*!
-* Copyright 2010 - 2015 Pentaho Corporation.  All rights reserved.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*
-*/
-
+ * Copyright 2010 - 2015 Pentaho Corporation.  All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
 package com.pentaho.repository.importexport;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -79,16 +80,26 @@ public class StreamToJobNodeConverter implements Converter {
 
     try {
       if ( fileId != null ) {
-        Repository repository = PDIImportUtil.connectToRepository( null );
+        Repository repository = connectToRepository();
         RepositoryFile file = unifiedRepository.getFileById( fileId );
         if ( file != null ) {
           try {
             JobMeta jobMeta = repository.loadJob( new StringObjectId( fileId.toString() ), null );
             if ( jobMeta != null ) {
+              Set<String> privateDatabases = jobMeta.getPrivateDatabases();
+              if ( privateDatabases != null ) {
+                // keep only private transformation databases
+                for ( Iterator<DatabaseMeta> it = jobMeta.getDatabases().iterator(); it.hasNext(); ) {
+                  String databaseName = it.next().getName();
+                  if ( !privateDatabases.contains( databaseName ) ) {
+                    it.remove();
+                  }
+                }
+              }
               return new ByteArrayInputStream( jobMeta.getXML().getBytes() );
             }
           } catch ( KettleException e ) {
-            logger.error(e);
+            logger.error( e );
             // file is there and may be legacy, attempt simple export
             SimpleRepositoryFileData fileData =
                 unifiedRepository.getDataForRead( fileId, SimpleRepositoryFileData.class );
@@ -100,9 +111,14 @@ public class StreamToJobNodeConverter implements Converter {
         }
       }
     } catch ( Exception e ) {
-      logger.error(e);
+      logger.error( e );
     }
     return is;
+  }
+
+  // package-local visibility for testing purposes
+  Repository connectToRepository() throws KettleException {
+    return PDIImportUtil.connectToRepository( null );
   }
 
   /**
@@ -116,7 +132,7 @@ public class StreamToJobNodeConverter implements Converter {
     try {
       long size = inputStream.available();
       JobMeta jobMeta = new JobMeta();
-      Repository repository = PDIImportUtil.connectToRepository( null );
+      Repository repository = connectToRepository();
       Document doc = PDIImportUtil.loadXMLFrom( inputStream );
       if ( doc != null ) {
         jobMeta.loadXML( doc.getDocumentElement(), repository, null );

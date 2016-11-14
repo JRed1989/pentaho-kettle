@@ -42,7 +42,7 @@ import org.w3c.dom.Node;
 
 /**
  * @author Tatsiana_Kasiankova
- * 
+ *
  */
 public class SlaveServerConfigTest {
 
@@ -242,7 +242,7 @@ public class SlaveServerConfigTest {
   }
 
   private String getConfig( Map<String, String> jettyOptions ) {
-    StringBuffer xml = new StringBuffer();
+    StringBuilder xml = new StringBuilder( 50 );
     xml.append( XMLHandler.getXMLHeader( Const.XML_ENCODING ) );
     xml.append( "<" + XML_TAG_SLAVE_CONFIG + ">" ).append( Const.CR );
     if ( jettyOptions != null ) {

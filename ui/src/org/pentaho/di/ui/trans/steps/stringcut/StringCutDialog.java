@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -47,9 +47,9 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.TransMeta;
@@ -335,7 +335,7 @@ public class StringCutDialog extends BaseStepDialog implements StepDialogInterfa
   }
 
   private void ok() {
-    if ( Const.isEmpty( wStepname.getText() ) ) {
+    if ( Utils.isEmpty( wStepname.getText() ) ) {
       return;
     }
 
@@ -351,7 +351,7 @@ public class StringCutDialog extends BaseStepDialog implements StepDialogInterfa
       if ( r != null ) {
         TableItemInsertListener listener = new TableItemInsertListener() {
           public boolean tableItemInserted( TableItem tableItem, ValueMetaInterface v ) {
-            if ( v.getType() == ValueMeta.TYPE_STRING ) {
+            if ( v.getType() == ValueMetaInterface.TYPE_STRING ) {
               // Only process strings
               return true;
             } else {

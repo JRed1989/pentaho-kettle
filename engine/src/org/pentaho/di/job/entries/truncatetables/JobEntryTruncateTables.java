@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,17 +22,16 @@
 
 package org.pentaho.di.job.entries.truncatetables;
 
-import static org.pentaho.di.job.entry.validator.AbstractFileValidator.putVariableSpace;
-import static org.pentaho.di.job.entry.validator.AndValidator.putValidators;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.andValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.fileExistsValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notNullValidator;
+import org.pentaho.di.job.entry.validator.AbstractFileValidator;
+import org.pentaho.di.job.entry.validator.AndValidator;
+import org.pentaho.di.job.entry.validator.JobEntryValidatorUtils;
 
 import java.util.List;
 
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.RowMetaAndData;
 import org.pentaho.di.core.database.Database;
@@ -89,13 +88,24 @@ public class JobEntryTruncateTables extends JobEntryBase implements Cloneable, J
     this( "" );
   }
 
+  public void allocate( int nrFields ) {
+    this.arguments = new String[nrFields];
+    this.schemaname = new String[nrFields];
+  }
+
   public Object clone() {
     JobEntryTruncateTables je = (JobEntryTruncateTables) super.clone();
+    if ( arguments != null ) {
+      int nrFields = arguments.length;
+      je.allocate( nrFields );
+      System.arraycopy( arguments, 0, je.arguments, 0, nrFields );
+      System.arraycopy( schemaname, 0, je.schemaname, 0, nrFields );
+    }
     return je;
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 200 );
+    StringBuilder retval = new StringBuilder( 200 );
 
     retval.append( super.getXML() );
     retval.append( "      " ).append(
@@ -127,8 +137,7 @@ public class JobEntryTruncateTables extends JobEntryBase implements Cloneable, J
 
       // How many field arguments?
       int nrFields = XMLHandler.countNodes( fields, "field" );
-      this.arguments = new String[nrFields];
-      this.schemaname = new String[nrFields];
+      allocate( nrFields );
 
       // Read them all...
       for ( int i = 0; i < nrFields; i++ ) {
@@ -149,8 +158,7 @@ public class JobEntryTruncateTables extends JobEntryBase implements Cloneable, J
       this.argFromPrevious = rep.getJobEntryAttributeBoolean( id_jobentry, "arg_from_previous" );
       // How many arguments?
       int argnr = rep.countNrJobEntryAttributes( id_jobentry, "name" );
-      this.arguments = new String[argnr];
-      this.schemaname = new String[argnr];
+      allocate( argnr );
 
       // Read them all...
       for ( int a = 0; a < argnr; a++ ) {
@@ -204,13 +212,13 @@ public class JobEntryTruncateTables extends JobEntryBase implements Cloneable, J
     String realTablename = tablename;
     try {
 
-      if ( !Const.isEmpty( realSchemaname ) ) {
+      if ( !Utils.isEmpty( realSchemaname ) ) {
         realTablename = db.getDatabaseMeta().getQuotedSchemaTableCombination( realSchemaname, realTablename );
       }
 
       // check if table exists!
       if ( db.checkTableExists( realTablename ) ) {
-        if ( !Const.isEmpty( realSchemaname ) ) {
+        if ( !Utils.isEmpty( realSchemaname ) ) {
           db.truncateTable( realSchemaname, tablename );
         } else {
           db.truncateTable( tablename );
@@ -255,8 +263,7 @@ public class JobEntryTruncateTables extends JobEntryBase implements Cloneable, J
       db.shareVariablesWith( this );
       try {
         db.connect( parentJob.getTransactionId(), null );
-        if ( argFromPrevious && rows != null ) // Copy the input row to the (command line) arguments
-        {
+        if ( argFromPrevious && rows != null ) { // Copy the input row to the (command line) arguments
 
           for ( int iteration = 0; iteration < rows.size() && !parentJob.isStopped() && continueProcess; iteration++ ) {
             resultRow = rows.get( iteration );
@@ -265,7 +272,7 @@ public class JobEntryTruncateTables extends JobEntryBase implements Cloneable, J
             String tablename_previous = resultRow.getString( 0, null );
             String schemaname_previous = resultRow.getString( 1, null );
 
-            if ( !Const.isEmpty( tablename_previous ) ) {
+            if ( !Utils.isEmpty( tablename_previous ) ) {
               if ( log.isDetailed() ) {
                 logDetailed( BaseMessages.getString(
                   PKG, "JobEntryTruncateTables.ProcessingRow", tablename_previous, schemaname_previous ) );
@@ -286,7 +293,7 @@ public class JobEntryTruncateTables extends JobEntryBase implements Cloneable, J
           for ( int i = 0; i < arguments.length && !parentJob.isStopped() && continueProcess; i++ ) {
             String realTablename = environmentSubstitute( arguments[i] );
             String realSchemaname = environmentSubstitute( schemaname[i] );
-            if ( !Const.isEmpty( realTablename ) ) {
+            if ( !Utils.isEmpty( realTablename ) ) {
               if ( log.isDetailed() ) {
                 logDetailed( BaseMessages.getString(
                   PKG, "JobEntryTruncateTables.ProcessingArg", arguments[i], schemaname[i] ) );
@@ -338,18 +345,20 @@ public class JobEntryTruncateTables extends JobEntryBase implements Cloneable, J
 
   public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
-    boolean res = andValidator().validate( this, "arguments", remarks, putValidators( notNullValidator() ) );
+    boolean res = JobEntryValidatorUtils.andValidator().validate( this, "arguments", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notNullValidator() ) );
 
     if ( res == false ) {
       return;
     }
 
     ValidatorContext ctx = new ValidatorContext();
-    putVariableSpace( ctx, getVariables() );
-    putValidators( ctx, notNullValidator(), fileExistsValidator() );
+    AbstractFileValidator.putVariableSpace( ctx, getVariables() );
+    AndValidator.putValidators( ctx, JobEntryValidatorUtils.notNullValidator(),
+        JobEntryValidatorUtils.fileExistsValidator() );
 
     for ( int i = 0; i < arguments.length; i++ ) {
-      andValidator().validate( this, "arguments[" + i + "]", remarks, ctx );
+      JobEntryValidatorUtils.andValidator().validate( this, "arguments[" + i + "]", remarks, ctx );
     }
   }
 

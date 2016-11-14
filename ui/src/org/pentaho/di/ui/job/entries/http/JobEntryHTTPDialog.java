@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -47,6 +47,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.HTTPProtocol;
 import org.pentaho.di.core.Props;
 import org.pentaho.di.i18n.BaseMessages;
@@ -98,6 +99,18 @@ public class JobEntryHTTPDialog extends JobEntryDialog implements JobEntryDialog
   private TextVar wFieldURL;
 
   private FormData fdlFieldURL, fdFieldURL;
+
+  private Label wlFieldUpload;
+
+  private TextVar wFieldUpload;
+
+  private FormData fdlFieldUpload, fdFieldUpload;
+
+  private Label wlFieldTarget;
+
+  private TextVar wFieldTarget;
+
+  private FormData fdlFieldTarget, fdFieldTarget;
 
   private Label wlTargetFile;
 
@@ -327,6 +340,45 @@ public class JobEntryHTTPDialog extends JobEntryDialog implements JobEntryDialog
     fdFieldURL.right = new FormAttachment( 100, 0 );
     wFieldURL.setLayoutData( fdFieldURL );
 
+    // FieldUpload line
+
+    wlFieldUpload = new Label( wGeneralComp, SWT.RIGHT );
+    wlFieldUpload.setText( BaseMessages.getString( PKG, "JobHTTP.InputFieldUpload.Label" ) );
+    props.setLook( wlFieldUpload );
+    fdlFieldUpload = new FormData();
+    fdlFieldUpload.left = new FormAttachment( 0, 0 );
+    fdlFieldUpload.top = new FormAttachment( wFieldURL, margin );
+    fdlFieldUpload.right = new FormAttachment( middle, -margin );
+    wlFieldUpload.setLayoutData( fdlFieldUpload );
+    wFieldUpload = new TextVar( jobMeta, wGeneralComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFieldUpload );
+    wFieldUpload.setToolTipText( BaseMessages.getString( PKG, "JobHTTP.InputFieldUpload.Tooltip" ) );
+    wFieldUpload.addModifyListener( lsMod );
+    fdFieldUpload = new FormData();
+    fdFieldUpload.left = new FormAttachment( middle, 0 );
+    fdFieldUpload.top = new FormAttachment( wFieldURL, margin );
+    fdFieldUpload.right = new FormAttachment( 100, 0 );
+    wFieldUpload.setLayoutData( fdFieldUpload );
+
+    // FieldTarget line
+    wlFieldTarget = new Label( wGeneralComp, SWT.RIGHT );
+    wlFieldTarget.setText( BaseMessages.getString( PKG, "JobHTTP.InputFieldDest.Label" ) );
+    props.setLook( wlFieldTarget );
+    fdlFieldTarget = new FormData();
+    fdlFieldTarget.left = new FormAttachment( 0, 0 );
+    fdlFieldTarget.top = new FormAttachment( wFieldUpload, margin );
+    fdlFieldTarget.right = new FormAttachment( middle, -margin );
+    wlFieldTarget.setLayoutData( fdlFieldTarget );
+    wFieldTarget = new TextVar( jobMeta, wGeneralComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFieldTarget );
+    wFieldTarget.setToolTipText( BaseMessages.getString( PKG, "JobHTTP.InputFieldDest.Tooltip" ) );
+    wFieldTarget.addModifyListener( lsMod );
+    fdFieldTarget = new FormData();
+    fdFieldTarget.left = new FormAttachment( middle, 0 );
+    fdFieldTarget.top = new FormAttachment( wFieldUpload, margin );
+    fdFieldTarget.right = new FormAttachment( 100, 0 );
+    wFieldTarget.setLayoutData( fdFieldTarget );
+
     // ////////////////////////
     // START OF AuthenticationGROUP///
     // /
@@ -345,7 +397,7 @@ public class JobEntryHTTPDialog extends JobEntryDialog implements JobEntryDialog
     props.setLook( wlUserName );
     fdlUserName = new FormData();
     fdlUserName.left = new FormAttachment( 0, 0 );
-    fdlUserName.top = new FormAttachment( wFieldURL, margin );
+    fdlUserName.top = new FormAttachment( wFieldTarget, margin );
     fdlUserName.right = new FormAttachment( middle, -margin );
     wlUserName.setLayoutData( fdlUserName );
     wUserName = new TextVar( jobMeta, wAuthentication, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
@@ -354,7 +406,7 @@ public class JobEntryHTTPDialog extends JobEntryDialog implements JobEntryDialog
     wUserName.addModifyListener( lsMod );
     fdUserName = new FormData();
     fdUserName.left = new FormAttachment( middle, 0 );
-    fdUserName.top = new FormAttachment( wFieldURL, margin );
+    fdUserName.top = new FormAttachment( wFieldTarget, margin );
     fdUserName.right = new FormAttachment( 100, 0 );
     wUserName.setLayoutData( fdUserName );
 
@@ -436,7 +488,7 @@ public class JobEntryHTTPDialog extends JobEntryDialog implements JobEntryDialog
 
     fdAuthentication = new FormData();
     fdAuthentication.left = new FormAttachment( 0, margin );
-    fdAuthentication.top = new FormAttachment( wFieldURL, margin );
+    fdAuthentication.top = new FormAttachment( wFieldTarget, margin );
     fdAuthentication.right = new FormAttachment( 100, -margin );
     wAuthentication.setLayoutData( fdAuthentication );
     // ///////////////////////////////////////////////////////////
@@ -787,11 +839,23 @@ public class JobEntryHTTPDialog extends JobEntryDialog implements JobEntryDialog
     wURL.setEnabled( !wRunEveryRow.getSelection() );
     wlFieldURL.setEnabled( wRunEveryRow.getSelection() );
     wFieldURL.setEnabled( wRunEveryRow.getSelection() );
+    wlFieldUpload.setEnabled( wRunEveryRow.getSelection() );
+    wFieldUpload.setEnabled( wRunEveryRow.getSelection() );
+    wlFieldTarget.setEnabled(  wRunEveryRow.getSelection() );
+    wFieldTarget.setEnabled( wRunEveryRow.getSelection() );
 
-    wlTargetExt.setEnabled( wDateTimeAdded.getSelection() );
-    wTargetExt.setEnabled( wDateTimeAdded.getSelection() );
-    wlAppend.setEnabled( !wDateTimeAdded.getSelection() );
-    wAppend.setEnabled( !wDateTimeAdded.getSelection() );
+    wlUploadFile.setEnabled( !wRunEveryRow.getSelection() );
+    wUploadFile.setEnabled( !wRunEveryRow.getSelection() );
+    wbUploadFile.setEnabled( !wRunEveryRow.getSelection() );
+    wlTargetFile.setEnabled( !wRunEveryRow.getSelection() );
+    wbTargetFile.setEnabled( !wRunEveryRow.getSelection() );
+    wTargetFile.setEnabled( !wRunEveryRow.getSelection() );
+    wlDateTimeAdded.setEnabled( !wRunEveryRow.getSelection() );
+    wDateTimeAdded.setEnabled( !wRunEveryRow.getSelection() );
+    wlAppend.setEnabled( wRunEveryRow.getSelection() ? false : !wDateTimeAdded.getSelection() );
+    wAppend.setEnabled( wRunEveryRow.getSelection() ? false : !wDateTimeAdded.getSelection() );
+    wlTargetExt.setEnabled( wRunEveryRow.getSelection() ? false : wDateTimeAdded.getSelection() );
+    wTargetExt.setEnabled( wRunEveryRow.getSelection() ? false : wDateTimeAdded.getSelection() );
   }
 
   public void dispose() {
@@ -809,15 +873,17 @@ public class JobEntryHTTPDialog extends JobEntryDialog implements JobEntryDialog
     wURL.setText( Const.NVL( jobEntry.getUrl(), "" ) );
     wRunEveryRow.setSelection( jobEntry.isRunForEveryRow() );
     wFieldURL.setText( Const.NVL( jobEntry.getUrlFieldname(), "" ) );
+    wFieldUpload.setText( Const.NVL( jobEntry.getUploadFieldname(), "" ) );
+    wFieldTarget.setText( Const.NVL( jobEntry.getDestinationFieldname(), "" ) );
     wTargetFile.setText( Const.NVL( jobEntry.getTargetFilename(), "" ) );
     wAppend.setSelection( jobEntry.isFileAppended() );
     wDateTimeAdded.setSelection( jobEntry.isDateTimeAdded() );
-    wTargetExt.setText( Const.NVL( jobEntry.getTargetFilenameExtention(), "" ) );
+    wTargetExt.setText( Const.NVL( jobEntry.getTargetFilenameExtension(), "" ) );
 
     wUploadFile.setText( Const.NVL( jobEntry.getUploadFilename(), "" ) );
 
     jobEntry.setDateTimeAdded( wDateTimeAdded.getSelection() );
-    jobEntry.setTargetFilenameExtention( wTargetExt.getText() );
+    jobEntry.setTargetFilenameExtension( wTargetExt.getText() );
 
     wUserName.setText( Const.NVL( jobEntry.getUsername(), "" ) );
     wPassword.setText( Const.NVL( jobEntry.getPassword(), "" ) );
@@ -856,7 +922,7 @@ public class JobEntryHTTPDialog extends JobEntryDialog implements JobEntryDialog
   }
 
   private void ok() {
-    if ( Const.isEmpty( wName.getText() ) ) {
+    if ( Utils.isEmpty( wName.getText() ) ) {
       MessageBox mb = new MessageBox( shell, SWT.OK | SWT.ICON_ERROR );
       mb.setText( BaseMessages.getString( PKG, "System.StepJobEntryNameMissing.Title" ) );
       mb.setMessage( BaseMessages.getString( PKG, "System.JobEntryNameMissing.Msg" ) );
@@ -867,20 +933,21 @@ public class JobEntryHTTPDialog extends JobEntryDialog implements JobEntryDialog
     jobEntry.setUrl( wURL.getText() );
     jobEntry.setRunForEveryRow( wRunEveryRow.getSelection() );
     jobEntry.setUrlFieldname( wFieldURL.getText() );
-    jobEntry.setTargetFilename( wTargetFile.getText() );
-    jobEntry.setFileAppended( wAppend.getSelection() );
-
-    jobEntry.setDateTimeAdded( wDateTimeAdded.getSelection() );
-    jobEntry.setTargetFilenameExtention( wTargetExt.getText() );
-
-    jobEntry.setUploadFilename( wUploadFile.getText() );
+    jobEntry.setUploadFieldname( wFieldUpload.getText() );
+    jobEntry.setDestinationFieldname( wFieldTarget.getText() );
 
     jobEntry.setUsername( wUserName.getText() );
     jobEntry.setPassword( wPassword.getText() );
-
     jobEntry.setProxyHostname( wProxyServer.getText() );
     jobEntry.setProxyPort( wProxyPort.getText() );
     jobEntry.setNonProxyHosts( wNonProxyHosts.getText() );
+
+    jobEntry.setUploadFilename( wUploadFile.getText() );
+
+    jobEntry.setTargetFilename( wRunEveryRow.getSelection() ? "" : wTargetFile.getText() );
+    jobEntry.setFileAppended( wRunEveryRow.getSelection() ? false : wAppend.getSelection() );
+    jobEntry.setDateTimeAdded( wRunEveryRow.getSelection() ? false : wDateTimeAdded.getSelection() );
+    jobEntry.setTargetFilenameExtension( wRunEveryRow.getSelection() ? "" : wTargetExt.getText() );
     jobEntry.setAddFilenameToResult( wAddFilenameToResult.getSelection() );
 
     int nritems = wHeaders.nrNonEmpty();

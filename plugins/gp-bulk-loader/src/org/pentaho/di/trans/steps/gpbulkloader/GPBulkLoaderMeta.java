@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -27,6 +27,7 @@ import java.util.List;
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.ProvidesDatabaseConnectionInformation;
 import org.pentaho.di.core.SQLStatement;
 import org.pentaho.di.core.annotations.Step;
@@ -62,10 +63,10 @@ import org.w3c.dom.Node;
  */
 
 @Step( id = "GPBulkLoader", image = "BLKGPL.svg",
-i18nPackageName = "org.pentaho.di.trans.steps.gpbulkloader", name = "GPBulkLoaderMeta.Name",
-description = "GPBulkLoaderMeta.Description",
-categoryDescription = "i18n:org.pentaho.di.job:JobCategory.Category.Deprecated",
-documentationUrl = "http://wiki.pentaho.com/display/PMOPEN/GreenPlum+bulk+loader" )
+  i18nPackageName = "org.pentaho.di.trans.steps.gpbulkloader", name = "GPBulkLoaderMeta.Name",
+  description = "GPBulkLoaderMeta.Description",
+  categoryDescription = "i18n:org.pentaho.di.job:JobCategory.Category.Deprecated",
+  documentationUrl = "http://wiki.pentaho.com/display/PMOPEN/GreenPlum+bulk+loader" )
 
 public class GPBulkLoaderMeta extends BaseStepMeta implements StepMetaInterface,
   ProvidesDatabaseConnectionInformation {
@@ -147,6 +148,7 @@ public class GPBulkLoaderMeta extends BaseStepMeta implements StepMetaInterface,
   /**
    * @return Returns the database.
    */
+  @Override
   public DatabaseMeta getDatabaseMeta() {
     return databaseMeta;
   }
@@ -162,6 +164,7 @@ public class GPBulkLoaderMeta extends BaseStepMeta implements StepMetaInterface,
   /**
    * @return Returns the tableName.
    */
+  @Override
   public String getTableName() {
     return tableName;
   }
@@ -220,6 +223,7 @@ public class GPBulkLoaderMeta extends BaseStepMeta implements StepMetaInterface,
     this.dateMask = dateMask;
   }
 
+  @Override
   public void loadXML( Node stepnode, List<DatabaseMeta> databases, IMetaStore metaStore ) throws KettleXMLException {
     readData( stepnode, databases );
   }
@@ -230,6 +234,7 @@ public class GPBulkLoaderMeta extends BaseStepMeta implements StepMetaInterface,
     dateMask = new String[nrvalues];
   }
 
+  @Override
   public Object clone() {
     GPBulkLoaderMeta retval = (GPBulkLoaderMeta) super.clone();
     int nrvalues = fieldTable.length;
@@ -294,6 +299,7 @@ public class GPBulkLoaderMeta extends BaseStepMeta implements StepMetaInterface,
     }
   }
 
+  @Override
   public void setDefault() {
     fieldTable = null;
     databaseMeta = null;
@@ -315,6 +321,7 @@ public class GPBulkLoaderMeta extends BaseStepMeta implements StepMetaInterface,
     allocate( nrvalues );
   }
 
+  @Override
   public String getXML() {
     StringBuffer retval = new StringBuffer( 300 );
 
@@ -345,6 +352,7 @@ public class GPBulkLoaderMeta extends BaseStepMeta implements StepMetaInterface,
     return retval.toString();
   }
 
+  @Override
   public void readRep( Repository rep, IMetaStore metaStore, ObjectId id_step, List<DatabaseMeta> databases ) throws KettleException {
     try {
       databaseMeta = rep.loadDatabaseMetaFromStepAttribute( id_step, "id_connection", databases );
@@ -377,6 +385,7 @@ public class GPBulkLoaderMeta extends BaseStepMeta implements StepMetaInterface,
     }
   }
 
+  @Override
   public void saveRep( Repository rep, IMetaStore metaStore, ObjectId id_transformation, ObjectId id_step ) throws KettleException {
     try {
       rep.saveDatabaseMetaStepAttribute( id_transformation, id_step, "id_connection", databaseMeta );
@@ -412,11 +421,13 @@ public class GPBulkLoaderMeta extends BaseStepMeta implements StepMetaInterface,
     }
   }
 
+  @Override
   public void getFields( RowMetaInterface rowMeta, String origin, RowMetaInterface[] info, StepMeta nextStep,
     VariableSpace space, Repository repository, IMetaStore metaStore ) throws KettleStepException {
     // Default: nothing changes to rowMeta
   }
 
+  @Override
   public void check( List<CheckResultInterface> remarks, TransMeta transMeta, StepMeta stepMeta,
     RowMetaInterface prev, String[] input, String[] output, RowMetaInterface info, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
@@ -429,7 +440,7 @@ public class GPBulkLoaderMeta extends BaseStepMeta implements StepMetaInterface,
       try {
         db.connect();
 
-        if ( !Const.isEmpty( tableName ) ) {
+        if ( !Utils.isEmpty( tableName ) ) {
           cr =
             new CheckResult( CheckResultInterface.TYPE_RESULT_OK, BaseMessages.getString(
               PKG, "GPBulkLoaderMeta.CheckResult.TableNameOK" ), stepMeta );
@@ -551,6 +562,7 @@ public class GPBulkLoaderMeta extends BaseStepMeta implements StepMetaInterface,
     }
   }
 
+  @Override
   public SQLStatement getSQLStatements( TransMeta transMeta, StepMeta stepMeta, RowMetaInterface prev,
     Repository repository, IMetaStore metaStore ) throws KettleStepException {
     SQLStatement retval = new SQLStatement( stepMeta.getName(), databaseMeta, null ); // default: nothing to do!
@@ -572,7 +584,7 @@ public class GPBulkLoaderMeta extends BaseStepMeta implements StepMetaInterface,
           }
         }
 
-        if ( !Const.isEmpty( tableName ) ) {
+        if ( !Utils.isEmpty( tableName ) ) {
           Database db = new Database( loggingObject, databaseMeta );
           db.shareVariablesWith( transMeta );
           try {
@@ -605,6 +617,7 @@ public class GPBulkLoaderMeta extends BaseStepMeta implements StepMetaInterface,
     return retval;
   }
 
+  @Override
   public void analyseImpact( List<DatabaseImpact> impact, TransMeta transMeta, StepMeta stepMeta,
     RowMetaInterface prev, String[] input, String[] output, RowMetaInterface info, Repository repository,
     IMetaStore metaStore ) throws KettleStepException {
@@ -624,15 +637,18 @@ public class GPBulkLoaderMeta extends BaseStepMeta implements StepMetaInterface,
     }
   }
 
+  @Override
   public StepInterface getStep( StepMeta stepMeta, StepDataInterface stepDataInterface, int cnr,
     TransMeta transMeta, Trans trans ) {
     return new GPBulkLoader( stepMeta, stepDataInterface, cnr, transMeta, trans );
   }
 
+  @Override
   public StepDataInterface getStepData() {
     return new GPBulkLoaderData();
   }
 
+  @Override
   public DatabaseMeta[] getUsedDatabaseConnections() {
     if ( databaseMeta != null ) {
       return new DatabaseMeta[] { databaseMeta };
@@ -641,6 +657,7 @@ public class GPBulkLoaderMeta extends BaseStepMeta implements StepMetaInterface,
     }
   }
 
+  @Override
   public RowMetaInterface getRequiredFields( VariableSpace space ) throws KettleException {
     String realTableName = space.environmentSubstitute( tableName );
     String realSchemaName = space.environmentSubstitute( schemaName );
@@ -650,7 +667,7 @@ public class GPBulkLoaderMeta extends BaseStepMeta implements StepMetaInterface,
       try {
         db.connect();
 
-        if ( !Const.isEmpty( realTableName ) ) {
+        if ( !Utils.isEmpty( realTableName ) ) {
           String schemaTable = databaseMeta.getQuotedSchemaTableCombination( realSchemaName, realTableName );
 
           // Check if this table exists...
@@ -677,6 +694,7 @@ public class GPBulkLoaderMeta extends BaseStepMeta implements StepMetaInterface,
   /**
    * @return the schemaName
    */
+  @Override
   public String getSchemaName() {
     return schemaName;
   }

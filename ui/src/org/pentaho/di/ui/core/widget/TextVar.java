@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -38,6 +38,7 @@ import org.eclipse.swt.layout.FormLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.ui.core.PropsUI;
@@ -106,7 +107,7 @@ public class TextVar extends Composite {
   protected void initialize( VariableSpace space, Composite composite, int flags, String toolTipText,
       GetCaretPositionInterface getCaretPositionInterface, InsertTextInterface insertTextInterface,
       SelectionListener selectionListener ) {
-   
+
     this.toolTipText = toolTipText;
     this.getCaretPositionInterface = getCaretPositionInterface;
     this.insertTextInterface = insertTextInterface;
@@ -141,6 +142,7 @@ public class TextVar extends Composite {
     fdText.top = new FormAttachment( 0, 0 );
     fdText.left = new FormAttachment( 0, 0 );
     fdText.right = new FormAttachment( 100, -image.getBounds().width );
+    fdText.bottom = new FormAttachment( 100, 0 );
     wText.setLayoutData( fdText );
   }
 
@@ -180,11 +182,11 @@ public class TextVar extends Composite {
         if ( textField.getEchoChar() == '\0' ) { // Can't show passwords ;-)
 
           String tip = textField.getText();
-          if ( !Const.isEmpty( tip ) && !Const.isEmpty( toolTipText ) ) {
+          if ( !Utils.isEmpty( tip ) && !Utils.isEmpty( toolTipText ) ) {
             tip += Const.CR + Const.CR + toolTipText;
           }
 
-          if ( Const.isEmpty( tip ) ) {
+          if ( Utils.isEmpty( tip ) ) {
             tip = toolTipText;
           }
           textField.setToolTipText( variables.environmentSubstitute( tip ) );

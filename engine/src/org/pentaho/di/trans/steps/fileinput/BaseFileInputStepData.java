@@ -34,7 +34,7 @@ import org.pentaho.di.trans.step.errorhandling.FileErrorHandler;
 
 /**
  * Some base data for file-based input steps.
- * 
+ *
  * @author Alexander Buloichik
  */
 public class BaseFileInputStepData extends BaseStepData {
@@ -75,6 +75,6 @@ public class BaseFileInputStepData extends BaseStepData {
   public Date lastModificationDateTime;
   public String uriName;
   public String rootUriName;
-  public long size;
+  public Long size;
 
 }

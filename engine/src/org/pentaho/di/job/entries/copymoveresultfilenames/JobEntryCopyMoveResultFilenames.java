@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,11 +22,9 @@
 
 package org.pentaho.di.job.entries.copymoveresultfilenames;
 
-import static org.pentaho.di.job.entry.validator.AbstractFileValidator.putVariableSpace;
-import static org.pentaho.di.job.entry.validator.AndValidator.putValidators;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.andValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.fileDoesNotExistValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notNullValidator;
+import org.pentaho.di.job.entry.validator.AbstractFileValidator;
+import org.pentaho.di.job.entry.validator.AndValidator;
+import org.pentaho.di.job.entry.validator.JobEntryValidatorUtils;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -40,6 +38,7 @@ import org.apache.commons.vfs2.FileUtil;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.ResultFile;
 import org.pentaho.di.core.database.DatabaseMeta;
@@ -136,7 +135,7 @@ public class JobEntryCopyMoveResultFilenames extends JobEntryBase implements Clo
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 50 );
+    StringBuilder retval = new StringBuilder( 500 ); // 358 chars in just tags and spaces alone
 
     retval.append( super.getXML() );
     retval.append( "      " ).append( XMLHandler.addTagValue( "foldername", foldername ) );
@@ -405,10 +404,10 @@ public class JobEntryCopyMoveResultFilenames extends JobEntryBase implements Clo
         return result;
       }
     }
-    if ( !Const.isEmpty( wildcard ) ) {
+    if ( !Utils.isEmpty( wildcard ) ) {
       wildcardPattern = Pattern.compile( environmentSubstitute( wildcard ) );
     }
-    if ( !Const.isEmpty( wildcardexclude ) ) {
+    if ( !Utils.isEmpty( wildcardexclude ) ) {
       wildcardExcludePattern = Pattern.compile( environmentSubstitute( wildcardexclude ) );
     }
 
@@ -642,7 +641,7 @@ public class JobEntryCopyMoveResultFilenames extends JobEntryBase implements Clo
     SimpleDateFormat daf = new SimpleDateFormat();
     Date now = new Date();
 
-    if ( isSpecifyFormat() && !Const.isEmpty( getDateTimeFormat() ) ) {
+    if ( isSpecifyFormat() && !Utils.isEmpty( getDateTimeFormat() ) ) {
       daf.applyPattern( getDateTimeFormat() );
       String dt = daf.format( now );
       shortfilename += dt;
@@ -668,7 +667,7 @@ public class JobEntryCopyMoveResultFilenames extends JobEntryBase implements Clo
   /**********************************************************
    *
    * @param selectedfile
-   * @param wildcard
+   * @param sourceWildcard
    * @return True if the selectedfile matches the wildcard
    **********************************************************/
   private boolean CheckFileWildcard( String selectedfile, Pattern pattern, boolean include ) {
@@ -687,9 +686,9 @@ public class JobEntryCopyMoveResultFilenames extends JobEntryBase implements Clo
   public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
     ValidatorContext ctx = new ValidatorContext();
-    putVariableSpace( ctx, getVariables() );
-    putValidators( ctx, notNullValidator(), fileDoesNotExistValidator() );
-    andValidator().validate( this, "filename", remarks, ctx );
+    AbstractFileValidator.putVariableSpace( ctx, getVariables() );
+    AndValidator.putValidators( ctx, JobEntryValidatorUtils.notNullValidator(), JobEntryValidatorUtils.fileDoesNotExistValidator() );
+    JobEntryValidatorUtils.andValidator().validate( this, "filename", remarks, ctx );
   }
 
 }

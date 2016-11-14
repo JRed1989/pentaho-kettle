@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -23,8 +23,11 @@
 package org.pentaho.di.www;
 
 import java.io.PrintWriter;
-import org.apache.commons.lang.StringUtils;
 import java.io.StringWriter;
+import java.util.List;
+import java.util.Properties;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -32,24 +35,19 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.vfs2.FileObject;
 import org.pentaho.di.cluster.SlaveServer;
-import org.pentaho.di.core.Const;
 import org.pentaho.di.core.KettleClientEnvironment;
 import org.pentaho.di.core.KettleEnvironment;
 import org.pentaho.di.core.logging.KettleLogStore;
 import org.pentaho.di.core.logging.LogChannel;
 import org.pentaho.di.core.logging.LogChannelInterface;
-import org.pentaho.di.core.row.ValueMeta;
-import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.core.util.EnvUtil;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.vfs.KettleVFS;
 import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.i18n.BaseMessages;
-import org.pentaho.di.trans.Trans;
-import org.pentaho.di.trans.TransMeta;
-import org.pentaho.di.trans.TransPreviewFactory;
-import org.pentaho.di.trans.steps.rowgenerator.RowGeneratorMeta;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
@@ -58,11 +56,6 @@ import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.ClientConfig;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
 import com.sun.jersey.api.client.filter.HTTPBasicAuthFilter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Properties;
-
 import com.sun.jersey.api.json.JSONConfiguration;
 
 public class Carte {
@@ -89,19 +82,19 @@ public class Carte {
     transformationMap.setSlaveServerConfig( config );
     final JobMap jobMap = CarteSingleton.getInstance().getJobMap();
     jobMap.setSlaveServerConfig( config );
-    List<SlaveServerDetection> detections = Collections.synchronizedList( new ArrayList<SlaveServerDetection>() );
+    List<SlaveServerDetection> detections = new CopyOnWriteArrayList<SlaveServerDetection>();
     SocketRepository socketRepository = CarteSingleton.getInstance().getSocketRepository();
 
     SlaveServer slaveServer = config.getSlaveServer();
 
     String hostname = slaveServer.getHostname();
     int port = WebServer.PORT;
-    if ( !Const.isEmpty( slaveServer.getPort() ) ) {
+    if ( !Utils.isEmpty( slaveServer.getPort() ) ) {
       try {
         port = Integer.parseInt( slaveServer.getPort() );
       } catch ( Exception e ) {
-        log.logError(
-            BaseMessages.getString( PKG, "Carte.Error.CanNotPartPort", slaveServer.getHostname(), "" + port ), e );
+        log.logError( BaseMessages.getString( PKG, "Carte.Error.CanNotPartPort", slaveServer.getHostname(), "" + port ),
+            e );
         allOK = false;
       }
     }
@@ -123,8 +116,8 @@ public class Carte {
           log.logBasic( "Registered this slave server to master slave server [" + master.toString() + "] on address ["
               + master.getServerAndPort() + "]" );
         } catch ( Exception e ) {
-          log.logError( "Unable to register to master slave server [" + master.toString() + "] on address ["
-              + master.getServerAndPort() + "]" );
+          log.logError( "Unable to register to master slave server [" + master.toString() + "] on address [" + master
+              .getServerAndPort() + "]" );
           allOK = false;
         }
         try {
@@ -133,13 +126,13 @@ public class Carte {
               log.logError( "More than one primary master server. Master name is " + propertiesMaster );
             } else {
               masterProperties = master.getKettleProperties();
-              log.logBasic( "Got properties from master server [" + master.toString() + "], address ["
-                  + master.getServerAndPort() + "]" );
+              log.logBasic( "Got properties from master server [" + master.toString() + "], address [" + master
+                  .getServerAndPort() + "]" );
             }
           }
         } catch ( Exception e ) {
-          log.logError( "Unable to get properties from master server [" + master.toString() + "], address ["
-              + master.getServerAndPort() + "]" );
+          log.logError( "Unable to get properties from master server [" + master.toString() + "], address [" + master
+              .getServerAndPort() + "]" );
           allOK = false;
         }
       }
@@ -167,7 +160,7 @@ public class Carte {
   public static void main( String[] args ) {
     try {
       parseAndRunCommand( args );
-    } catch (Exception e) {
+    } catch ( Exception e ) {
       e.printStackTrace();
     }
   }
@@ -175,17 +168,14 @@ public class Carte {
   @SuppressWarnings( "static-access" )
   private static void parseAndRunCommand( String[] args ) throws Exception {
     options = new Options();
-    options.addOption( OptionBuilder.withLongOpt( "stop" ).withDescription(
-            BaseMessages.getString( PKG, "Carte.ParamDescription.stop" ) ).hasArg( false ).isRequired( false ).create(
-            's' ) );
-    options.addOption( OptionBuilder.withLongOpt( "userName" ).withDescription(
-        BaseMessages.getString( PKG, "Carte.ParamDescription.userName" ) ).hasArg( true ).isRequired( false )
-        .create( 'u' ) );
-    options.addOption( OptionBuilder.withLongOpt( "password" ).withDescription(
-        BaseMessages.getString( PKG, "Carte.ParamDescription.password" ) ).hasArg( true ).isRequired( false )
-        .create( 'p' ) );
-    options.addOption( OptionBuilder.withLongOpt( "help" ).withDescription(
-        BaseMessages.getString( PKG, "Carte.ParamDescription.help" ) ).create( 'h' ) );
+    options.addOption( OptionBuilder.withLongOpt( "stop" ).withDescription( BaseMessages.getString( PKG,
+        "Carte.ParamDescription.stop" ) ).hasArg( false ).isRequired( false ).create( 's' ) );
+    options.addOption( OptionBuilder.withLongOpt( "userName" ).withDescription( BaseMessages.getString( PKG,
+        "Carte.ParamDescription.userName" ) ).hasArg( true ).isRequired( false ).create( 'u' ) );
+    options.addOption( OptionBuilder.withLongOpt( "password" ).withDescription( BaseMessages.getString( PKG,
+        "Carte.ParamDescription.password" ) ).hasArg( true ).isRequired( false ).create( 'p' ) );
+    options.addOption( OptionBuilder.withLongOpt( "help" ).withDescription( BaseMessages.getString( PKG,
+        "Carte.ParamDescription.help" ) ).create( 'h' ) );
 
     CommandLineParser parser = new BasicParser();
     CommandLine cmd = parser.parse( options, args );
@@ -200,14 +190,14 @@ public class Carte {
     // Load from an xml file that describes the complete configuration...
     //
     SlaveServerConfig config = null;
-    if ( arguments.length == 1 && !Const.isEmpty( arguments[0] ) ) {
+    if ( arguments.length == 1 && !Utils.isEmpty( arguments[0] ) ) {
       if ( cmd.hasOption( 's' ) ) {
         throw new Carte.CarteCommandException( BaseMessages.getString( PKG, "Carte.Error.illegalStop" ) );
       }
       usingConfigFile = true;
       FileObject file = KettleVFS.getFileObject( arguments[0] );
       Document document = XMLHandler.loadXMLFile( file );
-      setKettleEnvironment();  //Must stand up server now to allow decryption of password
+      setKettleEnvironment(); // Must stand up server now to allow decryption of password
       Node configNode = XMLHandler.getSubNode( document, SlaveServerConfig.XML_TAG );
       config = new SlaveServerConfig( new LogChannel( "Slave server config" ), configNode );
       if ( config.getAutoSequence() != null ) {
@@ -215,7 +205,7 @@ public class Carte {
       }
       config.setFilename( arguments[0] );
     }
-    if ( arguments.length == 2 && !Const.isEmpty( arguments[0] ) && !Const.isEmpty( arguments[1] ) ) {
+    if ( arguments.length == 2 && !Utils.isEmpty( arguments[0] ) && !Utils.isEmpty( arguments[1] ) ) {
       String hostname = arguments[0];
       String port = arguments[1];
 
@@ -243,10 +233,10 @@ public class Carte {
     }
     runCarte( config );
   }
-  
+
   private static void setKettleEnvironment() throws Exception {
-    KettleEnvironment.init();
     KettleClientEnvironment.getInstance().setClient( KettleClientEnvironment.ClientType.CARTE );
+    KettleEnvironment.init();
   }
 
   public static void runCarte( SlaveServerConfig config ) throws Exception {
@@ -293,9 +283,9 @@ public class Carte {
   private static void displayHelpAndAbort() {
     HelpFormatter formatter = new HelpFormatter();
     String optionsHelp = getOptionsHelpForUsage();
-    String header = BaseMessages.getString( PKG, "Carte.Usage.Text" ) + optionsHelp + "\nor\n"
-            + BaseMessages.getString( PKG, "Carte.Usage.Text2" ) + "\n\n"
-            + BaseMessages.getString( PKG, "Carte.MainDescription" );
+    String header =
+        BaseMessages.getString( PKG, "Carte.Usage.Text" ) + optionsHelp + "\nor\n" + BaseMessages.getString( PKG,
+            "Carte.Usage.Text2" ) + "\n\n" + BaseMessages.getString( PKG, "Carte.MainDescription" );
 
     StringWriter stringWriter = new StringWriter();
     PrintWriter printWriter = new PrintWriter( stringWriter );
@@ -319,7 +309,7 @@ public class Carte {
     StringWriter stringWriter = new StringWriter();
     PrintWriter printWriter = new PrintWriter( stringWriter );
     formatter.printUsage( printWriter, 999, "", options );
-    return stripOff( stringWriter.toString(), "usage: " );// Strip off the "usage:" so it can be localized
+    return stripOff( stringWriter.toString(), "usage: " ); // Strip off the "usage:" so it can be localized
   }
 
   private static String stripOff( String target, String strip ) {
@@ -336,7 +326,7 @@ public class Carte {
 
   /**
    * Checks that Carte is running and if so, shuts down the Carte server
-   * 
+   *
    * @param hostname
    * @param port
    * @param username
@@ -352,7 +342,7 @@ public class Carte {
       clientConfig.getFeatures().put( JSONConfiguration.FEATURE_POJO_MAPPING, Boolean.TRUE );
       Client client = Client.create( clientConfig );
       client.addFilter( new HTTPBasicAuthFilter( username, password ) );
-  
+
       // check if the user can access the carte server. Don't really need this call but may want to check it's output at
       // some point
       String contextURL = "http://" + hostname + ":" + port + "/kettle";

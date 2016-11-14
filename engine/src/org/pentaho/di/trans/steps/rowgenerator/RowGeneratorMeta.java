@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -29,6 +29,7 @@ import java.util.List;
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.RowMetaAndData;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
@@ -117,19 +118,16 @@ public class RowGeneratorMeta extends BaseStepMeta implements StepMetaInterface 
     int nrfields = fieldName.length;
 
     retval.allocate( nrfields );
-
-    for ( int i = 0; i < nrfields; i++ ) {
-      retval.fieldName[i] = fieldName[i];
-      retval.fieldType[i] = fieldType[i];
-      retval.fieldFormat[i] = fieldFormat[i];
-      retval.currency[i] = currency[i];
-      retval.decimal[i] = decimal[i];
-      retval.group[i] = group[i];
-      retval.value[i] = value[i];
-      retval.fieldLength[i] = fieldLength[i];
-      retval.fieldPrecision[i] = fieldPrecision[i];
-      retval.setEmptyString[i] = setEmptyString[i];
-    }
+    System.arraycopy( fieldName, 0, retval.fieldName, 0, nrfields );
+    System.arraycopy( fieldType, 0, retval.fieldType, 0, nrfields );
+    System.arraycopy( fieldFormat, 0, retval.fieldFormat, 0, nrfields );
+    System.arraycopy( fieldLength, 0, retval.fieldLength, 0, nrfields );
+    System.arraycopy( fieldPrecision, 0, retval.fieldPrecision, 0, nrfields );
+    System.arraycopy( currency, 0, retval.currency, 0, nrfields );
+    System.arraycopy( decimal, 0, retval.decimal, 0, nrfields );
+    System.arraycopy( group, 0, retval.group, 0, nrfields );
+    System.arraycopy( value, 0, retval.value, 0, nrfields );
+    System.arraycopy( setEmptyString, 0, retval.setEmptyString, 0, nrfields );
 
     return retval;
   }
@@ -159,7 +157,7 @@ public class RowGeneratorMeta extends BaseStepMeta implements StepMetaInterface 
         fieldLength[i] = Const.toInt( slength, -1 );
         fieldPrecision[i] = Const.toInt( sprecision, -1 );
         String emptyString = XMLHandler.getTagValue( fnode, "set_empty_string" );
-        setEmptyString[i] = !Const.isEmpty( emptyString ) && "Y".equalsIgnoreCase( emptyString );
+        setEmptyString[i] = !Utils.isEmpty( emptyString ) && "Y".equalsIgnoreCase( emptyString );
       }
 
       // Is there a limit on the number of rows we process?
@@ -208,7 +206,7 @@ public class RowGeneratorMeta extends BaseStepMeta implements StepMetaInterface 
       List<CheckResultInterface> remarks = new ArrayList<CheckResultInterface>();
       RowMetaAndData rowMetaAndData = RowGenerator.buildRow( this, remarks, origin );
       if ( !remarks.isEmpty() ) {
-        StringBuffer stringRemarks = new StringBuffer();
+        StringBuilder stringRemarks = new StringBuilder();
         for ( CheckResultInterface remark : remarks ) {
           stringRemarks.append( remark.toString() ).append( Const.CR );
         }
@@ -226,7 +224,7 @@ public class RowGeneratorMeta extends BaseStepMeta implements StepMetaInterface 
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 300 );
+    StringBuilder retval = new StringBuilder( 300 );
 
     retval.append( "    <fields>" ).append( Const.CR );
     for ( int i = 0; i < fieldName.length; i++ ) {

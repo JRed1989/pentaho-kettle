@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -23,6 +23,7 @@
 package org.pentaho.di.core.database;
 
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.row.ValueMetaInterface;
 
 /**
@@ -55,7 +56,7 @@ public class LucidDBDatabaseMeta extends BaseDatabaseMeta implements DatabaseInt
   @Override
   public String getURL( String hostname, String port, String databaseName ) {
 
-    if ( !Const.isEmpty( port ) && Const.toInt( port, -1 ) > 0 ) {
+    if ( !Utils.isEmpty( port ) && Const.toInt( port, -1 ) > 0 ) {
       return "jdbc:luciddb:http://" + hostname + ":" + port;
     } else {
       return "jdbc:luciddb:http://" + hostname;
@@ -164,6 +165,7 @@ public class LucidDBDatabaseMeta extends BaseDatabaseMeta implements DatabaseInt
 
     int type = v.getType();
     switch ( type ) {
+      case ValueMetaInterface.TYPE_TIMESTAMP:
       case ValueMetaInterface.TYPE_DATE:
         retval += "TIMESTAMP";
         break;

@@ -3,7 +3,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -80,12 +80,15 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Menu;
+import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.ToolBar;
 import org.eclipse.swt.widgets.ToolItem;
 import org.eclipse.swt.widgets.Widget;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.EngineMetaInterface;
 import org.pentaho.di.core.NotePadMeta;
 import org.pentaho.di.core.Props;
@@ -120,6 +123,7 @@ import org.pentaho.di.job.JobExecutionConfiguration;
 import org.pentaho.di.job.JobHopMeta;
 import org.pentaho.di.job.JobMeta;
 import org.pentaho.di.job.JobPainter;
+import org.pentaho.di.job.entries.abort.JobEntryAbort;
 import org.pentaho.di.job.entries.job.JobEntryJob;
 import org.pentaho.di.job.entries.trans.JobEntryTrans;
 import org.pentaho.di.job.entry.JobEntryCopy;
@@ -306,6 +310,7 @@ public class JobGraph extends AbstractGraph implements XulEventHandler, Redrawab
     this.log = spoon.getLog();
     this.spoon = spoon;
     this.jobMeta = jobMeta;
+    spoon.selectionFilter.setText( "" );
 
     this.props = PropsUI.getInstance();
     this.areaOwners = new ArrayList<AreaOwner>();
@@ -681,7 +686,7 @@ public class JobGraph extends AbstractGraph implements XulEventHandler, Redrawab
     //
     if ( e.button == 1 || e.button == 2 ) {
       AreaOwner areaOwner = getVisibleAreaOwner( real.x, real.y );
-      if ( areaOwner != null ) {
+      if ( areaOwner != null && areaOwner.getAreaType() != null ) {
         switch ( areaOwner.getAreaType() ) {
           case JOB_ENTRY_MINI_ICON_OUTPUT:
             // Click on the output icon means: start of drag
@@ -1031,7 +1036,7 @@ public class JobGraph extends AbstractGraph implements XulEventHandler, Redrawab
     // Moved over an area?
     //
     AreaOwner areaOwner = getVisibleAreaOwner( real.x, real.y );
-    if ( areaOwner != null ) {
+    if ( areaOwner != null && areaOwner.getAreaType() != null ) {
       JobEntryCopy jobEntryCopy = null;
       switch ( areaOwner.getAreaType() ) {
         case JOB_ENTRY_ICON:
@@ -1204,7 +1209,7 @@ public class JobGraph extends AbstractGraph implements XulEventHandler, Redrawab
     Point real = screen2real( e.x, e.y );
 
     AreaOwner areaOwner = getVisibleAreaOwner( real.x, real.y );
-    if ( areaOwner != null ) {
+    if ( areaOwner != null && areaOwner.getAreaType() != null ) {
       switch ( areaOwner.getAreaType() ) {
         case JOB_ENTRY_ICON:
           JobEntryCopy jobEntryCopy = (JobEntryCopy) areaOwner.getOwner();
@@ -1330,7 +1335,7 @@ public class JobGraph extends AbstractGraph implements XulEventHandler, Redrawab
         Point cursor = getLastMove();
         if ( cursor != null ) {
           AreaOwner areaOwner = getVisibleAreaOwner( cursor.x, cursor.y );
-          if ( areaOwner != null ) {
+          if ( areaOwner != null && areaOwner.getAreaType() != null ) {
             AreaType areaType = areaOwner.getAreaType();
             if ( areaType == AreaType.JOB_ENTRY_ICON || areaType.belongsToJobContextMenu() ) {
               JobEntryCopy selectedJobEntryCopy = (JobEntryCopy) areaOwner.getOwner();
@@ -1385,6 +1390,45 @@ public class JobGraph extends AbstractGraph implements XulEventHandler, Redrawab
       ToolBar swtToolbar = (ToolBar) toolbar.getManagedObject();
       swtToolbar.setBackground( GUIResource.getInstance().getColorDemoGray() );
       swtToolbar.pack();
+
+      // Added 1/11/2016 to implement dropdown option for "Run"
+      ToolItem runItem = new ToolItem( swtToolbar, SWT.DROP_DOWN, 0 );
+
+      runItem.setImage( GUIResource.getInstance().getImage( "ui/images/run.svg" ) );
+      runItem.setToolTipText( BaseMessages.getString( PKG, "Spoon.Tooltip.RunTranformation" ) );
+      runItem.addSelectionListener( new SelectionAdapter() {
+
+        @Override
+        public void widgetSelected( SelectionEvent e ) {
+          if ( e.detail == SWT.DROP_DOWN ) {
+            Menu menu = new Menu( shell, SWT.POP_UP );
+
+            MenuItem item1 = new MenuItem( menu, SWT.PUSH );
+            item1.setText( BaseMessages.getString( PKG, "Spoon.Run.Run" ) );
+            item1.setAccelerator( SWT.F9 );
+            item1.addSelectionListener( new SelectionAdapter() {
+              @Override
+              public void widgetSelected( SelectionEvent e1 ) {
+                runJob();
+              }
+            } );
+            MenuItem item2 = new MenuItem( menu, SWT.PUSH );
+            item2.setText( BaseMessages.getString( PKG, "Spoon.Run.RunOptions" ) );
+            item2.setAccelerator( SWT.F8 );
+            item2.addSelectionListener( new SelectionAdapter() {
+              @Override
+              public void widgetSelected( SelectionEvent e2 ) {
+                runOptionsJob();
+              }
+            } );
+
+            menu.setLocation( shell.getDisplay().map( mainComposite.getParent(), null, mainComposite.getLocation() ) );
+            menu.setVisible( true );
+          } else {
+            runJob();
+          }
+        }
+      } );
 
       // Hack alert : more XUL limitations...
       //
@@ -1552,9 +1596,16 @@ public class JobGraph extends AbstractGraph implements XulEventHandler, Redrawab
   }
 
   public void delSelected() {
+    delSelected( getJobEntry() );
+  }
+
+  public void delSelected( JobEntryCopy clickedEntry ) {
     List<JobEntryCopy> copies = jobMeta.getSelectedEntries();
     int nrsels = copies.size();
     if ( nrsels == 0 ) {
+      if ( clickedEntry != null ) {
+        spoon.deleteJobEntryCopies( jobMeta, clickedEntry );
+      }
       return;
     }
 
@@ -1820,6 +1871,7 @@ public class JobGraph extends AbstractGraph implements XulEventHandler, Redrawab
       XulMenupopup menu = (XulMenupopup) doc.getElementById( "job-graph-entry" );
       if ( menu != null ) {
         List<JobEntryCopy> selection = jobMeta.getSelectedEntries();
+        doRightClickSelection( jobEntry, selection );
         int sels = selection.size();
 
         XulMenuitem item = (XulMenuitem) doc.getElementById( "job-graph-entry-newhop" );
@@ -1828,11 +1880,11 @@ public class JobGraph extends AbstractGraph implements XulEventHandler, Redrawab
         JfaceMenupopup launchMenu = (JfaceMenupopup) doc.getElementById( "job-graph-entry-launch-popup" );
         String[] referencedObjects = jobEntry.getEntry().getReferencedObjectDescriptions();
         boolean[] enabledObjects = jobEntry.getEntry().isReferencedObjectEnabled();
-        launchMenu.setDisabled( Const.isEmpty( referencedObjects ) );
+        launchMenu.setDisabled( Utils.isEmpty( referencedObjects ) );
 
         launchMenu.removeChildren();
 
-        if ( !Const.isEmpty( referencedObjects ) ) {
+        if ( !Utils.isEmpty( referencedObjects ) ) {
           for ( int i = 0; i < referencedObjects.length; i++ ) {
             final int index = i;
             String referencedObject = referencedObjects[i];
@@ -1906,6 +1958,7 @@ public class JobGraph extends AbstractGraph implements XulEventHandler, Redrawab
           XulMenuitem miPopEvalTrue = (XulMenuitem) doc.getElementById( "job-graph-hop-evaluation-true" );
           XulMenuitem miPopEvalFalse = (XulMenuitem) doc.getElementById( "job-graph-hop-evaluation-false" );
           XulMenuitem miDisHop = (XulMenuitem) doc.getElementById( "job-graph-hop-enabled" );
+          XulMenuitem miFlipHop = (XulMenuitem) doc.getElementById( "job-graph-hop-flip" );
 
           // Set the checkboxes in the right places...
           //
@@ -1936,6 +1989,11 @@ public class JobGraph extends AbstractGraph implements XulEventHandler, Redrawab
               miPopEvalUncond.setDisabled( true );
             } else {
               miPopEvalUncond.setDisabled( false );
+            }
+            if ( hi.getFromEntry().isStart() || hi.getToEntry().getEntry() instanceof JobEntryAbort ) {
+              miFlipHop.setDisabled( true );
+            } else {
+              miFlipHop.setDisabled( false );
             }
           }
 
@@ -2228,9 +2286,9 @@ public class JobGraph extends AbstractGraph implements XulEventHandler, Redrawab
 
     // check the area owner list...
     //
-    StringBuffer tip = new StringBuffer();
+    StringBuilder tip = new StringBuilder();
     AreaOwner areaOwner = getVisibleAreaOwner( x, y );
-    if ( areaOwner != null ) {
+    if ( areaOwner != null && areaOwner.getAreaType() != null ) {
       JobEntryCopy jobEntryCopy;
       switch ( areaOwner.getAreaType() ) {
         case JOB_HOP_ICON:
@@ -2402,17 +2460,17 @@ public class JobGraph extends AbstractGraph implements XulEventHandler, Redrawab
 
   public void launchStuff( JobEntryCopy jobEntryCopy ) {
     String[] references = jobEntryCopy.getEntry().getReferencedObjectDescriptions();
-    if ( !Const.isEmpty( references ) ) {
+    if ( !Utils.isEmpty( references ) ) {
       loadReferencedObject( jobEntryCopy, 0 );
     }
 
     /*
      * if (jobEntryCopy.isJob()) { final JobEntryJob entry = (JobEntryJob) jobEntryCopy.getEntry(); if ((entry != null
-     * && entry.getJobObjectId() == null && !Const.isEmpty(entry.getFilename()) && spoon.rep == null) || (entry != null
-     * && !Const.isEmpty(entry.getName()) && spoon.rep != null) || (entry != null && entry.getJobObjectId()!=null &&
+     * && entry.getJobObjectId() == null && !Utils.isEmpty(entry.getFilename()) && spoon.rep == null) || (entry != null
+     * && !Utils.isEmpty(entry.getName()) && spoon.rep != null) || (entry != null && entry.getJobObjectId()!=null &&
      * spoon.rep != null) ) { openJob(entry, jobEntryCopy); } } else if (jobEntryCopy.isTransformation()) { final
      * JobEntryTrans entry = (JobEntryTrans) jobEntryCopy.getEntry(); if ((entry != null && entry.getTransObjectId() ==
-     * null && !Const.isEmpty(entry.getFilename()) && spoon.rep == null) || (entry != null && entry.getName() != null &&
+     * null && !Utils.isEmpty(entry.getFilename()) && spoon.rep == null) || (entry != null && entry.getName() != null &&
      * spoon.rep != null) || (entry != null && entry.getTransObjectId()!=null && spoon.rep != null) ) {
      * openTransformation(entry, jobEntryCopy); } }
      */
@@ -2508,7 +2566,7 @@ public class JobGraph extends AbstractGraph implements XulEventHandler, Redrawab
           // See if this file is already loaded...
           //
           String exactFilename = jobMeta.environmentSubstitute( entry.getFilename() );
-          if ( Const.isEmpty( exactFilename ) ) {
+          if ( Utils.isEmpty( exactFilename ) ) {
             throw new Exception( BaseMessages.getString( PKG, "JobGraph.Exception.NoFilenameSpecified" ) );
           }
 
@@ -2525,10 +2583,10 @@ public class JobGraph extends AbstractGraph implements XulEventHandler, Redrawab
         case REPOSITORY_BY_NAME:
           String exactTransname = jobMeta.environmentSubstitute( entry.getTransname() );
           String exactDirectory = jobMeta.environmentSubstitute( entry.getDirectory() );
-          if ( Const.isEmpty( exactTransname ) ) {
+          if ( Utils.isEmpty( exactTransname ) ) {
             throw new Exception( BaseMessages.getString( PKG, "JobGraph.Exception.NoTransNameSpecified" ) );
           }
-          if ( Const.isEmpty( exactDirectory ) ) {
+          if ( Utils.isEmpty( exactDirectory ) ) {
             throw new Exception( BaseMessages.getString( PKG, "JobGraph.Exception.NoTransDirectorySpecified" ) );
           }
 
@@ -2611,7 +2669,7 @@ public class JobGraph extends AbstractGraph implements XulEventHandler, Redrawab
           // See if this file is already loaded...
           //
           String exactFilename = jobMeta.environmentSubstitute( entry.getFilename() );
-          if ( Const.isEmpty( exactFilename ) ) {
+          if ( Utils.isEmpty( exactFilename ) ) {
             throw new Exception( BaseMessages.getString( PKG, "JobGraph.Exception.NoFilenameSpecified" ) );
           }
 
@@ -2628,10 +2686,10 @@ public class JobGraph extends AbstractGraph implements XulEventHandler, Redrawab
         case REPOSITORY_BY_NAME:
           String exactJobname = jobMeta.environmentSubstitute( entry.getJobName() );
           String exactDirectory = jobMeta.environmentSubstitute( entry.getDirectory() );
-          if ( Const.isEmpty( exactJobname ) ) {
+          if ( Utils.isEmpty( exactJobname ) ) {
             throw new Exception( BaseMessages.getString( PKG, "JobGraph.Exception.NoJobNameSpecified" ) );
           }
-          if ( Const.isEmpty( exactDirectory ) ) {
+          if ( Utils.isEmpty( exactDirectory ) ) {
             throw new Exception( BaseMessages.getString( PKG, "JobGraph.Exception.NoJobDirectorySpecified" ) );
           }
 
@@ -2767,7 +2825,7 @@ public class JobGraph extends AbstractGraph implements XulEventHandler, Redrawab
       int leftPosition = ( area.x - pentahoImage.getBounds().width ) / 2;
       int topPosition = ( area.y - pentahoImage.getBounds().height ) / 2;
       e.gc.drawImage( pentahoImage, leftPosition, topPosition );
-      
+
     }
     img.dispose();
 
@@ -2776,9 +2834,9 @@ public class JobGraph extends AbstractGraph implements XulEventHandler, Redrawab
   public Image getJobImage( Device device, int x, int y, float magnificationFactor ) {
     GCInterface gc = new SWTGC( device, new Point( x, y ), iconsize );
 
-    int gridSize = 
-        PropsUI.getInstance().isShowCanvasGridEnabled() ? PropsUI.getInstance().getCanvasGridSize() : 1;  
-    
+    int gridSize =
+        PropsUI.getInstance().isShowCanvasGridEnabled() ? PropsUI.getInstance().getCanvasGridSize() : 1;
+
     JobPainter jobPainter =
       new JobPainter(
         gc, jobMeta, new Point( x, y ), new SwtScrollBar( hori ), new SwtScrollBar( vert ), hop_candidate,
@@ -3335,11 +3393,17 @@ public class JobGraph extends AbstractGraph implements XulEventHandler, Redrawab
     spoon.runFile();
   }
 
+  public void runOptionsJob() {
+    spoon.runOptionsFile();
+  }
+
   public void getSQL() {
     spoon.getSQL();
   }
 
-  public XulToolbar getToolbar() { return toolbar; }
+  public XulToolbar getToolbar() {
+    return toolbar;
+  }
 
   public void exploreDatabase() {
     spoon.exploreDatabase();
@@ -3424,7 +3488,7 @@ public class JobGraph extends AbstractGraph implements XulEventHandler, Redrawab
 
             // If there is an alternative start job entry, pass it to the job
             //
-            if ( !Const.isEmpty( executionConfiguration.getStartCopyName() ) ) {
+            if ( !Utils.isEmpty( executionConfiguration.getStartCopyName() ) ) {
               JobEntryCopy startJobEntryCopy =
                 runJobMeta.findJobEntry( executionConfiguration.getStartCopyName(), executionConfiguration
                   .getStartCopyNr(), false );

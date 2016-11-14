@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -29,6 +29,7 @@ import java.util.Map;
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.ObjectLocationSpecificationMethod;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
@@ -104,7 +105,7 @@ public class SingleThreaderMeta extends BaseStepMeta implements StepMetaInterfac
       String method = XMLHandler.getTagValue( stepnode, "specification_method" );
       specificationMethod = ObjectLocationSpecificationMethod.getSpecificationMethodByCode( method );
       String transId = XMLHandler.getTagValue( stepnode, "trans_object_id" );
-      transObjectId = Const.isEmpty( transId ) ? null : new StringObjectId( transId );
+      transObjectId = Utils.isEmpty( transId ) ? null : new StringObjectId( transId );
 
       transName = XMLHandler.getTagValue( stepnode, "trans_name" );
       fileName = XMLHandler.getTagValue( stepnode, "filename" );
@@ -118,12 +119,11 @@ public class SingleThreaderMeta extends BaseStepMeta implements StepMetaInterfac
       Node parametersNode = XMLHandler.getSubNode( stepnode, "parameters" );
 
       String passAll = XMLHandler.getTagValue( parametersNode, "pass_all_parameters" );
-      passingAllParameters = Const.isEmpty( passAll ) || "Y".equalsIgnoreCase( passAll );
+      passingAllParameters = Utils.isEmpty( passAll ) || "Y".equalsIgnoreCase( passAll );
 
       int nrParameters = XMLHandler.countNodes( parametersNode, "parameter" );
 
-      parameters = new String[nrParameters];
-      parameterValues = new String[nrParameters];
+      allocate( nrParameters );
 
       for ( int i = 0; i < nrParameters; i++ ) {
         Node knode = XMLHandler.getSubNodeByNr( parametersNode, "parameter", i );
@@ -137,13 +137,23 @@ public class SingleThreaderMeta extends BaseStepMeta implements StepMetaInterfac
     }
   }
 
+  public void allocate( int nrParameters ) {
+    parameters = new String[nrParameters];
+    parameterValues = new String[nrParameters];
+  }
+
   public Object clone() {
-    Object retval = super.clone();
+    SingleThreaderMeta retval = (SingleThreaderMeta) super.clone();
+    int nrParameters = parameters.length;
+    retval.allocate( nrParameters );
+    System.arraycopy( parameters, 0, retval.parameters, 0, nrParameters );
+    System.arraycopy( parameterValues, 0, retval.parameterValues, 0, nrParameters );
+
     return retval;
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 300 );
+    StringBuilder retval = new StringBuilder( 300 );
 
     retval.append( "    " ).append(
       XMLHandler.addTagValue( "specification_method", specificationMethod == null ? null : specificationMethod
@@ -197,7 +207,7 @@ public class SingleThreaderMeta extends BaseStepMeta implements StepMetaInterfac
     String method = rep.getStepAttributeString( id_step, "specification_method" );
     specificationMethod = ObjectLocationSpecificationMethod.getSpecificationMethodByCode( method );
     String transId = rep.getStepAttributeString( id_step, "trans_object_id" );
-    transObjectId = Const.isEmpty( transId ) ? null : new StringObjectId( transId );
+    transObjectId = Utils.isEmpty( transId ) ? null : new StringObjectId( transId );
     transName = rep.getStepAttributeString( id_step, "trans_name" );
     fileName = rep.getStepAttributeString( id_step, "filename" );
     directoryPath = rep.getStepAttributeString( id_step, "directory_path" );
@@ -280,7 +290,7 @@ public class SingleThreaderMeta extends BaseStepMeta implements StepMetaInterfac
 
     // Let's keep it simple!
     //
-    if ( !Const.isEmpty( space.environmentSubstitute( retrieveStep ) ) ) {
+    if ( !Utils.isEmpty( space.environmentSubstitute( retrieveStep ) ) ) {
       RowMetaInterface stepFields = mappingTransMeta.getStepFields( retrieveStep );
       row.addRowMeta( stepFields );
     }
@@ -317,7 +327,7 @@ public class SingleThreaderMeta extends BaseStepMeta implements StepMetaInterfac
         String realTransname = space.environmentSubstitute( mappingMeta.getTransName() );
         String realDirectory = space.environmentSubstitute( mappingMeta.getDirectoryPath() );
 
-        if ( !Const.isEmpty( realTransname ) && !Const.isEmpty( realDirectory ) && rep != null ) {
+        if ( !Utils.isEmpty( realTransname ) && !Utils.isEmpty( realDirectory ) && rep != null ) {
           RepositoryDirectoryInterface repdir = rep.findDirectory( realDirectory );
           if ( repdir != null ) {
             try {
@@ -449,12 +459,12 @@ public class SingleThreaderMeta extends BaseStepMeta implements StepMetaInterfac
     ResourceReference reference = new ResourceReference( stepInfo );
     references.add( reference );
 
-    if ( !Const.isEmpty( realFilename ) ) {
+    if ( !Utils.isEmpty( realFilename ) ) {
       // Add the filename to the references, including a reference to this step
       // meta data.
       //
       reference.getEntries().add( new ResourceEntry( realFilename, ResourceType.ACTIONFILE ) );
-    } else if ( !Const.isEmpty( realTransname ) ) {
+    } else if ( !Utils.isEmpty( realTransname ) ) {
       // Add the filename to the references, including a reference to this step
       // meta data.
       //
@@ -687,8 +697,8 @@ public class SingleThreaderMeta extends BaseStepMeta implements StepMetaInterfac
   }
 
   private boolean isTransformationDefined() {
-    return !Const.isEmpty( fileName )
-      || transObjectId != null || ( !Const.isEmpty( this.directoryPath ) && !Const.isEmpty( transName ) );
+    return !Utils.isEmpty( fileName )
+      || transObjectId != null || ( !Utils.isEmpty( this.directoryPath ) && !Utils.isEmpty( transName ) );
   }
 
   public boolean[] isReferencedObjectEnabled() {

@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -55,6 +55,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.i18n.BaseMessages;
@@ -169,6 +170,9 @@ public class RestDialog extends BaseStepDialog implements StepDialogInterface {
   private Label wlResponseTime;
   private TextVar wResponseTime;
   private FormData fdlResponseTime, fdResponseTime;
+  private Label wlResponseHeader;
+  private TextVar wResponseHeader;
+  private FormData fdlResponseHeader, fdResponseHeader;
 
   private Label wlTrustStorePassword;
   private TextVar wTrustStorePassword;
@@ -551,6 +555,23 @@ public class RestDialog extends BaseStepDialog implements StepDialogInterface {
     fdResponseTime.top = new FormAttachment( wResultCode, margin );
     fdResponseTime.right = new FormAttachment( 100, 0 );
     wResponseTime.setLayoutData( fdResponseTime );
+ // Response header line...
+    wlResponseHeader = new Label( gOutputFields, SWT.RIGHT );
+    wlResponseHeader.setText( BaseMessages.getString( PKG, "RestDialog.ResponseHeader.Label" ) );
+    props.setLook( wlResponseHeader );
+    fdlResponseHeader = new FormData();
+    fdlResponseHeader.left = new FormAttachment( 0, 0 );
+    fdlResponseHeader.right = new FormAttachment( middle, -margin );
+    fdlResponseHeader.top = new FormAttachment( wResponseTime, margin );
+    wlResponseHeader.setLayoutData( fdlResponseHeader );
+    wResponseHeader = new TextVar( transMeta, gOutputFields, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wResponseHeader );
+    wResponseHeader.addModifyListener( lsMod );
+    fdResponseHeader = new FormData();
+    fdResponseHeader.left = new FormAttachment( middle, 0 );
+    fdResponseHeader.top = new FormAttachment( wResponseTime, margin );
+    fdResponseHeader.right = new FormAttachment( 100, 0 );
+    wResponseHeader.setLayoutData( fdResponseHeader );
 
     FormData fdOutputFields = new FormData();
     fdOutputFields.left = new FormAttachment( 0, 0 );
@@ -1306,6 +1327,9 @@ public class RestDialog extends BaseStepDialog implements StepDialogInterface {
     if ( input.getTrustStorePassword() != null ) {
       wTrustStorePassword.setText( input.getTrustStorePassword() );
     }
+    if ( input.getResponseHeaderFieldName() != null ) {
+      wResponseHeader.setText( input.getResponseHeaderFieldName() );
+    }
 
     wApplicationType.setText( Const.NVL( input.getApplicationType(), "" ) );
 
@@ -1323,7 +1347,7 @@ public class RestDialog extends BaseStepDialog implements StepDialogInterface {
   }
 
   private void ok() {
-    if ( Const.isEmpty( wStepname.getText() ) ) {
+    if ( Utils.isEmpty( wStepname.getText() ) ) {
       return;
     }
 
@@ -1365,6 +1389,7 @@ public class RestDialog extends BaseStepDialog implements StepDialogInterface {
     input.setFieldName( wResult.getText() );
     input.setResultCodeFieldName( wResultCode.getText() );
     input.setResponseTimeFieldName( wResponseTime.getText() );
+    input.setResponseHeaderFieldName( wResponseHeader.getText() );
 
     input.setHttpLogin( wHttpLogin.getText() );
     input.setHttpPassword( wHttpPassword.getText() );

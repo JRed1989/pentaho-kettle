@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2014 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -41,6 +41,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.logging.LogLevel;
 import org.pentaho.di.i18n.BaseMessages;
@@ -89,15 +90,15 @@ public class JobEntryGetPOPTest {
     contentFile.setFileName( testFile.getName() );
     content.addBodyPart( contentFile );
 
-    return (Object) content;
+    return content;
   }
 
   /**
    * PDI-10942 - Job get emails JobEntry does not mark emails as 'read' when load emails content.
-   * 
+   *
    * Test that we always open remote folder in rw mode, and after email attachment is loaded email is marked as read.
    * Set for openFolder rw mode if this is pop3.
-   * 
+   *
    * @throws KettleException
    * @throws MessagingException
    */
@@ -111,10 +112,10 @@ public class JobEntryGetPOPTest {
 
   /**
    * PDI-10942 - Job get emails JobEntry does not mark emails as 'read' when load emails content.
-   * 
+   *
    * Test that we always open remote folder in rw mode, and after email attachment is loaded email is marked as read.
    * protocol IMAP and default remote folder is overridden
-   * 
+   *
    * @throws KettleException
    * @throws MessagingException
    */
@@ -128,27 +129,27 @@ public class JobEntryGetPOPTest {
 
   /**
    * PDI-10942 - Job get emails JobEntry does not mark emails as 'read' when load emails content.
-   * 
+   *
    * Test that we always open remote folder in rw mode, and after email attachment is loaded email is marked as read.
    * protocol IMAP and default remote folder is NOT overridden
-   * 
+   *
    * @throws KettleException
    * @throws MessagingException
    */
   @Test
   public void testFetchOneFolderModeIMAPWithIsDefFolder() throws KettleException, MessagingException {
     entry.fetchOneFolder( mailConn, false, null, "junitRealOutputFolder", "junitTargetAttachmentFolder",
-        "junitRealMoveToIMAPFolder", "junitRealFilenamePattern", 0, Mockito.mock( SimpleDateFormat.class ) );
+            "junitRealMoveToIMAPFolder", "junitRealFilenamePattern", 0, Mockito.mock( SimpleDateFormat.class ) );
     Mockito.verify( mailConn ).openFolder( true );
     Mockito.verify( message ).setFlag( Flag.SEEN, true );
   }
 
   /**
    * PDI-11943 - Get Mail Job Entry: Attachments folder not created
-   * 
+   *
    * Test that the Attachments folder is created when the entry is
    * configured to save attachments and messages in the same folder
-   * 
+   *
    * @throws IOException
    */
   @Test
@@ -170,17 +171,17 @@ public class JobEntryGetPOPTest {
       fail( "Could not create folder " + e.getLocalizedMessage() );
     }
 
-    assertTrue( "Output Folder should be a local path", !Const.isEmpty( outputFolderName ) );
-    assertTrue( "Attachment Folder should be a local path", !Const.isEmpty( attachmentsFolderName ) );
+    assertTrue( "Output Folder should be a local path", !Utils.isEmpty( outputFolderName ) );
+    assertTrue( "Attachment Folder should be a local path", !Utils.isEmpty( attachmentsFolderName ) );
     assertTrue( "Output and Attachment Folder should match", outputFolderName.equals( attachmentsFolderName ) );
   }
 
   /**
    * PDI-11943 - Get Mail Job Entry: Attachments folder not created
-   * 
+   *
    * Test that the Attachments folder is created when the entry is
    * configured to save attachments and messages in different folders
-   * 
+   *
    * @throws IOException
    */
   @Test
@@ -203,17 +204,17 @@ public class JobEntryGetPOPTest {
       fail( "Could not create folder: " + e.getLocalizedMessage() );
     }
 
-    assertTrue( "Output Folder should be a local path", !Const.isEmpty( outputFolderName ) );
-    assertTrue( "Attachment Folder should be a local path", !Const.isEmpty( attachmentsFolderName ) );
+    assertTrue( "Output Folder should be a local path", !Utils.isEmpty( outputFolderName ) );
+    assertTrue( "Attachment Folder should be a local path", !Utils.isEmpty( attachmentsFolderName ) );
     assertFalse( "Output and Attachment Folder should not match", outputFolderName.equals( attachmentsFolderName ) );
   }
 
   /**
    * PDI-11943 - Get Mail Job Entry: Attachments folder not created
-   * 
+   *
    * Test that the Attachments folder is not created when the entry is
    * configured to not create folders
-   * 
+   *
    * @throws IOException
    */
   @Test
@@ -237,7 +238,7 @@ public class JobEntryGetPOPTest {
       if ( e instanceof KettleException ) {
         assertTrue( "Output Folder should not be created",
           BaseMessages.getString( JobEntryGetPOP.class,
-            "JobGetMailsFromPOP.Error.OutputFolderNotExist", outputDir.getCanonicalPath() ).equals(
+            "JobGetMailsFromPOP.Error.OutputFolderNotExist", outputDir.getAbsolutePath() ).equals(
               Const.trim( e.getMessage() ) ) );
       } else {
         fail( "Output Folder should not have been created: " + e.getLocalizedMessage() );
@@ -250,11 +251,71 @@ public class JobEntryGetPOPTest {
       if ( e instanceof KettleException ) {
         assertTrue( "Output Folder should not be created",
           BaseMessages.getString( JobEntryGetPOP.class,
-            "JobGetMailsFromPOP.Error.AttachmentFolderNotExist", attachmentsDir.getCanonicalPath() ).equals(
+            "JobGetMailsFromPOP.Error.AttachmentFolderNotExist", attachmentsDir.getAbsolutePath() ).equals(
               Const.trim( e.getMessage() ) ) );
       } else {
         fail( "Attachments Folder should not have been created: " + e.getLocalizedMessage() );
       }
+    }
+  }
+
+  /**
+   * PDI-14305 - Get Mails (POP3/IMAP) Not substituting environment variables for target directories
+   *
+   * Test that environment variables are appropriately substituted when creating output and attachment folders
+   */
+  @Test
+  public void testEnvVariablesAreSubstitutedForFolders() {
+    // create variables and add them to the variable space
+    String outputVariableName = "myOutputVar";
+    String outputVariableValue = "myOutputFolder";
+    String attachmentVariableName = "myAttachmentVar";
+    String attachmentVariableValue = "myOutputFolder";
+    entry.setVariable( outputVariableName, outputVariableValue );
+    entry.setVariable( attachmentVariableName, attachmentVariableValue );
+
+    // create temp directories for testing using variable value
+    String tempDirBase = TestUtils.createTempDir();
+    File outputDir = new File( tempDirBase, outputVariableValue );
+    outputDir.mkdir();
+    File attachmentDir = new File( tempDirBase, attachmentVariableValue );
+    attachmentDir.mkdir();
+
+    // set output and attachment folders to path with variable
+    String outputDirWithVariable = tempDirBase + File.separator + "${" + outputVariableName + "}";
+    String attachmentDirWithVariable = tempDirBase + File.separator + "${" + attachmentVariableName + "}";
+    entry.setOutputDirectory( outputDirWithVariable );
+    entry.setAttachmentFolder( attachmentDirWithVariable );
+
+    // directly test environment substitute functions
+    assertTrue( "Error in Direct substitute test for output directory",
+            outputDir.toString().equals( entry.getRealOutputDirectory() ) );
+    assertTrue( "Error in Direct substitute test for  attachment directory",
+            attachmentDir.toString().equals( entry.getRealAttachmentFolder() ) );
+
+    // test environment substitute for output dir via createOutputDirectory method
+    try {
+      String outputRes = entry.createOutputDirectory( JobEntryGetPOP.FOLDER_OUTPUT );
+      assertTrue( "Variables not working in createOutputDirectory: output directory",
+              outputRes.equals( outputDir.toString() ) );
+    } catch ( Exception e ) {
+      fail( "Unexpected exception when calling createOutputDirectory for output directory" );
+
+    }
+
+    // test environment substitute for attachment dir via createOutputDirectory method
+    try {
+      String attachOutputRes = entry.createOutputDirectory( JobEntryGetPOP.FOLDER_ATTACHMENTS );
+      assertTrue( "Variables not working in createOutputDirectory: attachment with options false",
+              attachOutputRes.equals( outputDir.toString() ) );
+      // set options that trigger alternate path for FOLDER_ATTACHMENTS option
+      entry.setSaveAttachment( true );
+      entry.setDifferentFolderForAttachment( true );
+      String attachRes = entry.createOutputDirectory( JobEntryGetPOP.FOLDER_ATTACHMENTS );
+      assertTrue( "Variables not working in createOutputDirectory: attachment with options true",
+              attachRes.equals( outputDir.toString() ) );
+    } catch ( Exception e ) {
+      fail( "Unexpected exception when calling createOutputDirectory for attachment directory" );
     }
   }
 }

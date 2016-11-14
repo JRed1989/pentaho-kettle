@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,11 +22,9 @@
 
 package org.pentaho.di.job.entries.deletefolders;
 
-import static org.pentaho.di.job.entry.validator.AbstractFileValidator.putVariableSpace;
-import static org.pentaho.di.job.entry.validator.AndValidator.putValidators;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.andValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.fileExistsValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notNullValidator;
+import org.pentaho.di.job.entry.validator.AbstractFileValidator;
+import org.pentaho.di.job.entry.validator.AndValidator;
+import org.pentaho.di.job.entry.validator.JobEntryValidatorUtils;
 
 import java.io.IOException;
 import java.util.List;
@@ -38,6 +36,7 @@ import org.apache.commons.vfs2.FileType;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.RowMetaAndData;
 import org.pentaho.di.core.database.DatabaseMeta;
@@ -99,8 +98,17 @@ public class JobEntryDeleteFolders extends JobEntryBase implements Cloneable, Jo
     this( "" );
   }
 
+  public void allocate( int nrFields ) {
+    arguments = new String[nrFields];
+  }
+
   public Object clone() {
     JobEntryDeleteFolders je = (JobEntryDeleteFolders) super.clone();
+    if ( arguments != null ) {
+      int nrFields = arguments.length;
+      je.allocate( nrFields );
+      System.arraycopy( arguments, 0, je.arguments, 0, nrFields );
+    }
     return je;
   }
 
@@ -137,7 +145,7 @@ public class JobEntryDeleteFolders extends JobEntryBase implements Cloneable, Jo
 
       // How many field arguments?
       int nrFields = XMLHandler.countNodes( fields, "field" );
-      arguments = new String[nrFields];
+      allocate( nrFields );
 
       // Read them all...
       for ( int i = 0; i < nrFields; i++ ) {
@@ -159,7 +167,7 @@ public class JobEntryDeleteFolders extends JobEntryBase implements Cloneable, Jo
 
       // How many arguments?
       int argnr = rep.countNrJobEntryAttributes( id_jobentry, "name" );
-      arguments = new String[argnr];
+      allocate( argnr );
 
       // Read them all...
       for ( int a = 0; a < argnr; a++ ) {
@@ -219,7 +227,7 @@ public class JobEntryDeleteFolders extends JobEntryBase implements Cloneable, Jo
         }
         RowMetaAndData resultRow = rows.get( iteration );
         String args_previous = resultRow.getString( 0, null );
-        if ( !Const.isEmpty( args_previous ) ) {
+        if ( !Utils.isEmpty( args_previous ) ) {
           if ( deleteFolder( args_previous ) ) {
             updateSuccess();
           } else {
@@ -240,7 +248,7 @@ public class JobEntryDeleteFolders extends JobEntryBase implements Cloneable, Jo
           return result;
         }
         String realfilename = environmentSubstitute( arguments[i] );
-        if ( !Const.isEmpty( realfilename ) ) {
+        if ( !Utils.isEmpty( realfilename ) ) {
           if ( deleteFolder( realfilename ) ) {
             updateSuccess();
           } else {
@@ -371,18 +379,18 @@ public class JobEntryDeleteFolders extends JobEntryBase implements Cloneable, Jo
 
   public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
-    boolean res = andValidator().validate( this, "arguments", remarks, putValidators( notNullValidator() ) );
+    boolean res = JobEntryValidatorUtils.andValidator().validate( this, "arguments", remarks, AndValidator.putValidators( JobEntryValidatorUtils.notNullValidator() ) );
 
     if ( !res ) {
       return;
     }
 
     ValidatorContext ctx = new ValidatorContext();
-    putVariableSpace( ctx, getVariables() );
-    putValidators( ctx, notNullValidator(), fileExistsValidator() );
+    AbstractFileValidator.putVariableSpace( ctx, getVariables() );
+    AndValidator.putValidators( ctx, JobEntryValidatorUtils.notNullValidator(), JobEntryValidatorUtils.fileExistsValidator() );
 
     for ( int i = 0; i < arguments.length; i++ ) {
-      andValidator().validate( this, "arguments[" + i + "]", remarks, ctx );
+      JobEntryValidatorUtils.andValidator().validate( this, "arguments[" + i + "]", remarks, ctx );
     }
   }
 

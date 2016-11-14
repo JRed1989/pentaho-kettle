@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -46,6 +46,7 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.vfs.KettleVFS;
 import org.pentaho.di.i18n.BaseMessages;
@@ -77,13 +78,13 @@ public class AccessOutputDialog extends BaseStepDialog implements StepDialogInte
   private Button wbbTablename;
   private FormData fdlTablename, fdTablename, fdbTablename;
 
-  /*
-   * private Label wlTruncate; private Button wTruncate; private FormData fdlTruncate, fdTruncate;
-   */
-
   private Label wlCreateTable;
   private Button wCreateTable;
   private FormData fdlCreateTable, fdCreateTable;
+
+  private Label wlTruncateTable;
+  private Button wTruncateTable;
+  private FormData fdlTruncateTable, fdTruncateTable;
 
   private Label wlCommitSize;
   private Text wCommitSize;
@@ -274,13 +275,33 @@ public class AccessOutputDialog extends BaseStepDialog implements StepDialogInte
     wCreateTable.setLayoutData( fdCreateTable );
     wCreateTable.addSelectionListener( lsSelMod );
 
+    // Truncate table?
+    wlTruncateTable = new Label( shell, SWT.RIGHT );
+    wlTruncateTable.setText( BaseMessages.getString( PKG, "AccessOutputDialog.TruncateTable.Label" ) );
+    wlTruncateTable.setToolTipText( BaseMessages.getString( PKG, "AccessOutputDialog.TruncateTable.Tooltip" ) );
+    props.setLook( wlTruncateTable );
+    fdlTruncateTable = new FormData();
+    fdlTruncateTable.left = new FormAttachment( 0, 0 );
+    fdlTruncateTable.top = new FormAttachment( wCreateTable, margin );
+    fdlTruncateTable.right = new FormAttachment( middle, 0 );
+    wlTruncateTable.setLayoutData( fdlTruncateTable );
+    wTruncateTable = new Button( shell, SWT.CHECK );
+    wTruncateTable.setToolTipText( BaseMessages.getString( PKG, "AccessOutputDialog.TruncateTable.Tooltip" ) );
+    props.setLook( wCreateTable );
+    fdTruncateTable = new FormData();
+    fdTruncateTable.left = new FormAttachment( middle, margin );
+    fdTruncateTable.top = new FormAttachment( wCreateTable, margin );
+    fdTruncateTable.right = new FormAttachment( 100, 0 );
+    wTruncateTable.setLayoutData( fdTruncateTable );
+    wTruncateTable.addSelectionListener( lsSelMod );
+
     // The commit size...
     wlCommitSize = new Label( shell, SWT.RIGHT );
     wlCommitSize.setText( BaseMessages.getString( PKG, "AccessOutputDialog.CommitSize.Label" ) );
     props.setLook( wlCommitSize );
     fdlCommitSize = new FormData();
     fdlCommitSize.left = new FormAttachment( 0, 0 );
-    fdlCommitSize.top = new FormAttachment( wCreateTable, margin );
+    fdlCommitSize.top = new FormAttachment( wTruncateTable, margin );
     fdlCommitSize.right = new FormAttachment( middle, 0 );
     wlCommitSize.setLayoutData( fdlCommitSize );
 
@@ -290,7 +311,7 @@ public class AccessOutputDialog extends BaseStepDialog implements StepDialogInte
     fdCommitSize = new FormData();
     fdCommitSize.left = new FormAttachment( middle, margin );
     fdCommitSize.right = new FormAttachment( 100, 0 );
-    fdCommitSize.top = new FormAttachment( wCreateTable, margin );
+    fdCommitSize.top = new FormAttachment( wTruncateTable, margin );
     wCommitSize.setLayoutData( fdCommitSize );
     wCommitSize.addModifyListener( lsMod );
 
@@ -362,7 +383,7 @@ public class AccessOutputDialog extends BaseStepDialog implements StepDialogInte
         FileDialog dialog = new FileDialog( shell, SWT.SAVE );
         dialog.setFilterExtensions( new String[] { "*.mdb;*.MDB;*.accdb;*.ACCDB", "*" } );
 
-        if ( !Const.isEmpty( wFilename.getText() ) ) {
+        if ( !Utils.isEmpty( wFilename.getText() ) ) {
           String fname = transMeta.environmentSubstitute( wFilename.getText() );
           dialog.setFileName( fname );
         }
@@ -413,6 +434,7 @@ public class AccessOutputDialog extends BaseStepDialog implements StepDialogInte
 
     wCreateFile.setSelection( input.isFileCreated() );
     wCreateTable.setSelection( input.isFileCreated() );
+    wTruncateTable.setSelection( input.truncateTable() );
     if ( input.getCommitSize() > 0 ) {
       wCommitSize.setText( Integer.toString( input.getCommitSize() ) );
     }
@@ -434,13 +456,14 @@ public class AccessOutputDialog extends BaseStepDialog implements StepDialogInte
     info.setTablename( wTablename.getText() );
     info.setFileCreated( wCreateFile.getSelection() );
     info.setTableCreated( wCreateTable.getSelection() );
+    info.setTableTruncated( wTruncateTable.getSelection() );
     info.setCommitSize( Const.toInt( wCommitSize.getText(), -1 ) );
     info.setAddToResultFiles( wAddToResult.getSelection() );
     input.setDoNotOpenNewFileInit( wDoNotOpenNewFileInit.getSelection() );
   }
 
   private void ok() {
-    if ( Const.isEmpty( wStepname.getText() ) ) {
+    if ( Utils.isEmpty( wStepname.getText() ) ) {
       return;
     }
 

@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -39,6 +39,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.vfs2.FileObject;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.database.Database;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.encryption.Encr;
@@ -62,9 +63,9 @@ import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Performs a streaming bulk load to a VectorWise table.
- * 
+ *
  * Based on Sven Boden's Oracle Bulk Loader step
- * 
+ *
  * @author matt
  * @since 14-apr-2009
  */
@@ -300,19 +301,19 @@ public class IngresVectorwiseLoader extends BaseStep implements StepInterface {
 
   /**
    * Create the command line for a sql process depending on the meta information supplied.
-   * 
+   *
    * @param meta
    *          The meta data to create the command line from
-   * 
+   *
    * @return The string to execute.
-   * 
+   *
    * @throws KettleException
    *           Upon any exception
    */
   public String createCommandLine( IngresVectorwiseLoaderMeta meta ) throws KettleException {
     StringBuilder sb = new StringBuilder( 300 );
 
-    if ( !Const.isEmpty( meta.getSqlPath() ) ) {
+    if ( !Utils.isEmpty( meta.getSqlPath() ) ) {
       try {
         FileObject fileObject = KettleVFS.getFileObject( environmentSubstitute( meta.getSqlPath() ), getTransMeta() );
         String sqlexec = Const.optionallyQuoteStringByOS( KettleVFS.getFilename( fileObject ) );
@@ -358,10 +359,10 @@ public class IngresVectorwiseLoader extends BaseStep implements StepInterface {
         sb.append( " -f " ).append( meta.getDelimiter() ).append( "" );
         sb.append( " -t " ).append( schemaTable );
 
-        if ( !Const.isEmpty( encoding ) ) {
+        if ( !Utils.isEmpty( encoding ) ) {
           sb.append( " -C " ).append( encoding );
         }
-        if ( !Const.isEmpty( errorFile ) ) {
+        if ( !Utils.isEmpty( errorFile ) ) {
           sb.append( " -l " ).append( errorFile );
         }
         if ( maxNrErrors > 0 ) {
@@ -621,7 +622,7 @@ public class IngresVectorwiseLoader extends BaseStep implements StepInterface {
     data = (IngresVectorwiseLoaderData) sdi;
 
     if ( super.init( smi, sdi ) ) {
-      if ( Const.isEmpty( meta.getDelimiter() ) ) {
+      if ( Utils.isEmpty( meta.getDelimiter() ) ) {
         data.separator = data.getBytes( "|" );
       } else {
         data.separator = data.getBytes( meta.getDelimiter() );
@@ -636,12 +637,12 @@ public class IngresVectorwiseLoader extends BaseStep implements StepInterface {
         meta.getDatabaseMeta().getQuotedSchemaTableCombination( null, environmentSubstitute( meta.getTableName() ) );
 
       data.encoding = environmentSubstitute( meta.getEncoding() );
-      data.isEncoding = !Const.isEmpty( environmentSubstitute( meta.getEncoding() ) );
+      data.isEncoding = !Utils.isEmpty( environmentSubstitute( meta.getEncoding() ) );
 
       data.byteBuffer = null;
 
       String bufferSizeString = environmentSubstitute( meta.getBufferSize() );
-      data.bufferSize = Const.isEmpty( bufferSizeString ) ? 5000 : Const.toInt( bufferSizeString, 5000 );
+      data.bufferSize = Utils.isEmpty( bufferSizeString ) ? 5000 : Const.toInt( bufferSizeString, 5000 );
 
       if ( meta.isTruncatingTable() && meta.getDatabaseMeta() != null ) {
 

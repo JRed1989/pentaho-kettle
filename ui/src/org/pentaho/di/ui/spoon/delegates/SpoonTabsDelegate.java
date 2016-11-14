@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -38,15 +38,20 @@ import org.pentaho.di.core.Const;
 import org.pentaho.di.core.EngineMetaInterface;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleFileException;
+import org.pentaho.di.core.extension.ExtensionPointHandler;
+import org.pentaho.di.core.extension.KettleExtensionPoint;
 import org.pentaho.di.core.gui.SpoonInterface;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.vfs.KettleVFS;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.job.JobMeta;
 import org.pentaho.di.repository.ObjectRevision;
 import org.pentaho.di.repository.RepositoryOperation;
 import org.pentaho.di.trans.TransMeta;
+import org.pentaho.di.ui.core.PropsUI;
 import org.pentaho.di.ui.core.gui.GUIResource;
 import org.pentaho.di.ui.repository.RepositorySecurityUI;
+import org.pentaho.di.ui.spoon.AbstractGraph;
 import org.pentaho.di.ui.spoon.Spoon;
 import org.pentaho.di.ui.spoon.SpoonBrowser;
 import org.pentaho.di.ui.spoon.TabItemInterface;
@@ -73,9 +78,11 @@ public class SpoonTabsDelegate extends SpoonDelegate {
   }
 
   public boolean tabClose( TabItem item ) throws KettleException {
+    return tabClose( item, false );
+  }
+
+  public boolean tabClose( TabItem item, boolean force ) throws KettleException {
     // Try to find the tab-item that's being closed.
-    List<TabMapEntry> collection = new ArrayList<TabMapEntry>();
-    collection.addAll( tabMap );
 
     boolean createPerms = !RepositorySecurityUI
         .verifyOperations( Spoon.getInstance().getShell(), Spoon.getInstance().getRepository(), false,
@@ -83,26 +90,51 @@ public class SpoonTabsDelegate extends SpoonDelegate {
 
     boolean close = true;
     boolean canSave = true;
-    for ( TabMapEntry entry : collection ) {
+    for ( TabMapEntry entry : tabMap ) {
       if ( item.equals( entry.getTabItem() ) ) {
-        TabItemInterface itemInterface = entry.getObject();
-        if ( itemInterface.getManagedObject() != null
-            && AbstractMeta.class.isAssignableFrom( itemInterface.getManagedObject().getClass() ) ) {
-          canSave = !( (AbstractMeta) itemInterface.getManagedObject() ).hasMissingPlugins();
-        }
-        if ( canSave ) {
-          // Can we close this tab? Only allow users with create content perms to save
-          if ( !itemInterface.canBeClosed() && createPerms ) {
-            int reply = itemInterface.showChangedWarning();
-            if ( reply == SWT.YES ) {
-              close = itemInterface.applyChanges();
-            } else {
-              if ( reply == SWT.CANCEL ) {
-                close = false;
+        final TabItemInterface itemInterface = entry.getObject();
+        final Object managedObject = itemInterface.getManagedObject();
+
+        if ( !force ) {
+          if ( managedObject != null
+            && AbstractMeta.class.isAssignableFrom( managedObject.getClass() ) ) {
+            canSave = !( (AbstractMeta) managedObject ).hasMissingPlugins();
+          }
+
+          if ( canSave ) {
+            // Can we close this tab? Only allow users with create content perms to save
+            if ( !itemInterface.canBeClosed() && createPerms ) {
+              int reply = itemInterface.showChangedWarning();
+              if ( reply == SWT.YES ) {
+                close = itemInterface.applyChanges();
               } else {
-                close = true;
+                if ( reply == SWT.CANCEL ) {
+                  close = false;
+                } else {
+                  close = true;
+                }
               }
             }
+          }
+        }
+
+        String beforeCloseId = null;
+        String afterCloseId = null;
+
+        if ( itemInterface instanceof TransGraph ) {
+          beforeCloseId = KettleExtensionPoint.TransBeforeClose.id;
+          afterCloseId = KettleExtensionPoint.TransAfterClose.id;
+        } else if ( itemInterface instanceof JobGraph ) {
+          beforeCloseId = KettleExtensionPoint.JobBeforeClose.id;
+          afterCloseId = KettleExtensionPoint.JobAfterClose.id;
+        }
+
+        if ( beforeCloseId != null ) {
+          try {
+            ExtensionPointHandler.callExtensionPoint( log, beforeCloseId, managedObject );
+          } catch ( KettleException e ) {
+            // prevent tab close
+            close = false;
           }
         }
 
@@ -110,23 +142,31 @@ public class SpoonTabsDelegate extends SpoonDelegate {
         // transformation/job
         //
         if ( close ) {
-          if ( entry.getObject() instanceof TransGraph ) {
-            TransMeta transMeta = (TransMeta) entry.getObject().getManagedObject();
+          if ( itemInterface instanceof TransGraph ) {
+            TransMeta transMeta = (TransMeta) managedObject;
             spoon.delegates.trans.closeTransformation( transMeta );
             spoon.refreshTree();
             // spoon.refreshCoreObjects();
-          } else if ( entry.getObject() instanceof JobGraph ) {
-            JobMeta jobMeta = (JobMeta) entry.getObject().getManagedObject();
+          } else if ( itemInterface instanceof JobGraph ) {
+            JobMeta jobMeta = (JobMeta) managedObject;
             spoon.delegates.jobs.closeJob( jobMeta );
             spoon.refreshTree();
             // spoon.refreshCoreObjects();
-          } else if ( entry.getObject() instanceof SpoonBrowser ) {
-            spoon.closeSpoonBrowser();
+          } else if ( itemInterface instanceof SpoonBrowser ) {
+            this.removeTab( entry );
             spoon.refreshTree();
-          } else if ( entry.getObject() instanceof Composite ) {
-            Composite comp = (Composite) entry.getObject();
+          } else if ( itemInterface instanceof Composite ) {
+            Composite comp = (Composite) itemInterface;
             if ( comp != null && !comp.isDisposed() ) {
               comp.dispose();
+            }
+          }
+
+          if ( afterCloseId != null ) {
+            try {
+              ExtensionPointHandler.callExtensionPoint( log, afterCloseId, managedObject );
+            } catch ( KettleException e ) {
+              // fails gracefully... what else could we do?
             }
           }
         }
@@ -196,15 +236,27 @@ public class SpoonTabsDelegate extends SpoonDelegate {
   }
 
   public boolean addSpoonBrowser( String name, String urlString ) {
-    return addSpoonBrowser( name, urlString, true, null );
+    return addSpoonBrowser( name, urlString, true, null, true );
+  }
+
+  public boolean addSpoonBrowser( String name, String urlString, boolean showControls ) {
+    return addSpoonBrowser( name, urlString, true, null, showControls );
   }
 
   public boolean addSpoonBrowser( String name, String urlString, LocationListener listener ) {
-    boolean ok = addSpoonBrowser( name, urlString, true, listener );
+    boolean ok = addSpoonBrowser( name, urlString, true, listener, true );
     return ok;
   }
 
+  public boolean addSpoonBrowser( String name, String urlString, LocationListener listener, boolean showControls ) {
+    return addSpoonBrowser( name, urlString, true, listener, showControls );
+  }
+
   public boolean addSpoonBrowser( String name, String urlString, boolean isURL, LocationListener listener ) {
+    return addSpoonBrowser( name, urlString, isURL, listener, true );
+  }
+
+  public boolean addSpoonBrowser( String name, String urlString, boolean isURL, LocationListener listener, boolean showControls ) {
     TabSet tabfolder = spoon.tabfolder;
 
     try {
@@ -217,7 +269,7 @@ public class SpoonTabsDelegate extends SpoonDelegate {
       TabMapEntry tabMapEntry = findTabMapEntry( name, ObjectType.BROWSER );
       if ( tabMapEntry == null ) {
         CTabFolder cTabFolder = tabfolder.getSwtTabset();
-        final SpoonBrowser browser = new SpoonBrowser( cTabFolder, spoon, urlString, isURL, true, listener );
+        final SpoonBrowser browser = new SpoonBrowser( cTabFolder, spoon, urlString, isURL, showControls, listener );
 
         browser.getBrowser().addOpenWindowListener( new OpenWindowListener() {
 
@@ -228,8 +280,8 @@ public class SpoonTabsDelegate extends SpoonDelegate {
             }
           }
         } );
-
-        TabItem tabItem = new TabItem( tabfolder, name, name );
+        PropsUI props = PropsUI.getInstance();
+        TabItem tabItem = new TabItem( tabfolder, name, name, props.getSashWeights() );
         tabItem.setImage( GUIResource.getInstance().getImageLogoSmall() );
         tabItem.setControl( browser.getComposite() );
 
@@ -263,11 +315,10 @@ public class SpoonTabsDelegate extends SpoonDelegate {
 
   public TabMapEntry findTabMapEntry( String tabItemText, ObjectType objectType ) {
     for ( TabMapEntry entry : tabMap ) {
-      if ( entry.getTabItem().isDisposed() ) {
-        continue;
-      }
-      if ( objectType == entry.getObjectType() && entry.getTabItem().getText().equalsIgnoreCase( tabItemText ) ) {
-        return entry;
+      if ( !entry.getTabItem().isDisposed() ) {
+        if ( objectType == entry.getObjectType() && entry.getTabItem().getText().equalsIgnoreCase( tabItemText ) ) {
+          return entry;
+        }
       }
     }
     return null;
@@ -275,15 +326,14 @@ public class SpoonTabsDelegate extends SpoonDelegate {
 
   public TabMapEntry findTabMapEntry( Object managedObject ) {
     for ( TabMapEntry entry : tabMap ) {
-      if ( entry.getTabItem().isDisposed() ) {
-        continue;
-      }
-      Object entryManagedObj = entry.getObject().getManagedObject();
-      // make sure they are the same class before comparing them
-      if ( entryManagedObj != null && managedObject != null ) {
-        if ( entryManagedObj.getClass().equals( managedObject.getClass() ) ) {
-          if ( entryManagedObj.equals( managedObject ) ) {
-            return entry;
+      if ( !entry.getTabItem().isDisposed() ) {
+        Object entryManagedObj = entry.getObject().getManagedObject();
+        // make sure they are the same class before comparing them
+        if ( entryManagedObj != null && managedObject != null ) {
+          if ( entryManagedObj.getClass().equals( managedObject.getClass() ) ) {
+            if ( entryManagedObj.equals( managedObject ) ) {
+              return entry;
+            }
           }
         }
       }
@@ -305,23 +355,22 @@ public class SpoonTabsDelegate extends SpoonDelegate {
     // File for the transformation we're looking for. It will be loaded upon first request.
     FileObject transFile = null;
     for ( TabMapEntry entry : tabMap ) {
-      if ( entry == null || entry.getTabItem().isDisposed() ) {
-        continue;
-      }
-      if ( trans.getFilename() != null && entry.getFilename() != null ) {
-        // If the entry has a file name it is the same as trans iff. they originated from the same files
-        FileObject entryFile = KettleVFS.getFileObject( entry.getFilename() );
-        if ( transFile == null ) {
-          transFile = KettleVFS.getFileObject( trans.getFilename() );
-        }
-        if ( entryFile.equals( transFile ) ) {
-          return entry;
-        }
-      } else if ( trans.getObjectId() != null && entry.getObject() != null ) {
-        EngineMetaInterface meta = entry.getObject().getMeta();
-        if ( meta != null && trans.getObjectId().equals( meta.getObjectId() ) ) {
-          // If the transformation has an object id and the entry shares the same id they are the same
-          return entry;
+      if ( entry != null && !entry.getTabItem().isDisposed() ) {
+        if ( trans.getFilename() != null && entry.getFilename() != null ) {
+          // If the entry has a file name it is the same as trans iff. they originated from the same files
+          FileObject entryFile = KettleVFS.getFileObject( entry.getFilename() );
+          if ( transFile == null ) {
+            transFile = KettleVFS.getFileObject( trans.getFilename() );
+          }
+          if ( entryFile.equals( transFile ) ) {
+            return entry;
+          }
+        } else if ( trans.getObjectId() != null && entry.getObject() != null ) {
+          EngineMetaInterface meta = entry.getObject().getMeta();
+          if ( meta != null && trans.getObjectId().equals( meta.getObjectId() ) ) {
+            // If the transformation has an object id and the entry shares the same id they are the same
+            return entry;
+          }
         }
       }
     }
@@ -348,40 +397,20 @@ public class SpoonTabsDelegate extends SpoonDelegate {
       //
       Object managedObject = entry.getObject().getManagedObject();
       if ( managedObject != null ) {
-        if ( entry.getObject() instanceof TransGraph ) {
-          TransMeta transMeta = (TransMeta) managedObject;
-          String tabText = makeTabName( transMeta, entry.isShowingLocation() );
+        if ( entry.getObject() instanceof AbstractGraph ) {
+          AbstractMeta meta = (AbstractMeta) managedObject;
+          String tabText = makeTabName( meta, entry.isShowingLocation() );
           entry.getTabItem().setText( tabText );
           String toolTipText = BaseMessages.getString( PKG, "Spoon.TabTrans.Tooltip", tabText );
-          if ( Const.isWindows() && !Const.isEmpty( transMeta.getFilename() ) ) {
-            toolTipText += Const.CR + Const.CR + transMeta.getFilename();
+          if ( entry.getObject() instanceof JobGraph ) {
+            toolTipText = BaseMessages.getString( PKG, "Spoon.TabJob.Tooltip", tabText );
           }
-          entry.getTabItem().setToolTipText( toolTipText );
-        } else if ( entry.getObject() instanceof JobGraph ) {
-          JobMeta jobMeta = (JobMeta) managedObject;
-          entry.getTabItem().setText( makeTabName( jobMeta, entry.isShowingLocation() ) );
-          String toolTipText =
-            BaseMessages.getString(
-              PKG, "Spoon.TabJob.Tooltip", makeTabName( jobMeta, entry.isShowingLocation() ) );
-          if ( Const.isWindows() && !Const.isEmpty( jobMeta.getFilename() ) ) {
-            toolTipText += Const.CR + Const.CR + jobMeta.getFilename();
+          if ( Const.isWindows() && !Utils.isEmpty( meta.getFilename() ) ) {
+            toolTipText += Const.CR + Const.CR + meta.getFilename();
           }
           entry.getTabItem().setToolTipText( toolTipText );
         }
       }
-
-      /*
-       * String after = entry.getTabItem().getText();
-       *
-       * if (!beforeText.equals(after)) // PDI-1683, could be improved to rename all the time {
-       * entry.setObjectName(after);
-       *
-       * // Also change the transformation map if (entry.getObject() instanceof TransGraph) {
-       * spoon.delegates.trans.removeTransformation(beforeText); spoon.delegates.trans.addTransformation(after,
-       * (TransMeta) entry.getObject().getManagedObject()); } // Also change the job map if (entry.getObject()
-       * instanceof JobGraph) { spoon.delegates.jobs.removeJob(beforeText); spoon.delegates.jobs.addJob(after, (JobMeta)
-       * entry.getObject().getManagedObject()); } }
-       */
     }
     spoon.setShellText();
   }
@@ -391,11 +420,11 @@ public class SpoonTabsDelegate extends SpoonDelegate {
   }
 
   public String makeTabName( EngineMetaInterface transMeta, boolean showLocation ) {
-    if ( Const.isEmpty( transMeta.getName() ) && Const.isEmpty( transMeta.getFilename() ) ) {
+    if ( Utils.isEmpty( transMeta.getName() ) && Utils.isEmpty( transMeta.getFilename() ) ) {
       return Spoon.STRING_TRANS_NO_NAME;
     }
 
-    if ( Const.isEmpty( transMeta.getName() )
+    if ( Utils.isEmpty( transMeta.getName() )
       || spoon.delegates.trans.isDefaultTransformationName( transMeta.getName() ) ) {
       transMeta.nameFromFilename();
     }
@@ -403,7 +432,7 @@ public class SpoonTabsDelegate extends SpoonDelegate {
     String name = "";
 
     if ( showLocation ) {
-      if ( !Const.isEmpty( transMeta.getFilename() ) ) {
+      if ( !Utils.isEmpty( transMeta.getFilename() ) ) {
         // Regular file...
         //
         name += transMeta.getFilename() + " : ";
@@ -425,15 +454,12 @@ public class SpoonTabsDelegate extends SpoonDelegate {
   }
 
   public void tabSelected( TabItem item ) {
-    ArrayList<TabMapEntry> collection = new ArrayList<TabMapEntry>( tabMap );
-
     // See which core objects to show
     //
-    for ( TabMapEntry entry : collection ) {
-      boolean isTrans = ( entry.getObject() instanceof TransGraph );
-
+    for ( TabMapEntry entry : tabMap ) {
+      boolean isAbstractGraph = ( entry.getObject() instanceof AbstractGraph );
       if ( item.equals( entry.getTabItem() ) ) {
-        if ( isTrans || entry.getObject() instanceof JobGraph ) {
+        if ( isAbstractGraph ) {
           EngineMetaInterface meta = entry.getObject().getMeta();
           if ( meta != null ) {
             meta.setInternalKettleVariables();
@@ -441,14 +467,8 @@ public class SpoonTabsDelegate extends SpoonDelegate {
           if ( spoon.getCoreObjectsState() != SpoonInterface.STATE_CORE_OBJECTS_SPOON ) {
             spoon.refreshCoreObjects();
           }
+          ( (AbstractGraph) entry.getObject() ).setFocus();
         }
-
-        if ( entry.getObject() instanceof JobGraph ) {
-          ( (JobGraph) entry.getObject() ).setFocus();
-        } else if ( entry.getObject() instanceof TransGraph ) {
-          ( (TransGraph) entry.getObject() ).setFocus();
-        }
-
         break;
       }
     }
@@ -456,11 +476,6 @@ public class SpoonTabsDelegate extends SpoonDelegate {
     // Also refresh the tree
     spoon.refreshTree();
     spoon.setShellText(); // calls also enableMenus() and markTabsChanged()
-
   }
-
-  /*
-   * private void setEnabled(String id,boolean enable) { spoon.getToolbar().getButtonById(id).setEnable(enable); }
-   */
 
 }

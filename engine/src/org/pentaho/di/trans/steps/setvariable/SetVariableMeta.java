@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -27,6 +27,7 @@ import java.util.List;
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleXMLException;
@@ -193,13 +194,10 @@ public class SetVariableMeta extends BaseStepMeta implements StepMetaInterface {
     int count = fieldName.length;
 
     retval.allocate( count );
-
-    for ( int i = 0; i < count; i++ ) {
-      retval.fieldName[i] = fieldName[i];
-      retval.variableName[i] = variableName[i];
-      retval.variableType[i] = variableType[i];
-      retval.defaultValue[i] = defaultValue[i];
-    }
+    System.arraycopy( fieldName, 0, retval.fieldName, 0, count );
+    System.arraycopy( variableName, 0, retval.variableName, 0, count );
+    System.arraycopy( variableType, 0, retval.variableType, 0, count );
+    System.arraycopy( defaultValue, 0, retval.defaultValue, 0, count );
 
     return retval;
   }
@@ -245,7 +243,7 @@ public class SetVariableMeta extends BaseStepMeta implements StepMetaInterface {
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 150 );
+    StringBuilder retval = new StringBuilder( 150 );
 
     retval.append( "    <fields>" ).append( Const.CR );
 
@@ -288,7 +286,7 @@ public class SetVariableMeta extends BaseStepMeta implements StepMetaInterface {
   public void saveRep( Repository rep, IMetaStore metaStore, ObjectId id_transformation, ObjectId id_step ) throws KettleException {
     try {
       for ( int i = 0; i < fieldName.length; i++ ) {
-        rep.saveStepAttribute( id_transformation, id_step, i, "field_name", Const.isEmpty( fieldName[i] )
+        rep.saveStepAttribute( id_transformation, id_step, i, "field_name", Utils.isEmpty( fieldName[i] )
           ? "" : fieldName[i] );
         rep.saveStepAttribute( id_transformation, id_step, i, "variable_name", variableName[i] );
         rep.saveStepAttribute(

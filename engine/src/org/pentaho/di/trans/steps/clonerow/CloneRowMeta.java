@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -26,14 +26,15 @@ import java.util.List;
 
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
-import org.pentaho.di.core.Const;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
 import org.pentaho.di.core.exception.KettleXMLException;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaBoolean;
+import org.pentaho.di.core.row.value.ValueMetaInteger;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.i18n.BaseMessages;
@@ -79,7 +80,7 @@ public class CloneRowMeta extends BaseStepMeta implements StepMetaInterface {
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer();
+    StringBuilder retval = new StringBuilder();
     retval.append( "    " + XMLHandler.addTagValue( "nrclones", nrclones ) );
     retval.append( "    " + XMLHandler.addTagValue( "addcloneflag", addcloneflag ) );
     retval.append( "    " + XMLHandler.addTagValue( "cloneflagfield", cloneflagfield ) );
@@ -222,8 +223,8 @@ public class CloneRowMeta extends BaseStepMeta implements StepMetaInterface {
     // Output field (boolean) ?
     if ( addcloneflag ) {
       String realfieldValue = space.environmentSubstitute( cloneflagfield );
-      if ( !Const.isEmpty( realfieldValue ) ) {
-        ValueMetaInterface v = new ValueMeta( realfieldValue, ValueMeta.TYPE_BOOLEAN );
+      if ( !Utils.isEmpty( realfieldValue ) ) {
+        ValueMetaInterface v = new ValueMetaBoolean( realfieldValue );
         v.setOrigin( origin );
         rowMeta.addValueMeta( v );
       }
@@ -231,8 +232,8 @@ public class CloneRowMeta extends BaseStepMeta implements StepMetaInterface {
     // Output clone row number
     if ( addclonenum ) {
       String realfieldValue = space.environmentSubstitute( clonenumfield );
-      if ( !Const.isEmpty( realfieldValue ) ) {
-        ValueMetaInterface v = new ValueMeta( realfieldValue, ValueMeta.TYPE_INTEGER );
+      if ( !Utils.isEmpty( realfieldValue ) ) {
+        ValueMetaInterface v = new ValueMetaInteger( realfieldValue );
         v.setOrigin( origin );
         rowMeta.addValueMeta( v );
       }
@@ -245,7 +246,7 @@ public class CloneRowMeta extends BaseStepMeta implements StepMetaInterface {
     CheckResult cr;
     String error_message = "";
 
-    if ( Const.isEmpty( nrclones ) ) {
+    if ( Utils.isEmpty( nrclones ) ) {
       error_message = BaseMessages.getString( PKG, "CloneRowMeta.CheckResult.NrClonesdMissing" );
       cr = new CheckResult( CheckResultInterface.TYPE_RESULT_ERROR, error_message, stepMeta );
     } else {
@@ -255,7 +256,7 @@ public class CloneRowMeta extends BaseStepMeta implements StepMetaInterface {
     remarks.add( cr );
 
     if ( addcloneflag ) {
-      if ( Const.isEmpty( cloneflagfield ) ) {
+      if ( Utils.isEmpty( cloneflagfield ) ) {
         error_message = BaseMessages.getString( PKG, "CloneRowMeta.CheckResult.CloneFlagFieldMissing" );
         cr = new CheckResult( CheckResultInterface.TYPE_RESULT_ERROR, error_message, stepMeta );
       } else {
@@ -265,7 +266,7 @@ public class CloneRowMeta extends BaseStepMeta implements StepMetaInterface {
       remarks.add( cr );
     }
     if ( addclonenum ) {
-      if ( Const.isEmpty( clonenumfield ) ) {
+      if ( Utils.isEmpty( clonenumfield ) ) {
         error_message = BaseMessages.getString( PKG, "CloneRowMeta.CheckResult.CloneNumFieldMissing" );
         cr = new CheckResult( CheckResultInterface.TYPE_RESULT_ERROR, error_message, stepMeta );
       } else {
@@ -275,7 +276,7 @@ public class CloneRowMeta extends BaseStepMeta implements StepMetaInterface {
       remarks.add( cr );
     }
     if ( nrcloneinfield ) {
-      if ( Const.isEmpty( nrclonefield ) ) {
+      if ( Utils.isEmpty( nrclonefield ) ) {
         error_message = BaseMessages.getString( PKG, "CloneRowMeta.CheckResult.NrCloneFieldMissing" );
         cr = new CheckResult( CheckResult.TYPE_RESULT_ERROR, error_message, stepMeta );
       } else {

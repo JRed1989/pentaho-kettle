@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -27,6 +27,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleDatabaseException;
 import org.pentaho.di.core.row.ValueMetaInterface;
 
@@ -115,7 +116,7 @@ public class NeoviewDatabaseMeta extends BaseDatabaseMeta implements DatabaseInt
       return "jdbc:odbc:" + databaseName;
     } else {
       String appendix = "";
-      if ( !Const.isEmpty( databaseName ) ) {
+      if ( !Utils.isEmpty( databaseName ) ) {
         if ( databaseName.contains( "=" ) ) {
           // some properties here like serverDataSource, catalog, schema etc. already given
           appendix = ":" + databaseName;
@@ -237,6 +238,7 @@ public class NeoviewDatabaseMeta extends BaseDatabaseMeta implements DatabaseInt
 
     int type = v.getType();
     switch ( type ) {
+      case ValueMetaInterface.TYPE_TIMESTAMP:
       case ValueMetaInterface.TYPE_DATE:
         retval += "TIMESTAMP";
         break;
@@ -358,7 +360,7 @@ public class NeoviewDatabaseMeta extends BaseDatabaseMeta implements DatabaseInt
 
   @Override
   public String getSQLLockTables( String[] tableNames ) {
-    StringBuffer sql = new StringBuffer( 128 );
+    StringBuilder sql = new StringBuilder( 128 );
     for ( int i = 0; i < tableNames.length; i++ ) {
       sql.append( "LOCK TABLE " ).append( tableNames[i] ).append( " IN EXCLUSIVE MODE;" ).append( Const.CR );
     }
@@ -447,6 +449,7 @@ public class NeoviewDatabaseMeta extends BaseDatabaseMeta implements DatabaseInt
             data = rs.getBytes( i + 1 );
           }
           break;
+        case ValueMetaInterface.TYPE_TIMESTAMP:
         case ValueMetaInterface.TYPE_DATE:
           if ( val.getOriginalColumnType() == java.sql.Types.TIME ) {
             // Neoview can not handle getDate / getTimestamp for a Time column

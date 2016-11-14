@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -26,7 +26,6 @@ import java.util.List;
 
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
-import org.pentaho.di.core.Const;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
@@ -34,6 +33,7 @@ import org.pentaho.di.core.exception.KettleXMLException;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.core.row.value.ValueMetaFactory;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.i18n.BaseMessages;
@@ -72,6 +72,7 @@ public class CalculatorMeta extends BaseStepMeta implements StepMetaInterface {
     calculation = new CalculatorMetaFunction[nrCalcs];
   }
 
+  @Override
   public void loadXML( Node stepnode, List<DatabaseMeta> databases, IMetaStore metaStore ) throws KettleXMLException {
     int nrCalcs = XMLHandler.countNodes( stepnode, CalculatorMetaFunction.XML_TAG );
     allocate( nrCalcs );
@@ -81,18 +82,20 @@ public class CalculatorMeta extends BaseStepMeta implements StepMetaInterface {
     }
   }
 
+  @Override
   public String getXML() {
     StringBuilder retval = new StringBuilder( 300 );
 
     if ( calculation != null ) {
       for ( CalculatorMetaFunction aCalculation : calculation ) {
-        retval.append( "       " ).append( aCalculation.getXML() ).append( Const.CR );
+        retval.append( aCalculation.getXML() );
       }
     }
 
     return retval.toString();
   }
 
+  @Override
   public boolean equals( Object obj ) {
     if ( obj != null && ( obj.getClass().equals( this.getClass() ) ) ) {
       CalculatorMeta m = (CalculatorMeta) obj;
@@ -102,6 +105,7 @@ public class CalculatorMeta extends BaseStepMeta implements StepMetaInterface {
     return false;
   }
 
+  @Override
   public Object clone() {
     CalculatorMeta retval = (CalculatorMeta) super.clone();
     if ( calculation != null ) {
@@ -115,10 +119,12 @@ public class CalculatorMeta extends BaseStepMeta implements StepMetaInterface {
     return retval;
   }
 
+  @Override
   public void setDefault() {
     calculation = new CalculatorMetaFunction[0];
   }
 
+  @Override
   public void readRep( Repository rep, IMetaStore metaStore, ObjectId id_step, List<DatabaseMeta> databases ) throws KettleException {
     int nrCalcs = rep.countNrStepAttributes( id_step, "field_name" );
     allocate( nrCalcs );
@@ -127,17 +133,19 @@ public class CalculatorMeta extends BaseStepMeta implements StepMetaInterface {
     }
   }
 
+  @Override
   public void saveRep( Repository rep, IMetaStore metaStore, ObjectId id_transformation, ObjectId id_step ) throws KettleException {
     for ( int i = 0; i < calculation.length; i++ ) {
       calculation[i].saveRep( rep, metaStore, id_transformation, id_step, i );
     }
   }
 
+  @Override
   public void getFields( RowMetaInterface row, String origin, RowMetaInterface[] info, StepMeta nextStep,
     VariableSpace space, Repository repository, IMetaStore metaStore ) throws KettleStepException {
     for ( CalculatorMetaFunction fn : calculation ) {
       if ( !fn.isRemovedFromResult() ) {
-        if ( !Const.isEmpty( fn.getFieldName() ) ) { // It's a new field!
+        if ( !Utils.isEmpty( fn.getFieldName() ) ) { // It's a new field!
           ValueMetaInterface v = getValueMeta( fn, origin );
           row.addValueMeta( v );
         }
@@ -175,7 +183,7 @@ public class CalculatorMeta extends BaseStepMeta implements StepMetaInterface {
     RowMetaInterface rowMeta = inputRowMeta.clone();
 
     for ( CalculatorMetaFunction fn : getCalculation() ) {
-      if ( !Const.isEmpty( fn.getFieldName() ) ) { // It's a new field!
+      if ( !Utils.isEmpty( fn.getFieldName() ) ) { // It's a new field!
         ValueMetaInterface v = getValueMeta( fn, null );
         rowMeta.addValueMeta( v );
       }
@@ -183,6 +191,7 @@ public class CalculatorMeta extends BaseStepMeta implements StepMetaInterface {
     return rowMeta;
   }
 
+  @Override
   public void check( List<CheckResultInterface> remarks, TransMeta transMeta, StepMeta stepMeta,
     RowMetaInterface prev, String[] input, String[] output, RowMetaInterface info, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
@@ -214,11 +223,13 @@ public class CalculatorMeta extends BaseStepMeta implements StepMetaInterface {
     }
   }
 
+  @Override
   public StepInterface getStep( StepMeta stepMeta, StepDataInterface stepDataInterface, int cnr, TransMeta tr,
     Trans trans ) {
     return new Calculator( stepMeta, stepDataInterface, cnr, tr, trans );
   }
 
+  @Override
   public StepDataInterface getStepData() {
     return new CalculatorData();
   }

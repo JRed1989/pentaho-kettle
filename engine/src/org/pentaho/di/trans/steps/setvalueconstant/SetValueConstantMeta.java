@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -27,6 +27,7 @@ import java.util.List;
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleXMLException;
@@ -76,13 +77,10 @@ public class SetValueConstantMeta extends BaseStepMeta implements StepMetaInterf
 
     int nrfields = fieldName.length;
     retval.allocate( nrfields );
-
-    for ( int i = 0; i < nrfields; i++ ) {
-      retval.fieldName[i] = fieldName[i];
-      retval.replaceValue[i] = replaceValue[i];
-      retval.replaceMask[i] = replaceMask[i];
-      retval.setEmptyString[i] = setEmptyString[i];
-    }
+    System.arraycopy( fieldName, 0, retval.fieldName, 0, nrfields );
+    System.arraycopy( replaceValue, 0, retval.replaceValue, 0, nrfields );
+    System.arraycopy( replaceMask, 0, retval.replaceMask, 0, nrfields );
+    System.arraycopy( setEmptyString, 0, retval.setEmptyString, 0, nrfields );
 
     return retval;
   }
@@ -140,9 +138,14 @@ public class SetValueConstantMeta extends BaseStepMeta implements StepMetaInterf
   }
 
   /**
+   * @deprecated use {@link #isEmptyString()} instead
    * @return the setEmptyString
    */
   public boolean[] isSetEmptyString() {
+    return isEmptyString();
+  }
+
+  public boolean[] isEmptyString() {
     return setEmptyString;
   }
 
@@ -175,7 +178,7 @@ public class SetValueConstantMeta extends BaseStepMeta implements StepMetaInterf
         replaceValue[i] = XMLHandler.getTagValue( fnode, "value" );
         replaceMask[i] = XMLHandler.getTagValue( fnode, "mask" );
         String emptyString = XMLHandler.getTagValue( fnode, "set_empty_string" );
-        setEmptyString[i] = !Const.isEmpty( emptyString ) && "Y".equalsIgnoreCase( emptyString );
+        setEmptyString[i] = !Utils.isEmpty( emptyString ) && "Y".equalsIgnoreCase( emptyString );
       }
     } catch ( Exception e ) {
       throw new KettleXMLException( "It was not possible to load the metadata for this step from XML", e );
@@ -183,7 +186,7 @@ public class SetValueConstantMeta extends BaseStepMeta implements StepMetaInterf
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer();
+    StringBuilder retval = new StringBuilder();
     retval.append( "   " + XMLHandler.addTagValue( "usevar", usevar ) );
     retval.append( "    <fields>" + Const.CR );
     for ( int i = 0; i < fieldName.length; i++ ) {

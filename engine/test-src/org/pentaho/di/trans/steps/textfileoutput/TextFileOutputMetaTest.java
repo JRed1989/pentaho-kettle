@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2015 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -36,10 +36,7 @@ import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.value.ValueMetaFactory;
 import org.pentaho.di.trans.steps.loadsave.LoadSaveTester;
 import org.pentaho.di.trans.steps.loadsave.validator.ArrayLoadSaveValidator;
-import org.pentaho.di.trans.steps.loadsave.validator.BooleanLoadSaveValidator;
 import org.pentaho.di.trans.steps.loadsave.validator.FieldLoadSaveValidator;
-import org.pentaho.di.trans.steps.loadsave.validator.PrimitiveBooleanArrayLoadSaveValidator;
-import org.pentaho.di.trans.steps.loadsave.validator.StringLoadSaveValidator;
 
 public class TextFileOutputMetaTest {
 
@@ -48,15 +45,15 @@ public class TextFileOutputMetaTest {
     KettleEnvironment.init( false );
   }
 
-  @Test
-  public void testRoundTrip() throws KettleException {
-    List<String> attributes =
-      Arrays.asList( "separator", "enclosure", "enclosure_forced", "enclosure_fix_disabled", "header", 
-        "footer", "format", "compression", "encoding", "endedLine", "fileNameInField", "fileNameField", 
-        "create_parent_folder", "fileName", "is_command", "servlet_output", "do_not_open_new_file_init", 
-        "extention", "append", "split", "haspartno", "add_date", "add_time", "SpecifyFormat", "date_time_format", 
-        "add_to_result_filenames", "pad", "fast_dump", "splitevery", "OutputFields" );
+  public static List<String> getMetaAttributes() {
+    return Arrays.asList( "separator", "enclosure", "enclosure_forced", "enclosure_fix_disabled", "header", "footer",
+      "format", "compression", "encoding", "endedLine", "fileNameInField", "fileNameField",
+      "create_parent_folder", "fileName", "is_command", "servlet_output", "do_not_open_new_file_init",
+      "extention", "append", "split", "haspartno", "add_date", "add_time", "SpecifyFormat", "date_time_format",
+      "add_to_result_filenames", "pad", "fast_dump", "splitevery", "OutputFields" );
+  }
 
+  public static Map<String, String> getGetterMap() {
     Map<String, String> getterMap = new HashMap<String, String>();
     getterMap.put( "separator", "getSeparator" );
     getterMap.put( "enclosure", "getEnclosure" );
@@ -88,8 +85,10 @@ public class TextFileOutputMetaTest {
     getterMap.put( "fast_dump", "isFastDump" );
     getterMap.put( "splitevery", "getSplitEvery" );
     getterMap.put( "OutputFields", "getOutputFields" );
+    return getterMap;
+  }
 
-
+  public static Map<String, String> getSetterMap() {
     Map<String, String> setterMap = new HashMap<String, String>();
     setterMap.put( "separator", "setSeparator" );
     setterMap.put( "enclosure", "setEnclosure" );
@@ -121,32 +120,39 @@ public class TextFileOutputMetaTest {
     setterMap.put( "fast_dump", "setFastDump" );
     setterMap.put( "splitevery", "setSplitEvery" );
     setterMap.put( "OutputFields", "setOutputFields" );
-
-
-    Map<String, FieldLoadSaveValidator<?>> fieldLoadSaveValidatorAttributeMap =
-      new HashMap<String, FieldLoadSaveValidator<?>>();
-
-    FieldLoadSaveValidator<TextFileField[]> outputFieldArrayLoadSaveValidator =
-      new ArrayLoadSaveValidator<TextFileField>( new TextFileFieldLoadSaveValidator(), 25 );
-
-    fieldLoadSaveValidatorAttributeMap.put( "OutputFields", outputFieldArrayLoadSaveValidator );
-
-    LoadSaveTester loadSaveTester =
-      new LoadSaveTester( TextFileOutputMeta.class, attributes, getterMap, setterMap,
-          fieldLoadSaveValidatorAttributeMap, new HashMap<String, FieldLoadSaveValidator<?>>() );
-
-    loadSaveTester.testRepoRoundTrip();
-    loadSaveTester.testXmlRoundTrip();
+    return setterMap;
   }
 
-  public class TextFileFieldLoadSaveValidator implements FieldLoadSaveValidator<TextFileField> {
+  public static Map<String, FieldLoadSaveValidator<?>> getAttributeValidators() {
+    return new HashMap<String, FieldLoadSaveValidator<?>>();
+  }
+
+  public static Map<String, FieldLoadSaveValidator<?>> getTypeValidators() {
+    Map<String, FieldLoadSaveValidator<?>> typeValidators =
+      new HashMap<String, FieldLoadSaveValidator<?>>();
+    typeValidators.put( TextFileField[].class.getCanonicalName(),
+      new ArrayLoadSaveValidator<TextFileField>( new TextFileFieldLoadSaveValidator() ) );
+    return typeValidators;
+  }
+
+  @Test
+  public void testRoundTrip() throws KettleException {
+    LoadSaveTester<TextFileOutputMeta> loadSaveTester =
+      new LoadSaveTester<TextFileOutputMeta>( TextFileOutputMeta.class, getMetaAttributes(),
+        getGetterMap(), getSetterMap(), getAttributeValidators(), getTypeValidators() );
+
+    loadSaveTester.testSerialization();
+  }
+
+  public static class TextFileFieldLoadSaveValidator implements FieldLoadSaveValidator<TextFileField> {
     Random rand = new Random();
 
     @Override
     public TextFileField getTestObject() {
       String name = UUID.randomUUID().toString();
-      int type = ValueMetaFactory.getIdForValueMeta(
-        ValueMetaFactory.getValueMetaNames()[rand.nextInt( ValueMetaFactory.getValueMetaNames().length )] );
+      int type =
+        ValueMetaFactory.getIdForValueMeta( ValueMetaFactory.getValueMetaNames()[rand.nextInt( ValueMetaFactory
+          .getValueMetaNames().length )] );
       String format = UUID.randomUUID().toString();
       int length = Math.abs( rand.nextInt() );
       int precision = Math.abs( rand.nextInt() );
@@ -155,8 +161,8 @@ public class TextFileOutputMetaTest {
       String groupSymbol = UUID.randomUUID().toString();
       String nullString = UUID.randomUUID().toString();
 
-      return new TextFileField( name, type, format, length, precision, currencySymbol,
-          decimalSymbol, groupSymbol, nullString );
+      return new TextFileField( name, type, format, length, precision, currencySymbol, decimalSymbol, groupSymbol,
+          nullString );
     }
 
     @Override
@@ -165,20 +171,19 @@ public class TextFileOutputMetaTest {
         return false;
       }
       TextFileField act = (TextFileField) actual;
-      if ( testObject.getName().equals( act.getName() ) &&
-        testObject.getType() == act.getType() &&
-        testObject.getFormat().equals( act.getFormat() ) &&
-        testObject.getLength() == act.getLength() &&
-        testObject.getPrecision() == act.getPrecision() &&
-        testObject.getCurrencySymbol().equals( act.getCurrencySymbol() ) &&
-        testObject.getDecimalSymbol().equals( act.getDecimalSymbol() ) &&
-        testObject.getGroupingSymbol().equals( act.getGroupingSymbol() ) &&
-        testObject.getNullString().equals( act.getNullString() ) ) {
-          return true;
+      if ( testObject.getName().equals( act.getName() )
+          && testObject.getType() == act.getType()
+          && testObject.getFormat().equals( act.getFormat() )
+          && testObject.getLength() == act.getLength()
+          && testObject.getPrecision() == act.getPrecision()
+          && testObject.getCurrencySymbol().equals( act.getCurrencySymbol() )
+          && testObject.getDecimalSymbol().equals( act.getDecimalSymbol() )
+          && testObject.getGroupingSymbol().equals( act.getGroupingSymbol() )
+          && testObject.getNullString().equals( act.getNullString() ) ) {
+        return true;
       } else {
         return false;
       }
     }
-    
   }
 }

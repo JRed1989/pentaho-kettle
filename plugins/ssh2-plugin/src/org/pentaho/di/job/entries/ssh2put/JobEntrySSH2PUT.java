@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,13 +22,6 @@
 
 package org.pentaho.di.job.entries.ssh2put;
 
-import static org.pentaho.di.job.entry.validator.AndValidator.putValidators;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.andValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.fileExistsValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.integerValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notBlankValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notNullValidator;
-
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,6 +35,7 @@ import org.apache.commons.vfs2.FileType;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.annotations.JobEntry;
 import org.pentaho.di.core.database.DatabaseMeta;
@@ -55,9 +49,11 @@ import org.pentaho.di.core.vfs.KettleVFS;
 import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.job.JobMeta;
+import org.pentaho.di.job.entries.FTPUtils;
 import org.pentaho.di.job.entry.JobEntryBase;
 import org.pentaho.di.job.entry.JobEntryInterface;
-import org.pentaho.di.job.entries.FTPUtils;
+import org.pentaho.di.job.entry.validator.AndValidator;
+import org.pentaho.di.job.entry.validator.JobEntryValidatorUtils;
 import org.pentaho.di.repository.ObjectId;
 import org.pentaho.di.repository.Repository;
 import org.pentaho.di.resource.ResourceEntry;
@@ -80,14 +76,13 @@ import com.trilead.ssh2.SFTPv3FileHandle;
  * @since 17-12-2007
  *
  */
-@JobEntry(  
+@JobEntry(
     id = "SSH2_PUT",
     image = "SHP.svg",
-    i18nPackageName="org.pentaho.di.job.entries.ssh2put",
-    name="JobSSH2PUT.TypeDesc",
+    i18nPackageName = "org.pentaho.di.job.entries.ssh2put",
+    name = "JobSSH2PUT.TypeDesc",
     description = "JobSSH2PUT.Tooltip",
-    categoryDescription="i18n:org.pentaho.di.job:JobCategory.Category.Deprecated"
-)
+    categoryDescription = "i18n:org.pentaho.di.job:JobCategory.Category.Deprecated" )
 public class JobEntrySSH2PUT extends JobEntryBase implements Cloneable, JobEntryInterface {
   private static Class<?> PKG = JobEntrySSH2PUT.class; // for i18n purposes, needed by Translator2!!
 
@@ -142,11 +137,13 @@ public class JobEntrySSH2PUT extends JobEntryBase implements Cloneable, JobEntry
     this( "" );
   }
 
+  @Override
   public Object clone() {
     JobEntrySSH2PUT je = (JobEntrySSH2PUT) super.clone();
     return je;
   }
 
+  @Override
   public String getXML() {
     StringBuffer retval = new StringBuffer( 128 );
 
@@ -185,6 +182,7 @@ public class JobEntrySSH2PUT extends JobEntryBase implements Cloneable, JobEntry
     return retval.toString();
   }
 
+  @Override
   public void loadXML( Node entrynode, List<DatabaseMeta> databases, List<SlaveServer> slaveServers,
     Repository rep, IMetaStore metaStore ) throws KettleXMLException {
     try {
@@ -225,6 +223,7 @@ public class JobEntrySSH2PUT extends JobEntryBase implements Cloneable, JobEntry
     }
   }
 
+  @Override
   public void loadRep( Repository rep, IMetaStore metaStore, ObjectId id_jobentry, List<DatabaseMeta> databases,
     List<SlaveServer> slaveServers ) throws KettleException {
     try {
@@ -263,6 +262,7 @@ public class JobEntrySSH2PUT extends JobEntryBase implements Cloneable, JobEntry
     }
   }
 
+  @Override
   public void saveRep( Repository rep, IMetaStore metaStore, ObjectId id_job ) throws KettleException {
     try {
       rep.saveJobEntryAttribute( id_job, getObjectId(), "servername", serverName );
@@ -624,6 +624,7 @@ public class JobEntrySSH2PUT extends JobEntryBase implements Cloneable, JobEntry
     return timeout;
   }
 
+  @Override
   public Result execute( Result previousResult, int nr ) {
     Result result = previousResult;
     result.setResult( false );
@@ -665,18 +666,18 @@ public class JobEntrySSH2PUT extends JobEntryBase implements Cloneable, JobEntry
 
       // Check for mandatory fields
       boolean mandatoryok = true;
-      if ( Const.isEmpty( realServerName ) ) {
+      if ( Utils.isEmpty( realServerName ) ) {
         mandatoryok = false;
         logError( BaseMessages.getString( PKG, "JobSSH2PUT.Log.ServernameMissing" ) );
       }
       if ( usehttpproxy ) {
-        if ( Const.isEmpty( realProxyHost ) ) {
+        if ( Utils.isEmpty( realProxyHost ) ) {
           mandatoryok = false;
           logError( BaseMessages.getString( PKG, "JobSSH2PUT.Log.HttpProxyhostMissing" ) );
         }
       }
       if ( publicpublickey ) {
-        if ( Const.isEmpty( realKeyFilename ) ) {
+        if ( Utils.isEmpty( realKeyFilename ) ) {
           mandatoryok = false;
           logError( BaseMessages.getString( PKG, "JobSSH2PUT.Log.KeyFileMissing" ) );
         } else {
@@ -688,12 +689,12 @@ public class JobEntrySSH2PUT extends JobEntryBase implements Cloneable, JobEntry
         }
       }
 
-      if ( Const.isEmpty( realLocalDirectory ) ) {
+      if ( Utils.isEmpty( realLocalDirectory ) ) {
         mandatoryok = false;
         logError( BaseMessages.getString( PKG, "JobSSH2PUT.Log.LocalFolderMissing" ) );
       }
       if ( afterFtpPut.equals( "move_file" ) ) {
-        if ( Const.isEmpty( realDestinationFolder ) ) {
+        if ( Utils.isEmpty( realDestinationFolder ) ) {
           mandatoryok = false;
           logError( BaseMessages.getString( PKG, "JobSSH2PUT.Log.DestinatFolderMissing" ) );
         } else {
@@ -785,7 +786,7 @@ public class JobEntrySSH2PUT extends JobEntryBase implements Cloneable, JobEntry
             }
 
             // Check if remote directory exists
-            if ( !Const.isEmpty( realftpDirectory ) ) {
+            if ( !Utils.isEmpty( realftpDirectory ) ) {
               if ( !sshDirectoryExists( client, realftpDirectory ) ) {
                 good = false;
                 if ( createRemoteFolder ) {
@@ -809,7 +810,7 @@ public class JobEntrySSH2PUT extends JobEntryBase implements Cloneable, JobEntry
 
               // Prepare Pattern for wildcard
               Pattern pattern = null;
-              if ( !Const.isEmpty( realwildcard ) ) {
+              if ( !Utils.isEmpty( realwildcard ) ) {
                 pattern = Pattern.compile( realwildcard );
               }
 
@@ -829,7 +830,7 @@ public class JobEntrySSH2PUT extends JobEntryBase implements Cloneable, JobEntry
                 }
 
                 // do we have a target directory?
-                if ( !Const.isEmpty( realftpDirectory ) ) {
+                if ( !Utils.isEmpty( realftpDirectory ) ) {
                   remoteFilename = realftpDirectory + FTPUtils.FILE_SEPARATOR + remoteFilename;
                 }
 
@@ -1142,13 +1143,15 @@ public class JobEntrySSH2PUT extends JobEntryBase implements Cloneable, JobEntry
     }
   }
 
+  @Override
   public boolean evaluates() {
     return true;
   }
 
+  @Override
   public List<ResourceReference> getResourceDependencies( JobMeta jobMeta ) {
     List<ResourceReference> references = super.getResourceDependencies( jobMeta );
-    if ( !Const.isEmpty( serverName ) ) {
+    if ( !Utils.isEmpty( serverName ) ) {
       String realServerName = jobMeta.environmentSubstitute( serverName );
       ResourceReference reference = new ResourceReference( this );
       reference.getEntries().add( new ResourceEntry( realServerName, ResourceType.SERVER ) );
@@ -1160,12 +1163,18 @@ public class JobEntrySSH2PUT extends JobEntryBase implements Cloneable, JobEntry
   @Override
   public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
-    andValidator().validate( this, "serverName", remarks, putValidators( notBlankValidator() ) );
-    andValidator().validate(
-      this, "localDirectory", remarks, putValidators( notBlankValidator(), fileExistsValidator() ) );
-    andValidator().validate( this, "userName", remarks, putValidators( notBlankValidator() ) );
-    andValidator().validate( this, "password", remarks, putValidators( notNullValidator() ) );
-    andValidator().validate( this, "serverPort", remarks, putValidators( integerValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "serverName", remarks,
+      AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "localDirectory", remarks,
+      AndValidator.putValidators(
+        JobEntryValidatorUtils.notBlankValidator(),
+        JobEntryValidatorUtils.fileExistsValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "userName", remarks,
+      AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "password", remarks,
+      AndValidator.putValidators( JobEntryValidatorUtils.notNullValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "serverPort", remarks,
+      AndValidator.putValidators( JobEntryValidatorUtils.integerValidator() ) );
   }
 
 }

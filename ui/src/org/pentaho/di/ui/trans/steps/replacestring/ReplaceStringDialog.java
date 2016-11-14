@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -47,9 +47,9 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.TransMeta;
@@ -382,7 +382,7 @@ public class ReplaceStringDialog extends BaseStepDialog implements StepDialogInt
         inf.getReplaceByString()[i] = "";
       }
       inf.getFieldReplaceByString()[i] = item.getText( 7 );
-      if ( !Const.isEmpty( item.getText( 7 ) ) ) {
+      if ( !Utils.isEmpty( item.getText( 7 ) ) ) {
         inf.getReplaceByString()[i] = "";
       }
 
@@ -394,7 +394,7 @@ public class ReplaceStringDialog extends BaseStepDialog implements StepDialogInt
   }
 
   private void ok() {
-    if ( Const.isEmpty( wStepname.getText() ) ) {
+    if ( Utils.isEmpty( wStepname.getText() ) ) {
       return;
     }
 
@@ -410,7 +410,7 @@ public class ReplaceStringDialog extends BaseStepDialog implements StepDialogInt
       if ( r != null ) {
         TableItemInsertListener listener = new TableItemInsertListener() {
           public boolean tableItemInserted( TableItem tableItem, ValueMetaInterface v ) {
-            if ( v.getType() == ValueMeta.TYPE_STRING ) {
+            if ( v.getType() == ValueMetaInterface.TYPE_STRING ) {
               // Only process strings
               tableItem.setText( 3, BaseMessages.getString( PKG, "System.Combo.No" ) );
               tableItem.setText( 6, BaseMessages.getString( PKG, "System.Combo.No" ) );

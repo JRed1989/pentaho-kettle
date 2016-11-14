@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2015 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,17 +22,6 @@
 
 package org.pentaho.di.core.row;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -40,7 +29,21 @@ import org.junit.Test;
 import org.pentaho.di.core.KettleClientEnvironment;
 import org.pentaho.di.core.exception.KettlePluginException;
 import org.pentaho.di.core.exception.KettleValueException;
+import org.pentaho.di.core.row.value.ValueMetaBase;
 import org.pentaho.di.core.row.value.ValueMetaFactory;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 public class RowMetaTest {
 
@@ -50,6 +53,7 @@ public class RowMetaTest {
   ValueMetaInterface date;
 
   ValueMetaInterface charly;
+  ValueMetaInterface dup;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -70,6 +74,8 @@ public class RowMetaTest {
     rowMeta.addValueMeta( date );
 
     charly = ValueMetaFactory.createValueMeta( "charly", ValueMetaInterface.TYPE_SERIALIZABLE );
+
+    dup = ValueMetaFactory.createValueMeta( "dup", ValueMetaInterface.TYPE_SERIALIZABLE );
   }
 
   private List<ValueMetaInterface> generateVList( String[] names, int[] types ) throws KettlePluginException {
@@ -138,7 +144,7 @@ public class RowMetaTest {
 
   @Test
   public void testAddValueMetaNullName() throws KettlePluginException {
-    ValueMetaInterface vmi = new ValueMeta();
+    ValueMetaInterface vmi = new ValueMetaBase();
     rowMeta.addValueMeta( vmi );
     assertTrue( rowMeta.getValueMetaList().contains( vmi ) );
   }
@@ -164,8 +170,25 @@ public class RowMetaTest {
   }
 
   @Test
+  public void testSetValueMetaDup() throws KettlePluginException {
+    rowMeta.setValueMeta( 1, dup );
+    assertEquals( "There is still 3 elements:", 3, rowMeta.size() );
+    assertEquals( -1, rowMeta.indexOfValue( "integer" ) );
+
+    rowMeta.setValueMeta( 1, dup );
+    assertEquals( "There is still 3 elements:", 3, rowMeta.size() );
+    assertEquals( -1, rowMeta.indexOfValue( "integer" ) );
+
+    rowMeta.setValueMeta( 2, dup );
+    assertEquals( "There is still 3 elements:", 3, rowMeta.size() );
+    assertEquals( "Original is still the same (object)", 1, rowMeta.getValueMetaList().indexOf( dup ) );
+    assertEquals( "Original is still the same (name)", 1, rowMeta.indexOfValue( "dup" ) );
+    assertEquals( "Renaming happened", 2, rowMeta.indexOfValue( "dup_1" ) );
+  }
+
+  @Test
   public void testSetValueMetaNullName() throws KettlePluginException {
-    ValueMetaInterface vmi = new ValueMeta();
+    ValueMetaInterface vmi = new ValueMetaBase();
     rowMeta.setValueMeta( 1, vmi );
     assertEquals( 1, rowMeta.getValueMetaList().indexOf( vmi ) );
     assertEquals( "There is still 3 elements:", 3, rowMeta.size() );
@@ -273,7 +296,7 @@ public class RowMetaTest {
 
   @Test
   public void testSwapNames() throws KettlePluginException {
-    ValueMetaInterface string2 = ValueMetaFactory.createValueMeta( "string2", ValueMeta.TYPE_STRING );
+    ValueMetaInterface string2 = ValueMetaFactory.createValueMeta( "string2", ValueMetaInterface.TYPE_STRING );
     rowMeta.addValueMeta( string2 );
     assertSame( string, rowMeta.searchValueMeta( "string" ) );
     assertSame( string2, rowMeta.searchValueMeta( "string2" ) );
@@ -281,6 +304,22 @@ public class RowMetaTest {
     string2.setName( "string" );
     assertSame( string2, rowMeta.searchValueMeta( "string" ) );
     assertSame( string, rowMeta.searchValueMeta( "string2" ) );
+  }
+
+  @Test
+  public void testCopyRowMetaCacheConstructor() {
+    Map<String, Integer> mapping = new HashMap<>();
+    mapping.put( "a", 1 );
+    List<Integer> needRealClone = new ArrayList<>();
+    needRealClone.add( 2 );
+    RowMeta.RowMetaCache rowMetaCache = new RowMeta.RowMetaCache( mapping, needRealClone );
+    RowMeta.RowMetaCache rowMetaCache2 = new RowMeta.RowMetaCache( rowMetaCache );
+    assertEquals( rowMetaCache.mapping, rowMetaCache2.mapping );
+    assertEquals( rowMetaCache.needRealClone, rowMetaCache2.needRealClone );
+    rowMetaCache = new RowMeta.RowMetaCache( mapping, null );
+    rowMetaCache2 = new RowMeta.RowMetaCache( rowMetaCache );
+    assertEquals( rowMetaCache.mapping, rowMetaCache2.mapping );
+    assertNull( rowMetaCache2.needRealClone );
   }
 
   // @Test

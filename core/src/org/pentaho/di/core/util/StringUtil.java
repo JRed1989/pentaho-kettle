@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -127,7 +127,7 @@ public class StringUtil {
       return null;
     }
 
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
 
     String rest = aString;
 
@@ -185,7 +185,7 @@ public class StringUtil {
       return null;
     }
 
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
 
     String rest = aString;
 
@@ -354,9 +354,9 @@ public class StringUtil {
   }
 
   public static final String generateRandomString( int length, String prefix, String postfix, boolean uppercase ) {
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
 
-    if ( !Const.isEmpty( prefix ) ) {
+    if ( !Utils.isEmpty( prefix ) ) {
       buffer.append( prefix );
     }
 
@@ -364,7 +364,7 @@ public class StringUtil {
       int c = 'a' + (int) ( Math.random() * 26 );
       buffer.append( (char) c );
     }
-    if ( !Const.isEmpty( postfix ) ) {
+    if ( !Utils.isEmpty( postfix ) ) {
       buffer.append( postfix );
     }
 
@@ -399,16 +399,16 @@ public class StringUtil {
     DecimalFormat df = (DecimalFormat) nf;
     DecimalFormatSymbols dfs = new DecimalFormatSymbols();
 
-    if ( !Const.isEmpty( pattern ) ) {
+    if ( !Utils.isEmpty( pattern ) ) {
       df.applyPattern( pattern );
     }
-    if ( !Const.isEmpty( decimal ) ) {
+    if ( !Utils.isEmpty( decimal ) ) {
       dfs.setDecimalSeparator( decimal.charAt( 0 ) );
     }
-    if ( !Const.isEmpty( grouping ) ) {
+    if ( !Utils.isEmpty( grouping ) ) {
       dfs.setGroupingSeparator( grouping.charAt( 0 ) );
     }
-    if ( !Const.isEmpty( currency ) ) {
+    if ( !Utils.isEmpty( currency ) ) {
       dfs.setCurrencySymbol( currency );
     }
     try {
@@ -444,13 +444,13 @@ public class StringUtil {
   }
 
   /**
-   * Check if the stringBuffer supplied is empty. A StringBuffer is empty when it is null or when the length is 0
+   * Check if the StringBuilder supplied is empty. A StringBuilder is empty when it is null or when the length is 0
    *
    * @param string
-   *          The stringBuffer to check
-   * @return true if the stringBuffer supplied is empty
+   *          The StringBuilder to check
+   * @return true if the StringBuilder supplied is empty
    */
-  public static final boolean isEmpty( StringBuffer string ) {
+  public static final boolean isEmpty( StringBuilder string ) {
     return string == null || string.length() == 0;
   }
 

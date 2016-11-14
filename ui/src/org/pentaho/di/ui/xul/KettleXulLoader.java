@@ -48,11 +48,21 @@ public class KettleXulLoader extends SwtXulLoader {
   public KettleXulLoader() throws XulException {
     parser.handlers.remove( "DIALOG" );
     parser.registerHandler( "DIALOG", org.pentaho.di.ui.xul.KettleDialog.class.getName() );
+
+    parser.handlers.remove( "ICONWAITBOX" );
+    parser.registerHandler( "ICONWAITBOX", org.pentaho.di.ui.xul.KettleWaitBox.class.getName() );
   }
 
   public void setIconsSize( int width, int height ) {
     iconWidth = width;
     iconHeight = height;
+  }
+
+  /**
+   * Get original stream without svg->png transformation.
+   */
+  public InputStream getOriginalResourceAsStream( String resource ) {
+    return super.getResourceAsStream( resource );
   }
 
   @Override
@@ -61,15 +71,11 @@ public class KettleXulLoader extends SwtXulLoader {
     int width = iconWidth;
     if ( resource.contains( ":" ) ) {
       // we have height/width overrides
-      width = Integer.parseInt( resource.substring( resource.indexOf( ":" ) + 1,
-          resource.indexOf( "#" ) ) );
-      height = Integer.parseInt( resource.substring( resource.indexOf( "#" ) + 1,
-          resource.indexOf( "." ) ) );
-      resource = resource.substring( 0, resource.indexOf( ":" ) ) +
-          resource.substring( resource.indexOf( "." ) );
+      width = Integer.parseInt( resource.substring( resource.indexOf( ":" ) + 1, resource.indexOf( "#" ) ) );
+      height = Integer.parseInt( resource.substring( resource.indexOf( "#" ) + 1, resource.indexOf( "." ) ) );
+      resource = resource.substring( 0, resource.indexOf( ":" ) ) + resource.substring( resource.indexOf( "." ) );
     }
-    if ( SvgSupport.isSvgEnabled() && ( SvgSupport.isSvgName( resource ) 
-        || SvgSupport.isPngName( resource ) ) ) {
+    if ( SvgSupport.isSvgEnabled() && ( SvgSupport.isSvgName( resource ) || SvgSupport.isPngName( resource ) ) ) {
       InputStream in = null;
       try {
         in = super.getResourceAsStream( SvgSupport.toSvgName( resource ) );

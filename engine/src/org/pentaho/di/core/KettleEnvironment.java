@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,7 +22,6 @@
 
 package org.pentaho.di.core;
 
-import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.SettableFuture;
 import org.pentaho.di.core.auth.AuthenticationConsumerPluginType;
 import org.pentaho.di.core.auth.AuthenticationProviderPluginType;
@@ -216,6 +215,5 @@ public class KettleEnvironment {
         executor.setExecutingUser( userInfo.getLogin() );
       }
     }
-    executor.setExecutingServer( Const.getHostname() );
   }
 }

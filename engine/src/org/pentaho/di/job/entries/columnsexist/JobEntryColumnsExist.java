@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,15 +22,15 @@
 
 package org.pentaho.di.job.entries.columnsexist;
 
-import static org.pentaho.di.job.entry.validator.AndValidator.putValidators;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.andValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notBlankValidator;
+import org.pentaho.di.job.entry.validator.AndValidator;
+import org.pentaho.di.job.entry.validator.JobEntryValidatorUtils;
 
 import java.util.List;
 
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.database.Database;
 import org.pentaho.di.core.database.DatabaseMeta;
@@ -64,7 +64,7 @@ public class JobEntryColumnsExist extends JobEntryBase implements Cloneable, Job
   private String schemaname;
   private String tablename;
   private DatabaseMeta connection;
-  public String[] arguments;
+  private String[] arguments;
 
   public JobEntryColumnsExist( String n ) {
     super( n, "" );
@@ -77,13 +77,22 @@ public class JobEntryColumnsExist extends JobEntryBase implements Cloneable, Job
     this( "" );
   }
 
+  public void allocate( int nrFields ) {
+    arguments = new String[nrFields];
+  }
+
   public Object clone() {
     JobEntryColumnsExist je = (JobEntryColumnsExist) super.clone();
+    if ( arguments != null ) {
+      int nrFields = arguments.length;
+      je.allocate( nrFields );
+      System.arraycopy( arguments, 0, je.arguments, 0, nrFields );
+    }
     return je;
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 200 );
+    StringBuilder retval = new StringBuilder( 200 );
 
     retval.append( super.getXML() );
 
@@ -119,7 +128,7 @@ public class JobEntryColumnsExist extends JobEntryBase implements Cloneable, Job
 
       // How many field arguments?
       int nrFields = XMLHandler.countNodes( fields, "field" );
-      arguments = new String[nrFields];
+      allocate( nrFields );
 
       // Read them all...
       for ( int i = 0; i < nrFields; i++ ) {
@@ -190,6 +199,14 @@ public class JobEntryColumnsExist extends JobEntryBase implements Cloneable, Job
     return schemaname;
   }
 
+  public String[] getArguments() {
+    return arguments;
+  }
+
+  public void setArguments( String[] arguments ) {
+    this.arguments = arguments;
+  }
+
   public void setDatabase( DatabaseMeta database ) {
     this.connection = database;
   }
@@ -214,7 +231,7 @@ public class JobEntryColumnsExist extends JobEntryBase implements Cloneable, Job
     int nrexistcolums = 0;
     int nrnotexistcolums = 0;
 
-    if ( Const.isEmpty( tablename ) ) {
+    if ( Utils.isEmpty( tablename ) ) {
       logError( BaseMessages.getString( PKG, "JobEntryColumnsExist.Error.TablenameEmpty" ) );
       return result;
     }
@@ -229,7 +246,7 @@ public class JobEntryColumnsExist extends JobEntryBase implements Cloneable, Job
         String realSchemaname = environmentSubstitute( schemaname );
         String realTablename = environmentSubstitute( tablename );
 
-        if ( !Const.isEmpty( realSchemaname ) ) {
+        if ( !Utils.isEmpty( realSchemaname ) ) {
           realTablename = db.getDatabaseMeta().getQuotedSchemaTableCombination( realSchemaname, realTablename );
         } else {
           realTablename = db.getDatabaseMeta().quoteField( realTablename );
@@ -237,7 +254,7 @@ public class JobEntryColumnsExist extends JobEntryBase implements Cloneable, Job
 
         db.connect( parentJob.getTransactionId(), null );
 
-        if ( db.checkTableExists( realTablename ) ) {
+        if ( db.checkTableExists( realTablename ) || db.checkTableExistsByDbMeta( realSchemaname, db.getDatabaseMeta().quoteField( environmentSubstitute( tablename ) ) ) ) {
           if ( log.isDetailed() ) {
             logDetailed( BaseMessages.getString( PKG, "JobEntryColumnsExist.Log.TableExists", realTablename ) );
           }
@@ -301,8 +318,8 @@ public class JobEntryColumnsExist extends JobEntryBase implements Cloneable, Job
   @Override
   public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
-    andValidator().validate( this, "tablename", remarks, putValidators( notBlankValidator() ) );
-    andValidator().validate( this, "columnname", remarks, putValidators( notBlankValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "tablename", remarks, AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "columnname", remarks, AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
   }
 
 }

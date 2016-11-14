@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -21,6 +21,8 @@
  ******************************************************************************/
 
 package org.pentaho.di.ui.job.entries.truncatetables;
+
+import java.util.Arrays;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CCombo;
@@ -43,6 +45,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.database.Database;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleDatabaseException;
@@ -112,6 +115,7 @@ public class JobEntryTruncateTablesDialog extends JobEntryDialog implements JobE
     }
   }
 
+  @Override
   public JobEntryInterface open() {
     Shell parent = getParent();
     Display display = parent.getDisplay();
@@ -121,6 +125,7 @@ public class JobEntryTruncateTablesDialog extends JobEntryDialog implements JobE
     JobDialog.setShellImage( shell, jobEntry );
 
     ModifyListener lsMod = new ModifyListener() {
+      @Override
       public void modifyText( ModifyEvent e ) {
         jobEntry.setChanged();
       }
@@ -179,6 +184,7 @@ public class JobEntryTruncateTablesDialog extends JobEntryDialog implements JobE
     fdPrevious.right = new FormAttachment( 100, 0 );
     wPrevious.setLayoutData( fdPrevious );
     wPrevious.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
 
         setPrevious();
@@ -195,6 +201,7 @@ public class JobEntryTruncateTablesDialog extends JobEntryDialog implements JobE
     fdbTable.top = new FormAttachment( wPrevious, 2 * margin );
     wbTable.setLayoutData( fdbTable );
     wbTable.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         getTableName();
       }
@@ -249,6 +256,7 @@ public class JobEntryTruncateTablesDialog extends JobEntryDialog implements JobE
 
     // Delete files from the list of files...
     wbdTablename.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent arg0 ) {
         int[] idx = wFields.getSelectionIndices();
         wFields.remove( idx );
@@ -275,11 +283,13 @@ public class JobEntryTruncateTablesDialog extends JobEntryDialog implements JobE
 
     // Add listeners
     lsCancel = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         cancel();
       }
     };
     lsOK = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         ok();
       }
@@ -289,6 +299,7 @@ public class JobEntryTruncateTablesDialog extends JobEntryDialog implements JobE
     wOK.addListener( SWT.Selection, lsOK );
     BaseStepDialog.positionBottomButtons( shell, new Button[] { wOK, wCancel }, margin, wFields );
     lsDef = new SelectionAdapter() {
+      @Override
       public void widgetDefaultSelected( SelectionEvent e ) {
         ok();
       }
@@ -298,6 +309,7 @@ public class JobEntryTruncateTablesDialog extends JobEntryDialog implements JobE
 
     // Detect X or ALT-F4 or something that kills this window...
     shell.addShellListener( new ShellAdapter() {
+      @Override
       public void shellClosed( ShellEvent e ) {
         cancel();
       }
@@ -367,7 +379,7 @@ public class JobEntryTruncateTablesDialog extends JobEntryDialog implements JobE
   }
 
   private void ok() {
-    if ( Const.isEmpty( wName.getText() ) ) {
+    if ( Utils.isEmpty( wName.getText() ) ) {
       MessageBox mb = new MessageBox( shell, SWT.OK | SWT.ICON_ERROR );
       mb.setText( BaseMessages.getString( PKG, "System.StepJobEntryNameMissing.Title" ) );
       mb.setMessage( BaseMessages.getString( PKG, "System.JobEntryNameMissing.Msg" ) );
@@ -409,6 +421,7 @@ public class JobEntryTruncateTablesDialog extends JobEntryDialog implements JobE
       try {
         database.connect();
         String[] Tablenames = database.getTablenames();
+        Arrays.sort( Tablenames );
         EnterSelectionDialog dialog = new EnterSelectionDialog( shell, Tablenames,
           BaseMessages.getString( PKG, "JobTruncateTables.SelectTables.Title" ),
           BaseMessages.getString( PKG, "JobTruncateTables.SelectTables.Message" ) );

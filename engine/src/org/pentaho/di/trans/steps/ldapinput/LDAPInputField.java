@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -24,9 +24,9 @@ package org.pentaho.di.trans.steps.ldapinput;
 
 import java.util.HashSet;
 
-import org.pentaho.di.core.Const;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaFactory;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.i18n.BaseMessages;
 
 /**
@@ -184,6 +184,7 @@ public class LDAPInputField implements Cloneable {
     return FetchAttributeAsDesc[i];
   }
 
+  @Override
   public Object clone() {
     try {
       LDAPInputField retval = (LDAPInputField) super.clone();
@@ -227,7 +228,7 @@ public class LDAPInputField implements Cloneable {
   }
 
   public String getTypeDesc() {
-    return ValueMeta.getTypeDesc( type );
+    return ValueMetaFactory.getValueMetaName( type );
   }
 
   public void setType( int type ) {
@@ -336,7 +337,7 @@ public class LDAPInputField implements Cloneable {
 
   public void setRealAttribute( String realfieldattribute ) {
     this.realAttribute = realfieldattribute;
-    if ( !Const.isEmpty( realfieldattribute ) ) {
+    if ( !Utils.isEmpty( realfieldattribute ) ) {
       if ( realfieldattribute.equals( ATTRIBUTE_OBJECT_SID ) ) {
         this.objectSid = true;
       }

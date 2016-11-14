@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,12 +22,11 @@
 
 package org.pentaho.di.trans.steps.ivwloader;
 
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.pentaho.di.core.util.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,6 +37,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.RowSet;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
@@ -79,7 +79,7 @@ public class IngresVectorwiseTest {
     public String createCommandLine( IngresVectorwiseLoaderMeta meta ) throws KettleException {
 
       String bufferSizeString = environmentSubstitute( meta.getBufferSize() );
-      int bufferSize = Const.isEmpty( bufferSizeString ) ? 5000 : Const.toInt( bufferSizeString, 5000 );
+      int bufferSize = Utils.isEmpty( bufferSizeString ) ? 5000 : Const.toInt( bufferSizeString, 5000 );
 
       Class<?> vwload = VWLoadMocker.class;
 
@@ -214,7 +214,7 @@ public class IngresVectorwiseTest {
       pr.getOutputStream().flush();
       int i;
       System.out.println( i = pr.waitFor() );
-      assertTrue( i == 0 );
+      assertEquals( 0, i );
     } catch ( IOException e ) {
       e.printStackTrace();
       fail( e.toString() );
@@ -267,8 +267,10 @@ public class IngresVectorwiseTest {
     RowMetaInterface inputRowMeta = mock( RowMetaInterface.class );
     ivwLoader.setInputRowMeta( inputRowMeta );
     when( rowSet.getRowMeta() ).thenReturn( inputRowMeta );
-    when( inputRowMeta.getValueMeta( 0 ) ).thenReturn( new ValueMetaInteger() );
-    when( inputRowMeta.getValueMeta( 1 ) ).thenReturn( new ValueMetaString() );
+    ValueMetaInteger valueMetaInteger = new ValueMetaInteger();
+    ValueMetaString valueMetaString = new ValueMetaString();
+    when( inputRowMeta.getValueMeta( 0 ) ).thenReturn( valueMetaInteger );
+    when( inputRowMeta.getValueMeta( 1 ) ).thenReturn( valueMetaString );
     when( inputRowMeta.indexOfValue( fieldStream[0] ) ).thenReturn( 0 );
     when( inputRowMeta.indexOfValue( fieldStream[1] ) ).thenReturn( 1 );
     when( inputRowMeta.clone() ).thenReturn( inputRowMeta );

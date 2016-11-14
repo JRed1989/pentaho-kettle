@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -26,11 +26,11 @@ import java.util.List;
 
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
-import org.pentaho.di.core.Const;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleXMLException;
 import org.pentaho.di.core.row.RowMetaInterface;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.i18n.BaseMessages;
@@ -161,7 +161,16 @@ public class SyslogMessageMeta extends BaseStepMeta implements StepMetaInterface
     this.port = port;
   }
 
+  /**
+   * @deprecated use {@link #setAddTimestamp(boolean)} instead
+   * @param value
+   */
+  @Deprecated
   public void addTimestamp( boolean value ) {
+    setAddTimestamp( value );
+  }
+
+  public void setAddTimestamp( boolean value ) {
     this.addTimestamp = value;
   }
 
@@ -187,7 +196,16 @@ public class SyslogMessageMeta extends BaseStepMeta implements StepMetaInterface
     return datePattern;
   }
 
+  /**
+   * @deprecated use {@link #setAddHostName(boolean)} instead
+   * @param value
+   */
+  @Deprecated
   public void addHostName( boolean value ) {
+    setAddHostName( value );
+  }
+
+  public void setAddHostName( boolean value ) {
     this.addHostName = value;
   }
 
@@ -199,7 +217,7 @@ public class SyslogMessageMeta extends BaseStepMeta implements StepMetaInterface
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer();
+    StringBuilder retval = new StringBuilder();
 
     retval.append( "    " + XMLHandler.addTagValue( "messagefieldname", messagefieldname ) );
     retval.append( "    " + XMLHandler.addTagValue( "port", port ) );
@@ -272,7 +290,7 @@ public class SyslogMessageMeta extends BaseStepMeta implements StepMetaInterface
     String error_message = "";
 
     // source filename
-    if ( Const.isEmpty( messagefieldname ) ) {
+    if ( Utils.isEmpty( messagefieldname ) ) {
       error_message = BaseMessages.getString( PKG, "SyslogMessageMeta.CheckResult.MessageFieldMissing" );
       cr = new CheckResult( CheckResult.TYPE_RESULT_ERROR, error_message, stepMeta );
       remarks.add( cr );

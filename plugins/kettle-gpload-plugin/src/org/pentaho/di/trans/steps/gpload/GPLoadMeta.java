@@ -12,7 +12,7 @@
  * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU Lesser General Public License for more details.
  *
- * Copyright (c) 2002-2013 Pentaho Corporation..  All rights reserved.
+ * Copyright (c) 2002-2016 Pentaho Corporation..  All rights reserved.
  */
 
 package org.pentaho.di.trans.steps.gpload;
@@ -22,6 +22,7 @@ import java.util.List;
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.SQLStatement;
 import org.pentaho.di.core.annotations.Step;
 import org.pentaho.di.core.database.Database;
@@ -29,6 +30,8 @@ import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
 import org.pentaho.di.core.exception.KettleXMLException;
+import org.pentaho.di.core.injection.Injection;
+import org.pentaho.di.core.injection.InjectionSupported;
 import org.pentaho.di.core.row.RowMeta;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.core.row.ValueMetaInterface;
@@ -51,85 +54,113 @@ import org.w3c.dom.Node;
 
 /**
  * GPLoad Bulk Loader Step Meta
- * 
+ *
  * @author Matt Casters, Sean Flatley
  */
 @Step( id = "GPLoad", image = "BLKGP.svg", i18nPackageName = "org.pentaho.di.trans.steps.gpload",
     name = "GPLoad.TypeLongDesc", description = "GPLoad.TypeLongDesc",
-    categoryDescription = "i18n:org.pentaho.di.trans.step:BaseStep.Category.Bulk" )
+    categoryDescription = "i18n:org.pentaho.di.trans.step:BaseStep.Category.Bulk",
+    documentationUrl = "http://wiki.pentaho.com/display/EAI/Greenplum+Load" )
+@InjectionSupported( localizationPrefix = "GPLoad.Injection.", groups = { "FIELDS", "LOCALHOSTS", "GP_CONFIG" } )
 public class GPLoadMeta extends BaseStepMeta implements StepMetaInterface {
   private static Class<?> PKG = GPLoadMeta.class; // for i18n purposes, needed by Translator2!!
 
   /** Collection of Local hosts **/
+  @Injection( name = "LOCALHOST_NAME", group = "LOCALHOSTS" )
   private String[] localHosts;
 
   /** LocalHostPort **/
+  @Injection( name = "PORT", group = "LOCALHOSTS" )
   private String localhostPort;
 
   /** what's the schema for the target? */
+  @Injection( name = "SCHEMA_NAME" )
   private String schemaName;
 
   /** what's the table for the target? */
+  @Injection( name = "TABLE_NAME" )
   private String tableName;
 
   /** what's the target of the error table? */
+  @Injection( name = "ERROR_TABLE", group = "GP_CONFIG" )
   private String errorTableName;
 
   /** Path to the gpload utility */
+  @Injection( name = "GPLOAD_PATH", group = "GP_CONFIG" )
   private String gploadPath;
 
   /** Path to the control file */
+  @Injection( name = "CONTROL_FILE", group = "GP_CONFIG" )
   private String controlFile;
 
   /** Path to the data file */
+  @Injection( name = "DATA_FILE", group = "GP_CONFIG" )
   private String dataFile;
 
   /** Path to the log file */
+  @Injection( name = "LOG_FILE", group = "GP_CONFIG" )
   private String logFile;
+
+  /** NULL_AS parameter for gpload - gpload treats values matching this string as null */
+  @Injection( name = "NULL_AS", group = "GP_CONFIG" )
+  private String nullAs;
 
   /** database connection */
   private DatabaseMeta databaseMeta;
 
   /** Specified database field */
+  @Injection( name = "FIELD_TABLE", group = "FIELDS" )
   private String[] fieldTable;
 
   /** Field name in the stream */
+  @Injection( name = "FIELD_STREAM", group = "FIELDS" )
   private String[] fieldStream;
 
   /** Database column to match on for an update or merge operation */
+  @Injection( name = "FIELD_MATCH", group = "FIELDS" )
   private boolean[] matchColumn;
 
   /** Database columns to update */
+  @Injection( name = "FIELD_UPDATE", group = "FIELDS" )
   private boolean[] updateColumn;
 
   /** the date mask to use if the value is a date */
+  @Injection( name = "FIELD_DATEMASK", group = "FIELDS" )
   private String[] dateMask;
 
   /** maximum errors */
+  @Injection( name = "MAX_ERRORS", group = "GP_CONFIG" )
   private String maxErrors;
 
   /** Load method */
+  @Injection( name = "LOAD_METHOD" )
   private String loadMethod;
 
   /** Load action */
+  @Injection( name = "LOAD_ACTION", group = "FIELDS" )
   private String loadAction;
 
   /** Encoding to use */
+  @Injection( name = "ENCODING", group = "GP_CONFIG" )
   private String encoding;
 
   /** Erase files after use */
+  @Injection( name = "ERASE_FILE" )
   private boolean eraseFiles;
 
   /** Boolean to indicate that numbers are to be enclosed */
+  @Injection( name = "ENCLOSURE_NUMBERS" )
   private boolean encloseNumbers;
 
   /** Data file delimiter */
+  @Injection( name = "DELIMITER", group = "GP_CONFIG" )
   private String delimiter;
 
   /** Default number of maximum errors allowed on a load */
   public static String MAX_ERRORS_DEFAULT = "50";
 
   /** Update condition **/
+  @Injection( name = "UPDATE_CONDITIONS", group = "FIELDS" )
   private String updateCondition;
 
   /*
@@ -304,6 +335,7 @@ public class GPLoadMeta extends BaseStepMeta implements StepMetaInterface {
       dataFile = XMLHandler.getTagValue( stepnode, "data_file" );
       delimiter = XMLHandler.getTagValue( stepnode, "delimiter" );
       logFile = XMLHandler.getTagValue( stepnode, "log_file" );
+      nullAs = XMLHandler.getTagValue( stepnode, "null_as" );
       eraseFiles = "Y".equalsIgnoreCase( XMLHandler.getTagValue( stepnode, "erase_files" ) );
       encoding = XMLHandler.getTagValue( stepnode, "encoding" );
       updateCondition = XMLHandler.getTagValue( stepnode, "update_condition" );
@@ -316,6 +348,8 @@ public class GPLoadMeta extends BaseStepMeta implements StepMetaInterface {
         localHosts[i] = XMLHandler.getNodeValue( localHostNode );
       }
       localhostPort = XMLHandler.getTagValue( stepnode, "localhost_port" );
+
+      encloseNumbers = XMLHandler.getTagValue( stepnode, "enclose_numbers" ).equalsIgnoreCase( "Y" );
 
       int nrvalues = XMLHandler.countNodes( stepnode, "mapping" );
       allocate( nrvalues );
@@ -365,6 +399,7 @@ public class GPLoadMeta extends BaseStepMeta implements StepMetaInterface {
     controlFile = "control${Internal.Step.CopyNr}.cfg";
     dataFile = "load${Internal.Step.CopyNr}.dat";
     logFile = "";
+    nullAs = "";
     encoding = "";
     delimiter = ",";
     encloseNumbers = false;
@@ -391,6 +426,7 @@ public class GPLoadMeta extends BaseStepMeta implements StepMetaInterface {
     retval.append( "    " ).append( XMLHandler.addTagValue( "data_file", dataFile ) );
     retval.append( "    " ).append( XMLHandler.addTagValue( "delimiter", delimiter ) );
     retval.append( "    " ).append( XMLHandler.addTagValue( "log_file", logFile ) );
+    retval.append( "    " ).append( XMLHandler.addTagValue( "null_as", nullAs ) );
     retval.append( "    " ).append( XMLHandler.addTagValue( "erase_files", eraseFiles ) );
     retval.append( "    " ).append( XMLHandler.addTagValue( "encoding", encoding ) );
     retval.append( "    " ).append( XMLHandler.addTagValue( "enclose_numbers", ( encloseNumbers ? "Y" : "N" ) ) );
@@ -431,6 +467,7 @@ public class GPLoadMeta extends BaseStepMeta implements StepMetaInterface {
       dataFile = rep.getStepAttributeString( id_step, "data_file" );
       delimiter = rep.getStepAttributeString( id_step, "delimiter" );
       logFile = rep.getStepAttributeString( id_step, "log_file" );
+      nullAs = rep.getStepAttributeString( id_step, "null_as" );
       eraseFiles = rep.getStepAttributeBoolean( id_step, "erase_files" );
       encoding = rep.getStepAttributeString( id_step, "encoding" );
       localhostPort = rep.getStepAttributeString( id_step, "localhost_port" );
@@ -475,6 +512,7 @@ public class GPLoadMeta extends BaseStepMeta implements StepMetaInterface {
       rep.saveStepAttribute( id_transformation, id_step, "data_file", dataFile );
       rep.saveStepAttribute( id_transformation, id_step, "delimiter", delimiter );
       rep.saveStepAttribute( id_transformation, id_step, "log_file", logFile );
+      rep.saveStepAttribute( id_transformation, id_step, "null_as", nullAs );
       rep.saveStepAttribute( id_transformation, id_step, "erase_files", eraseFiles );
       rep.saveStepAttribute( id_transformation, id_step, "encoding", encoding );
       rep.saveStepAttribute( id_transformation, id_step, "enclose_numbers", ( encloseNumbers ? "Y" : "N" ) );
@@ -520,7 +558,7 @@ public class GPLoadMeta extends BaseStepMeta implements StepMetaInterface {
       try {
         db.connect();
 
-        if ( !Const.isEmpty( tableName ) ) {
+        if ( !Utils.isEmpty( tableName ) ) {
           cr =
               new CheckResult( CheckResultInterface.TYPE_RESULT_OK, BaseMessages.getString( PKG,
                   "GPLoadMeta.CheckResult.TableNameOK" ), stepMeta );
@@ -660,7 +698,7 @@ public class GPLoadMeta extends BaseStepMeta implements StepMetaInterface {
           }
         }
 
-        if ( !Const.isEmpty( tableName ) ) {
+        if ( !Utils.isEmpty( tableName ) ) {
           Database db = new Database( loggingObject, databaseMeta );
           db.shareVariablesWith( transMeta );
           try {
@@ -736,7 +774,7 @@ public class GPLoadMeta extends BaseStepMeta implements StepMetaInterface {
       try {
         db.connect();
 
-        if ( !Const.isEmpty( realTableName ) ) {
+        if ( !Utils.isEmpty( realTableName ) ) {
           String schemaTable = databaseMeta.getQuotedSchemaTableCombination( realSchemaName, realTableName );
 
           // Check if this table exists...
@@ -795,6 +833,14 @@ public class GPLoadMeta extends BaseStepMeta implements StepMetaInterface {
 
   public void setLogFile( String logFile ) {
     this.logFile = logFile;
+  }
+
+  public String getNullAs() {
+    return nullAs;
+  }
+
+  public void setNullAs( String nullAs ) {
+    this.nullAs = nullAs;
   }
 
   public void setLoadAction( String action ) {

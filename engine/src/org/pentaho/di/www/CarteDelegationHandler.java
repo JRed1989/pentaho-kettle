@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -50,24 +50,21 @@ public class CarteDelegationHandler implements DelegationListener {
 
   @Override
   public synchronized void jobDelegationStarted( Job delegatedJob,
-    JobExecutionConfiguration jobExecutionConfiguration ) {
-    synchronized ( jobMap ) {
-      JobConfiguration jc = new JobConfiguration( delegatedJob.getJobMeta(), jobExecutionConfiguration );
-      jobMap.registerJob( delegatedJob, jc );
+                                                 JobExecutionConfiguration jobExecutionConfiguration ) {
 
-      delegatedJob.addDelegationListener( this );
-    }
+    JobConfiguration jc = new JobConfiguration( delegatedJob.getJobMeta(), jobExecutionConfiguration );
+    jobMap.registerJob( delegatedJob, jc );
+
+    delegatedJob.addDelegationListener( this );
   }
 
   @Override
   public synchronized void transformationDelegationStarted( Trans delegatedTrans,
     TransExecutionConfiguration transExecutionConfiguration ) {
-    synchronized ( transformationMap ) {
-      TransConfiguration tc = new TransConfiguration( delegatedTrans.getTransMeta(), transExecutionConfiguration );
-      transformationMap.registerTransformation( delegatedTrans, tc );
+    TransConfiguration tc = new TransConfiguration( delegatedTrans.getTransMeta(), transExecutionConfiguration );
+    transformationMap.registerTransformation( delegatedTrans, tc );
+    delegatedTrans.addDelegationListener( this );
 
-      delegatedTrans.addDelegationListener( this );
-    }
   }
 
 }

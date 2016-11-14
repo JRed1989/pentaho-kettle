@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,15 +22,15 @@
 
 package org.pentaho.di.job.entries.telnet;
 
-import static org.pentaho.di.job.entry.validator.AndValidator.putValidators;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.andValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notBlankValidator;
+import org.pentaho.di.job.entry.validator.AndValidator;
+import org.pentaho.di.job.entry.validator.JobEntryValidatorUtils;
 
 import java.util.List;
 
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleDatabaseException;
@@ -86,7 +86,7 @@ public class JobEntryTelnet extends JobEntryBase implements Cloneable, JobEntryI
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 100 );
+    StringBuilder retval = new StringBuilder( 100 );
 
     retval.append( super.getXML() );
     retval.append( "      " ).append( XMLHandler.addTagValue( "hostname", hostname ) );
@@ -179,7 +179,7 @@ public class JobEntryTelnet extends JobEntryBase implements Cloneable, JobEntryI
     int port = Const.toInt( getRealPort(), DEFAULT_PORT );
     int timeoutInt = Const.toInt( getRealTimeOut(), -1 );
 
-    if ( Const.isEmpty( hostname ) ) {
+    if ( Utils.isEmpty( hostname ) ) {
       // No Host was specified
       logError( BaseMessages.getString( PKG, "JobTelnet.SpecifyHost.Label" ) );
       return result;
@@ -210,7 +210,7 @@ public class JobEntryTelnet extends JobEntryBase implements Cloneable, JobEntryI
 
   public List<ResourceReference> getResourceDependencies( JobMeta jobMeta ) {
     List<ResourceReference> references = super.getResourceDependencies( jobMeta );
-    if ( !Const.isEmpty( hostname ) ) {
+    if ( !Utils.isEmpty( hostname ) ) {
       String realServername = jobMeta.environmentSubstitute( hostname );
       ResourceReference reference = new ResourceReference( this );
       reference.getEntries().add( new ResourceEntry( realServername, ResourceType.SERVER ) );
@@ -222,6 +222,7 @@ public class JobEntryTelnet extends JobEntryBase implements Cloneable, JobEntryI
   @Override
   public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
-    andValidator().validate( this, "hostname", remarks, putValidators( notBlankValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "hostname", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
   }
 }

@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -26,6 +26,7 @@ import java.text.SimpleDateFormat;
 import java.util.GregorianCalendar;
 
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowDataUtil;
 import org.pentaho.di.core.row.RowMeta;
@@ -34,11 +35,12 @@ import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.Trans;
 import org.pentaho.di.trans.TransMeta;
-import org.pentaho.di.trans.step.BaseStep;
 import org.pentaho.di.trans.step.StepDataInterface;
-import org.pentaho.di.trans.step.StepInterface;
 import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaInterface;
+import org.pentaho.di.trans.steps.salesforce.SalesforceConnectionUtils;
+import org.pentaho.di.trans.steps.salesforce.SalesforceRecordValue;
+import org.pentaho.di.trans.steps.salesforce.SalesforceStep;
 
 /**
  * Read data from Salesforce module, convert them to rows and writes these to one or more output streams.
@@ -46,7 +48,7 @@ import org.pentaho.di.trans.step.StepMetaInterface;
  * @author Samatar
  * @since 10-06-2007
  */
-public class SalesforceInput extends BaseStep implements StepInterface {
+public class SalesforceInput extends SalesforceStep {
   private static Class<?> PKG = SalesforceInputMeta.class; // for i18n purposes, needed by Translator2!!
 
   private SalesforceInputMeta meta;
@@ -57,6 +59,7 @@ public class SalesforceInput extends BaseStep implements StepInterface {
     super( stepMeta, stepDataInterface, copyNr, transMeta, trans );
   }
 
+  @Override
   public boolean processRow( StepMetaInterface smi, StepDataInterface sdi ) throws KettleException {
     if ( first ) {
       first = false;
@@ -216,7 +219,7 @@ public class SalesforceInput extends BaseStep implements StepInterface {
 
         // Do we need to repeat this field if it is null?
         if ( meta.getInputFields()[i].isRepeated() ) {
-          if ( data.previousRow != null && Const.isEmpty( value ) ) {
+          if ( data.previousRow != null && Utils.isEmpty( value ) ) {
             outputRowData[i] = data.previousRow[i];
           }
         }
@@ -226,31 +229,31 @@ public class SalesforceInput extends BaseStep implements StepInterface {
       int rowIndex = data.nrfields;
 
       // See if we need to add the url to the row...
-      if ( meta.includeTargetURL() && !Const.isEmpty( meta.getTargetURLField() ) ) {
+      if ( meta.includeTargetURL() && !Utils.isEmpty( meta.getTargetURLField() ) ) {
         outputRowData[rowIndex++] = data.connection.getURL();
       }
 
       // See if we need to add the module to the row...
-      if ( meta.includeModule() && !Const.isEmpty( meta.getModuleField() ) ) {
+      if ( meta.includeModule() && !Utils.isEmpty( meta.getModuleField() ) ) {
         outputRowData[rowIndex++] = data.connection.getModule();
       }
 
       // See if we need to add the generated SQL to the row...
-      if ( meta.includeSQL() && !Const.isEmpty( meta.getSQLField() ) ) {
+      if ( meta.includeSQL() && !Utils.isEmpty( meta.getSQLField() ) ) {
         outputRowData[rowIndex++] = data.connection.getSQL();
       }
 
       // See if we need to add the server timestamp to the row...
-      if ( meta.includeTimestamp() && !Const.isEmpty( meta.getTimestampField() ) ) {
+      if ( meta.includeTimestamp() && !Utils.isEmpty( meta.getTimestampField() ) ) {
         outputRowData[rowIndex++] = data.connection.getServerTimestamp();
       }
 
       // See if we need to add the row number to the row...
-      if ( meta.includeRowNumber() && !Const.isEmpty( meta.getRowNumberField() ) ) {
+      if ( meta.includeRowNumber() && !Utils.isEmpty( meta.getRowNumberField() ) ) {
         outputRowData[rowIndex++] = new Long( data.rownr );
       }
 
-      if ( meta.includeDeletionDate() && !Const.isEmpty( meta.getDeletionDateField() ) ) {
+      if ( meta.includeDeletionDate() && !Utils.isEmpty( meta.getDeletionDateField() ) ) {
         outputRowData[rowIndex++] = srvalue.getDeletionDate();
       }
 
@@ -303,7 +306,7 @@ public class SalesforceInput extends BaseStep implements StepInterface {
           }
         }
         sql = sql + " FROM " + environmentSubstitute( meta.getModule() );
-        if ( !Const.isEmpty( environmentSubstitute( meta.getCondition() ) ) ) {
+        if ( !Utils.isEmpty( environmentSubstitute( meta.getCondition() ) ) ) {
           sql += " WHERE " + environmentSubstitute( meta.getCondition().replace( "\n\r", "" ).replace( "\n", "" ) );
         }
         break;
@@ -322,6 +325,7 @@ public class SalesforceInput extends BaseStep implements StepInterface {
     return rowData;
   }
 
+  @Override
   public boolean init( StepMetaInterface smi, StepDataInterface sdi ) {
     meta = (SalesforceInputMeta) smi;
     data = (SalesforceInputData) sdi;
@@ -337,42 +341,24 @@ public class SalesforceInput extends BaseStep implements StepInterface {
       }
 
       String soSQL = environmentSubstitute( meta.getQuery() );
-      // check target URL
-      String realUrl = environmentSubstitute( meta.getTargetURL() );
-      if ( Const.isEmpty( realUrl ) ) {
-        log.logError( BaseMessages.getString( PKG, "SalesforceInput.TargetURLMissing.Error" ) );
-        return false;
-      }
-      // check username
-      String realUser = environmentSubstitute( meta.getUserName() );
-      if ( Const.isEmpty( realUser ) ) {
-        log.logError( BaseMessages.getString( PKG, "SalesforceInput.UsernameMissing.Error" ) );
-        return false;
-      }
       try {
 
         if ( meta.isSpecifyQuery() ) {
           // Check if user specified a query
-          if ( Const.isEmpty( soSQL ) ) {
+          if ( Utils.isEmpty( soSQL ) ) {
             log.logError( BaseMessages.getString( PKG, "SalesforceInputDialog.QueryMissing.DialogMessage" ) );
             return false;
           }
         } else {
-          data.Module = environmentSubstitute( meta.getModule() );
-          // Check if module is specified
-          if ( Const.isEmpty( data.Module ) ) {
-            log.logError( BaseMessages.getString( PKG, "SalesforceInputDialog.ModuleMissing.DialogMessage" ) );
-            return false;
-          }
           // check records filter
           if ( meta.getRecordsFilter() != SalesforceConnectionUtils.RECORDS_FILTER_ALL ) {
             String realFromDateString = environmentSubstitute( meta.getReadFrom() );
-            if ( Const.isEmpty( realFromDateString ) ) {
+            if ( Utils.isEmpty( realFromDateString ) ) {
               log.logError( BaseMessages.getString( PKG, "SalesforceInputDialog.FromDateMissing.DialogMessage" ) );
               return false;
             }
             String realToDateString = environmentSubstitute( meta.getReadTo() );
-            if ( Const.isEmpty( realToDateString ) ) {
+            if ( Utils.isEmpty( realToDateString ) ) {
               log.logError( BaseMessages.getString( PKG, "SalesforceInputDialog.ToDateMissing.DialogMessage" ) );
               return false;
             }
@@ -392,30 +378,14 @@ public class SalesforceInput extends BaseStep implements StepInterface {
 
         data.limit = Const.toLong( environmentSubstitute( meta.getRowLimit() ), 0 );
 
-        // create a Salesforce connection
-        data.connection =
-          new SalesforceConnection( log, realUrl, realUser, environmentSubstitute( meta.getPassword() ) );
-        // set timeout
-        data.connection.setTimeOut( Const.toInt( environmentSubstitute( meta.getTimeOut() ), 0 ) );
-        // Do we use compression?
-        data.connection.setUsingCompression( meta.isUsingCompression() );
         // Do we have to query for all records included deleted records
-        data.connection.queryAll( meta.isQueryAll() );
+        data.connection.setQueryAll( meta.isQueryAll() );
 
         // Build query if needed
         if ( meta.isSpecifyQuery() ) {
           // Free hand SOQL Query
           data.connection.setSQL( soSQL.replace( "\n\r", " " ).replace( "\n", " " ) );
         } else {
-          // retrieve data from a module
-          // Set condition if needed
-          String realCondition = environmentSubstitute( meta.getCondition() );
-          if ( !Const.isEmpty( realCondition ) ) {
-            data.connection.setCondition( realCondition );
-          }
-          // Set module
-          data.connection.setModule( data.Module );
-
           // Set calendars for update or deleted records
           if ( meta.getRecordsFilter() != SalesforceConnectionUtils.RECORDS_FILTER_ALL ) {
             data.connection.setCalendar( meta.getRecordsFilter(), data.startCal, data.endCal );
@@ -437,36 +407,28 @@ public class SalesforceInput extends BaseStep implements StepInterface {
       } catch ( KettleException ke ) {
         logError( BaseMessages.getString( PKG, "SalesforceInput.Log.ErrorOccurredDuringStepInitialize" )
           + ke.getMessage() );
+        return false;
       }
-
-      return true;
     }
     return false;
   }
 
+  @Override
   public void dispose( StepMetaInterface smi, StepDataInterface sdi ) {
-    meta = (SalesforceInputMeta) smi;
-    data = (SalesforceInputData) sdi;
-    try {
-      if ( data.connection != null ) {
-        data.connection.close();
-      }
-      if ( data.outputRowMeta != null ) {
-        data.outputRowMeta = null;
-      }
-      if ( data.convertRowMeta != null ) {
-        data.convertRowMeta = null;
-      }
-      if ( data.previousRow != null ) {
-        data.previousRow = null;
-      }
-      if ( data.startCal != null ) {
-        data.startCal = null;
-      }
-      if ( data.endCal != null ) {
-        data.endCal = null;
-      }
-    } catch ( Exception e ) { /* Ignore */
+    if ( data.outputRowMeta != null ) {
+      data.outputRowMeta = null;
+    }
+    if ( data.convertRowMeta != null ) {
+      data.convertRowMeta = null;
+    }
+    if ( data.previousRow != null ) {
+      data.previousRow = null;
+    }
+    if ( data.startCal != null ) {
+      data.startCal = null;
+    }
+    if ( data.endCal != null ) {
+      data.endCal = null;
     }
     super.dispose( smi, sdi );
   }

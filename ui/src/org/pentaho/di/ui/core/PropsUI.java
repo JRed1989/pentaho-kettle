@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -32,6 +32,8 @@ import java.util.ResourceBundle;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CTabFolder;
+import org.eclipse.swt.events.PaintEvent;
+import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Device;
 import org.eclipse.swt.graphics.Font;
@@ -41,9 +43,11 @@ import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableItem;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.LastUsedFile;
 import org.pentaho.di.core.ObjectUsageCount;
 import org.pentaho.di.core.Props;
@@ -67,6 +71,8 @@ import org.pentaho.di.ui.core.gui.WindowProperty;
  *
  */
 public class PropsUI extends Props {
+
+  private static String OS = System.getProperty( "os.name" ).toLowerCase();
 
   private static final String NO = "N";
 
@@ -193,6 +199,10 @@ public class PropsUI extends Props {
         if ( loaded != null ) {
           leditables.add( loaded );
         }
+      } catch ( ClassCastException cce ) {
+        // Not all Lifecycle plugins implement GUIOption, keep calm and carry on
+        LogChannel.GENERAL.logDebug( "Plugin " + plugin.getIds()[0]
+            + " does not implement GUIOption, it will not be editable" );
       } catch ( Exception e ) {
         LogChannel.GENERAL.logError( "Unexpected error loading class for plugin " + plugin.getName(), e );
       }
@@ -216,7 +226,7 @@ public class PropsUI extends Props {
     if ( display != null ) {
       // Set Default Look for all dialogs and sizes.
       String prop =
-        BasePropertyHandler.getProperty( "Default_UI_Properties_Resource", "org.pentaho.di.ui.core.default" );
+          BasePropertyHandler.getProperty( "Default_UI_Properties_Resource", "org.pentaho.di.ui.core.default" );
       try {
         ResourceBundle bundle = ResourceBundle.getBundle( prop );
         if ( bundle != null ) {
@@ -332,8 +342,8 @@ public class PropsUI extends Props {
     for ( int i = 0; i < lastUsedFiles.size(); i++ ) {
       LastUsedFile lastUsedFile = lastUsedFiles.get( i );
 
-      properties.setProperty( "filetype" + ( i + 1 ), Const.NVL(
-        lastUsedFile.getFileType(), LastUsedFile.FILE_TYPE_TRANSFORMATION ) );
+      properties.setProperty( "filetype" + ( i + 1 ), Const.NVL( lastUsedFile.getFileType(),
+          LastUsedFile.FILE_TYPE_TRANSFORMATION ) );
       properties.setProperty( "lastfile" + ( i + 1 ), Const.NVL( lastUsedFile.getFilename(), "" ) );
       properties.setProperty( "lastdir" + ( i + 1 ), Const.NVL( lastUsedFile.getDirectory(), "" ) );
       properties.setProperty( "lasttype" + ( i + 1 ), lastUsedFile.isSourceRepository() ? YES : NO );
@@ -346,8 +356,8 @@ public class PropsUI extends Props {
     for ( int i = 0; i < openTabFiles.size(); i++ ) {
       LastUsedFile openTabFile = openTabFiles.get( i );
 
-      properties.setProperty( "tabtype" + ( i + 1 ), Const.NVL(
-        openTabFile.getFileType(), LastUsedFile.FILE_TYPE_TRANSFORMATION ) );
+      properties.setProperty( "tabtype" + ( i + 1 ), Const.NVL( openTabFile.getFileType(),
+          LastUsedFile.FILE_TYPE_TRANSFORMATION ) );
       properties.setProperty( "tabfile" + ( i + 1 ), Const.NVL( openTabFile.getFilename(), "" ) );
       properties.setProperty( "tabdir" + ( i + 1 ), Const.NVL( openTabFile.getDirectory(), "" ) );
       properties.setProperty( "tabrep" + ( i + 1 ), openTabFile.isSourceRepository() ? YES : NO );
@@ -372,11 +382,10 @@ public class PropsUI extends Props {
    *          The name of the repository the file was loaded from or save to.
    */
   public void addLastFile( String fileType, String filename, String directory, boolean sourceRepository,
-    String repositoryName ) {
+      String repositoryName ) {
     LastUsedFile lastUsedFile =
-      new LastUsedFile(
-        fileType, filename, directory, sourceRepository, repositoryName, false,
-        LastUsedFile.OPENED_ITEM_TYPE_MASK_GRAPH );
+        new LastUsedFile( fileType, filename, directory, sourceRepository, repositoryName, false,
+            LastUsedFile.OPENED_ITEM_TYPE_MASK_GRAPH );
 
     int idx = lastUsedFiles.indexOf( lastUsedFile );
     if ( idx >= 0 ) {
@@ -406,9 +415,9 @@ public class PropsUI extends Props {
    *          The name of the repository the file was loaded from or save to.
    */
   public void addOpenTabFile( String fileType, String filename, String directory, boolean sourceRepository,
-    String repositoryName, int openTypes ) {
+      String repositoryName, int openTypes ) {
     LastUsedFile lastUsedFile =
-      new LastUsedFile( fileType, filename, directory, sourceRepository, repositoryName, true, openTypes );
+        new LastUsedFile( fileType, filename, directory, sourceRepository, repositoryName, true, openTypes );
     openTabFiles.add( lastUsedFile );
   }
 
@@ -424,8 +433,8 @@ public class PropsUI extends Props {
       boolean isOpened = YES.equalsIgnoreCase( properties.getProperty( "lastopened" + ( i + 1 ), NO ) );
       int openItemTypes = Const.toInt( properties.getProperty( "lastopentypes" + ( i + 1 ), "0" ), 0 );
 
-      lastUsedFiles.add( new LastUsedFile(
-        fileType, filename, directory, sourceRepository, repositoryName, isOpened, openItemTypes ) );
+      lastUsedFiles.add( new LastUsedFile( fileType, filename, directory, sourceRepository, repositoryName, isOpened,
+          openItemTypes ) );
     }
   }
 
@@ -441,8 +450,8 @@ public class PropsUI extends Props {
       boolean isOpened = YES.equalsIgnoreCase( properties.getProperty( "tabopened" + ( i + 1 ), NO ) );
       int openItemTypes = Const.toInt( properties.getProperty( "tabopentypes" + ( i + 1 ), "0" ), 0 );
 
-      openTabFiles.add( new LastUsedFile(
-        fileType, filename, directory, sourceRepository, repositoryName, isOpened, openItemTypes ) );
+      openTabFiles.add( new LastUsedFile( fileType, filename, directory, sourceRepository, repositoryName, isOpened,
+          openItemTypes ) );
     }
   }
 
@@ -822,7 +831,7 @@ public class PropsUI extends Props {
   public void setAntiAliasingEnabled( boolean anti ) {
     properties.setProperty( STRING_ANTI_ALIASING, anti ? YES : NO );
   }
-  
+
   public boolean isShowCanvasGridEnabled() {
     String showCanvas = properties.getProperty( STRING_SHOW_CANVAS_GRID, NO );
     return YES.equalsIgnoreCase( showCanvas ); // Default: don't show canvas grid
@@ -864,18 +873,27 @@ public class PropsUI extends Props {
     setLook( widget, WIDGET_STYLE_DEFAULT );
   }
 
-  public void setLook( Control control, int style ) {
+  public void setLook( final Control control, int style ) {
     if ( this.isOSLookShown() && style != WIDGET_STYLE_FIXED ) {
       return;
     }
 
-    GUIResource gui = GUIResource.getInstance();
+    final GUIResource gui = GUIResource.getInstance();
     Font font = null;
     Color background = null;
 
     switch ( style ) {
       case WIDGET_STYLE_DEFAULT:
         background = gui.getColorBackground();
+        if ( control instanceof Group && OS.indexOf( "mac" ) > -1 ) {
+          control.addPaintListener( new PaintListener() {
+            @Override
+            public void paintControl( PaintEvent paintEvent ) {
+              paintEvent.gc.setBackground( gui.getColorBackground() );
+              paintEvent.gc.fillRectangle( 2, 0, control.getBounds().width - 8, control.getBounds().height - 20 );
+            }
+          } );
+        }
         font = null; // GUIResource.getInstance().getFontDefault();
         break;
       case WIDGET_STYLE_FIXED:
@@ -989,7 +1007,7 @@ public class PropsUI extends Props {
 
   public int getDialogStyle( String styleProperty ) {
     String prop = properties.getProperty( styleProperty );
-    if ( Const.isEmpty( prop ) ) {
+    if ( Utils.isEmpty( prop ) ) {
       return SWT.NONE;
     }
 
@@ -1016,7 +1034,7 @@ public class PropsUI extends Props {
 
   public void setDialogSize( Shell shell, String styleProperty ) {
     String prop = properties.getProperty( styleProperty );
-    if ( Const.isEmpty( prop ) ) {
+    if ( Utils.isEmpty( prop ) ) {
       return;
     }
 

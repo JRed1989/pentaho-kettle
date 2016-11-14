@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -27,6 +27,7 @@ import java.util.List;
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.encryption.Encr;
 import org.pentaho.di.core.exception.KettleDatabaseException;
@@ -34,8 +35,11 @@ import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
 import org.pentaho.di.core.exception.KettleXMLException;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaBoolean;
+import org.pentaho.di.core.row.value.ValueMetaDate;
+import org.pentaho.di.core.row.value.ValueMetaInteger;
+import org.pentaho.di.core.row.value.ValueMetaString;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.i18n.BaseMessages;
@@ -105,6 +109,7 @@ public class MailInputMeta extends BaseStepMeta implements StepMetaInterface {
     super(); // allocate BaseStepMeta
   }
 
+  @Override
   public void loadXML( Node stepnode, List<DatabaseMeta> databases, IMetaStore metaStore ) throws KettleXMLException {
     readData( stepnode );
   }
@@ -113,6 +118,7 @@ public class MailInputMeta extends BaseStepMeta implements StepMetaInterface {
     inputFields = new MailInputField[nrfields];
   }
 
+  @Override
   public Object clone() {
     MailInputMeta retval = (MailInputMeta) super.clone();
     int nrFields = inputFields.length;
@@ -159,7 +165,8 @@ public class MailInputMeta extends BaseStepMeta implements StepMetaInterface {
     includesubfolders = "Y".equalsIgnoreCase( XMLHandler.getTagValue( stepnode, "includesubfolders" ) );
     usedynamicfolder = "Y".equalsIgnoreCase( XMLHandler.getTagValue( stepnode, "usedynamicfolder" ) );
     folderfield = XMLHandler.getTagValue( stepnode, "folderfield" );
-
+    proxyusername = XMLHandler.getTagValue( stepnode, "proxyusername" );
+    useproxy = "Y".equalsIgnoreCase( XMLHandler.getTagValue( stepnode, "useproxy" ) );
     useBatch = "Y".equalsIgnoreCase( XMLHandler.getTagValue( stepnode, Tags.USE_BATCH ) );
     try {
       batchSize = Integer.parseInt( XMLHandler.getTagValue( stepnode, Tags.BATCH_SIZE ) );
@@ -168,7 +175,7 @@ public class MailInputMeta extends BaseStepMeta implements StepMetaInterface {
     }
     start = XMLHandler.getTagValue( stepnode, Tags.START_MSG );
     end = XMLHandler.getTagValue( stepnode, Tags.END_MSG );
-    stopOnError = "Y".equalsIgnoreCase( XMLHandler.getTagAttribute( stepnode, Tags.STOP_ON_ERROR ) );
+    stopOnError = "Y".equalsIgnoreCase( XMLHandler.getTagValue( stepnode, Tags.STOP_ON_ERROR ) );
 
     rowlimit = XMLHandler.getTagValue( stepnode, "rowlimit" );
     Node fields = XMLHandler.getSubNode( stepnode, "fields" );
@@ -183,6 +190,7 @@ public class MailInputMeta extends BaseStepMeta implements StepMetaInterface {
     }
   }
 
+  @Override
   public void setDefault() {
     servername = null;
     username = null;
@@ -228,6 +236,7 @@ public class MailInputMeta extends BaseStepMeta implements StepMetaInterface {
 
   }
 
+  @Override
   public void readRep( Repository rep, IMetaStore metaStore, ObjectId id_step, List<DatabaseMeta> databases ) throws KettleException {
     try {
       servername = rep.getStepAttributeString( id_step, "servername" );
@@ -236,7 +245,7 @@ public class MailInputMeta extends BaseStepMeta implements StepMetaInterface {
       usessl = rep.getStepAttributeBoolean( id_step, "usessl" );
       int intSSLPort = (int) rep.getStepAttributeInteger( id_step, "sslport" );
       sslport = rep.getStepAttributeString( id_step, "sslport" ); // backward compatible.
-      if ( intSSLPort > 0 && Const.isEmpty( sslport ) ) {
+      if ( intSSLPort > 0 && Utils.isEmpty( sslport ) ) {
         sslport = Integer.toString( intSSLPort );
       }
 
@@ -298,6 +307,7 @@ public class MailInputMeta extends BaseStepMeta implements StepMetaInterface {
     }
   }
 
+  @Override
   public void saveRep( Repository rep, IMetaStore metaStore, ObjectId id_transformation, ObjectId id_step ) throws KettleException {
     try {
 
@@ -362,8 +372,9 @@ public class MailInputMeta extends BaseStepMeta implements StepMetaInterface {
     static final String STOP_ON_ERROR = "stopOnError";
   }
 
+  @Override
   public String getXML() {
-    StringBuffer retval = new StringBuffer();
+    StringBuilder retval = new StringBuilder();
     String tab = "      ";
     retval.append( "      " ).append( XMLHandler.addTagValue( "servername", servername ) );
     retval.append( "      " ).append( XMLHandler.addTagValue( "username", username ) );
@@ -420,6 +431,7 @@ public class MailInputMeta extends BaseStepMeta implements StepMetaInterface {
     return retval.toString();
   }
 
+  @Override
   public void check( List<CheckResultInterface> remarks, TransMeta transMeta, StepMeta stepMeta,
     RowMetaInterface prev, String[] input, String[] output, RowMetaInterface info, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
@@ -710,38 +722,41 @@ public class MailInputMeta extends BaseStepMeta implements StepMetaInterface {
     this.password = password;
   }
 
+  @Override
   public StepInterface getStep( StepMeta stepMeta, StepDataInterface stepDataInterface, int cnr, TransMeta tr,
     Trans trans ) {
     return new MailInput( stepMeta, stepDataInterface, cnr, tr, trans );
   }
 
+  @Override
   public StepDataInterface getStepData() {
     return new MailInputData();
   }
 
+  @Override
   public void getFields( RowMetaInterface r, String name, RowMetaInterface[] info, StepMeta nextStep,
     VariableSpace space, Repository repository, IMetaStore metaStore ) throws KettleStepException {
     int i;
     for ( i = 0; i < inputFields.length; i++ ) {
       MailInputField field = inputFields[i];
-      ValueMetaInterface v = new ValueMeta( space.environmentSubstitute( field.getName() ), ValueMeta.TYPE_STRING );
+      ValueMetaInterface v = new ValueMetaString( space.environmentSubstitute( field.getName() ) );
       switch ( field.getColumn() ) {
         case MailInputField.COLUMN_MESSAGE_NR:
         case MailInputField.COLUMN_SIZE:
         case MailInputField.COLUMN_ATTACHED_FILES_COUNT:
-          v = new ValueMeta( space.environmentSubstitute( field.getName() ), ValueMeta.TYPE_INTEGER );
+          v = new ValueMetaInteger( space.environmentSubstitute( field.getName() ) );
           v.setLength( ValueMetaInterface.DEFAULT_INTEGER_LENGTH, 0 );
           break;
         case MailInputField.COLUMN_RECEIVED_DATE:
         case MailInputField.COLUMN_SENT_DATE:
-          v = new ValueMeta( space.environmentSubstitute( field.getName() ), ValueMeta.TYPE_DATE );
+          v = new ValueMetaDate( space.environmentSubstitute( field.getName() ) );
           break;
         case MailInputField.COLUMN_FLAG_DELETED:
         case MailInputField.COLUMN_FLAG_DRAFT:
         case MailInputField.COLUMN_FLAG_FLAGGED:
         case MailInputField.COLUMN_FLAG_NEW:
         case MailInputField.COLUMN_FLAG_READ:
-          v = new ValueMeta( space.environmentSubstitute( field.getName() ), ValueMeta.TYPE_BOOLEAN );
+          v = new ValueMetaBoolean( space.environmentSubstitute( field.getName() ) );
           break;
         default:
           // STRING

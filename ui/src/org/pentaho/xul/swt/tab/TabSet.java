@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -34,6 +34,8 @@ import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Listener;
 
 public class TabSet implements SelectionListener, CTabFolder2Listener {
 
@@ -48,16 +50,45 @@ public class TabSet implements SelectionListener, CTabFolder2Listener {
 
   public TabSet( Composite parent ) {
     super();
-    tabfolder = new CTabFolder( parent, SWT.MULTI );
+    tabfolder = createTabFolder( parent );
 
     tabfolder.setSimple( false );
     tabfolder.setUnselectedImageVisible( true );
     tabfolder.setUnselectedCloseVisible( true );
     tabfolder.addSelectionListener( this );
     tabfolder.addCTabFolder2Listener( this );
+
+    workaroundTabChevronOverflow( tabfolder );
   }
 
+  private void workaroundTabChevronOverflow( CTabFolder tabfolder ) {
+    // hack to prevent two tab rows on swt 4.6+
+    // eclipse bug #499215
+    tabfolder.addListener( SWT.Resize, new Listener() {
+      @Override
+      public void handleEvent( Event event ) {
+        int idx = tabfolder.getSelectionIndex();
+        if ( idx > 0 && isTabOverflowing( tabfolder ) ) {
+          // trigger CTabFolder.updateTabHeight
+          tabfolder.setSelection( idx - 1 );
+          tabfolder.setSelection( idx );
+        }
+      }
+
+      private boolean isTabOverflowing( CTabFolder tabfolder ) {
+        // overflow happens when size of inner toolbar exceeds assigned tabHeight
+        return ( tabfolder.getChildren().length > 0
+            && tabfolder.getChildren()[0].getSize().y > tabfolder.getTabHeight() );
+      }
+    } );
+  }
+
+
   public void widgetSelected( SelectionEvent event ) {
+    TabItem deSelectedTabItem = tabList.get( selectedIndex );
+    if ( deSelectedTabItem != null ) {
+      notifyDeselectListeners( deSelectedTabItem );
+    }
     for ( int i = 0; i < tabList.size(); i++ ) {
       TabItem item = tabList.get( i );
       if ( event.item.equals( item.getSwtTabItem() ) ) {
@@ -103,6 +134,11 @@ public class TabSet implements SelectionListener, CTabFolder2Listener {
     // add to the lat used tab
     addItemToHistory( item );
   }
+
+  protected CTabFolder createTabFolder( Composite parent ) {
+    return new CTabFolder( parent, SWT.MULTI );
+  }
+
 
   /**
    * Add a tab item to the tab usage history
@@ -207,6 +243,11 @@ public class TabSet implements SelectionListener, CTabFolder2Listener {
   }
 
   public void remove( TabItem item ) {
+    int itemIndex = tabList.indexOf( item );
+    if ( itemIndex >= 0 && itemIndex < selectedIndex ) {
+      // removal would change selected
+      selectedIndex--;
+    }
     tabList.remove( item );
     item.dispose();
   }

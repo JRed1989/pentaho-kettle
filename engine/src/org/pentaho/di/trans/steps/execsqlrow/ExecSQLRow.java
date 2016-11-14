@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -23,14 +23,15 @@
 package org.pentaho.di.trans.steps.execsqlrow;
 
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.RowMetaAndData;
 import org.pentaho.di.core.database.Database;
 import org.pentaho.di.core.exception.KettleDatabaseException;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowDataUtil;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaInteger;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.Trans;
 import org.pentaho.di.trans.TransMeta;
@@ -61,25 +62,25 @@ public class ExecSQLRow extends BaseStep implements StepInterface {
     RowMetaAndData resultRow = new RowMetaAndData();
 
     if ( upd != null && upd.length() > 0 ) {
-      ValueMeta meta = new ValueMeta( upd, ValueMetaInterface.TYPE_INTEGER );
+      ValueMetaInterface meta = new ValueMetaInteger( upd );
       meta.setLength( ValueMetaInterface.DEFAULT_INTEGER_LENGTH, 0 );
       resultRow.addValue( meta, new Long( result.getNrLinesUpdated() ) );
     }
 
     if ( ins != null && ins.length() > 0 ) {
-      ValueMeta meta = new ValueMeta( ins, ValueMetaInterface.TYPE_INTEGER );
+      ValueMetaInterface meta = new ValueMetaInteger( ins );
       meta.setLength( ValueMetaInterface.DEFAULT_INTEGER_LENGTH, 0 );
       resultRow.addValue( meta, new Long( result.getNrLinesOutput() ) );
     }
 
     if ( del != null && del.length() > 0 ) {
-      ValueMeta meta = new ValueMeta( del, ValueMetaInterface.TYPE_INTEGER );
+      ValueMetaInterface meta = new ValueMetaInteger( del );
       meta.setLength( ValueMetaInterface.DEFAULT_INTEGER_LENGTH, 0 );
       resultRow.addValue( meta, new Long( result.getNrLinesDeleted() ) );
     }
 
     if ( read != null && read.length() > 0 ) {
-      ValueMeta meta = new ValueMeta( read, ValueMetaInterface.TYPE_INTEGER );
+      ValueMetaInterface meta = new ValueMetaInteger( read );
       meta.setLength( ValueMetaInterface.DEFAULT_INTEGER_LENGTH, 0 );
       resultRow.addValue( meta, new Long( result.getNrLinesRead() ) );
     }
@@ -87,6 +88,7 @@ public class ExecSQLRow extends BaseStep implements StepInterface {
     return resultRow;
   }
 
+  @Override
   public boolean processRow( StepMetaInterface smi, StepDataInterface sdi ) throws KettleException {
     meta = (ExecSQLRowMeta) smi;
     data = (ExecSQLRowData) sdi;
@@ -109,7 +111,7 @@ public class ExecSQLRow extends BaseStep implements StepInterface {
       meta.getFields( data.outputRowMeta, getStepname(), null, null, this, repository, metaStore );
 
       // Check is SQL field is provided
-      if ( Const.isEmpty( meta.getSqlFieldName() ) ) {
+      if ( Utils.isEmpty( meta.getSqlFieldName() ) ) {
         throw new KettleException( BaseMessages.getString( PKG, "ExecSQLRow.Error.SQLFieldFieldMissing" ) );
       }
 
@@ -130,7 +132,7 @@ public class ExecSQLRow extends BaseStep implements StepInterface {
 
     try {
       if ( meta.isSqlFromfile() ) {
-        if ( Const.isEmpty( sql ) ) {
+        if ( Utils.isEmpty( sql ) ) {
           // empty filename
           throw new KettleException( BaseMessages.getString( PKG, "ExecSQLRow.Log.EmptySQLFromFile" ) );
         }
@@ -190,6 +192,7 @@ public class ExecSQLRow extends BaseStep implements StepInterface {
     return true;
   }
 
+  @Override
   public void dispose( StepMetaInterface smi, StepDataInterface sdi ) {
     meta = (ExecSQLRowMeta) smi;
     data = (ExecSQLRowData) sdi;
@@ -220,6 +223,7 @@ public class ExecSQLRow extends BaseStep implements StepInterface {
   }
 
   /** Stop the running query */
+  @Override
   public void stopRunning( StepMetaInterface smi, StepDataInterface sdi ) throws KettleException {
     meta = (ExecSQLRowMeta) smi;
     data = (ExecSQLRowData) sdi;
@@ -229,6 +233,7 @@ public class ExecSQLRow extends BaseStep implements StepInterface {
     }
   }
 
+  @Override
   public boolean init( StepMetaInterface smi, StepDataInterface sdi ) {
     meta = (ExecSQLRowMeta) smi;
     data = (ExecSQLRowData) sdi;

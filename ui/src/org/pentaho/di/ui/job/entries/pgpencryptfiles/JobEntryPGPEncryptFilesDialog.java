@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -49,6 +49,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Props;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.job.JobMeta;
@@ -249,6 +250,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     }
   }
 
+  @Override
   public JobEntryInterface open() {
     Shell parent = getParent();
     Display display = parent.getDisplay();
@@ -258,6 +260,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     JobDialog.setShellImage( shell, jobEntry );
 
     ModifyListener lsMod = new ModifyListener() {
+      @Override
       public void modifyText( ModifyEvent e ) {
         jobEntry.setChanged();
       }
@@ -344,6 +347,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     wbbGpgExe.setLayoutData( fdbbGpgExe );
 
     wbbGpgExe.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         FileDialog dialog = new FileDialog( shell, SWT.OPEN );
         dialog.setFilterExtensions( new String[] { "*" } );
@@ -384,6 +388,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     fdasciiMode.right = new FormAttachment( 100, 0 );
     wasciiMode.setLayoutData( fdasciiMode );
     wasciiMode.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         jobEntry.setChanged();
       }
@@ -407,6 +412,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     fdIncludeSubfolders.right = new FormAttachment( 100, 0 );
     wIncludeSubfolders.setLayoutData( fdIncludeSubfolders );
     wIncludeSubfolders.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         jobEntry.setChanged();
         CheckIncludeSubFolders();
@@ -432,6 +438,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     fdPrevious.right = new FormAttachment( 100, 0 );
     wPrevious.setLayoutData( fdPrevious );
     wPrevious.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
 
         RefreshArgFromPrevious();
@@ -468,6 +475,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     wbSourceDirectory.setLayoutData( fdbSourceDirectory );
 
     wbSourceDirectory.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         DirectoryDialog ddialog = new DirectoryDialog( shell, SWT.OPEN );
         if ( wSourceFileFolder.getText() != null ) {
@@ -518,12 +526,14 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
 
     // Whenever something changes, set the tooltip to the expanded version:
     wSourceFileFolder.addModifyListener( new ModifyListener() {
+      @Override
       public void modifyText( ModifyEvent e ) {
         wSourceFileFolder.setToolTipText( jobMeta.environmentSubstitute( wSourceFileFolder.getText() ) );
       }
     } );
 
     wbSourceFileFolder.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         FileDialog dialog = new FileDialog( shell, SWT.OPEN );
         dialog.setFilterExtensions( new String[] { "*" } );
@@ -558,6 +568,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     wbDestinationDirectory.setLayoutData( fdbDestinationDirectory );
 
     wbDestinationDirectory.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         DirectoryDialog ddialog = new DirectoryDialog( shell, SWT.OPEN );
         if ( wDestinationFileFolder.getText() != null ) {
@@ -597,6 +608,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     wDestinationFileFolder.setLayoutData( fdDestinationFileFolder );
 
     wbDestinationFileFolder.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         FileDialog dialog = new FileDialog( shell, SWT.OPEN );
         dialog.setFilterExtensions( new String[] { "*" } );
@@ -684,14 +696,13 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
           ColumnInfo.COLUMN_TYPE_TEXT, false ), };
 
     colinf[0].setUsingVariables( true );
-    colinf[0].setToolTip( BaseMessages.getString( PKG, "JobPGPEncryptFiles.Fields.SourceFileFolder.Tooltip" ) );
     colinf[1].setUsingVariables( true );
-    colinf[1].setToolTip( BaseMessages.getString( PKG, "JobPGPEncryptFiles.Fields.Wildcard.Tooltip" ) );
-
+    colinf[1].setToolTip( BaseMessages.getString( PKG, "JobPGPEncryptFiles.Fields.SourceFileFolder.Tooltip" ) );
     colinf[2].setUsingVariables( true );
-    colinf[2].setToolTip( BaseMessages.getString( PKG, "JobPGPEncryptFiles.Fields.UserID.Tooltip" ) );
+    colinf[2].setToolTip( BaseMessages.getString( PKG, "JobPGPEncryptFiles.Fields.Wildcard.Tooltip" ) );
     colinf[3].setUsingVariables( true );
-    colinf[3]
+    colinf[3].setToolTip( BaseMessages.getString( PKG, "JobPGPEncryptFiles.Fields.UserID.Tooltip" ) );
+    colinf[4]
       .setToolTip( BaseMessages.getString( PKG, "JobPGPEncryptFiles.Fields.DestinationFileFolder.Tooltip" ) );
 
     wFields =
@@ -709,6 +720,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
 
     // Add the file to the list of files...
     SelectionAdapter selA = new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent arg0 ) {
         wFields.add( new String[] {
           JobEntryPGPEncryptFiles.actionTypeDesc[0], wSourceFileFolder.getText(), wWildcard.getText(), null,
@@ -726,6 +738,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
 
     // Delete files from the list of files...
     wbdSourceFileFolder.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent arg0 ) {
         int[] idx = wFields.getSelectionIndices();
         wFields.remove( idx );
@@ -736,6 +749,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
 
     // Edit the selected file & remove from the list...
     wbeSourceFileFolder.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent arg0 ) {
         int idx = wFields.getSelectionIndex();
         if ( idx >= 0 ) {
@@ -814,6 +828,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     fdCreateDestinationFolder.right = new FormAttachment( 100, 0 );
     wCreateDestinationFolder.setLayoutData( fdCreateDestinationFolder );
     wCreateDestinationFolder.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         jobEntry.setChanged();
       }
@@ -838,6 +853,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     fdDestinationIsAFile.right = new FormAttachment( 100, 0 );
     wDestinationIsAFile.setLayoutData( fdDestinationIsAFile );
     wDestinationIsAFile.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
 
         jobEntry.setChanged();
@@ -864,6 +880,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     fdDoNotKeepFolderStructure.right = new FormAttachment( 100, 0 );
     wDoNotKeepFolderStructure.setLayoutData( fdDoNotKeepFolderStructure );
     wDoNotKeepFolderStructure.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         jobEntry.setChanged();
       }
@@ -887,6 +904,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     fdAddDate.right = new FormAttachment( 100, 0 );
     wAddDate.setLayoutData( fdAddDate );
     wAddDate.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         jobEntry.setChanged();
         setAddDateBeforeExtension();
@@ -910,6 +928,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     fdAddTime.right = new FormAttachment( 100, 0 );
     wAddTime.setLayoutData( fdAddTime );
     wAddTime.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         jobEntry.setChanged();
         setAddDateBeforeExtension();
@@ -934,6 +953,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     fdSpecifyFormat.right = new FormAttachment( 100, 0 );
     wSpecifyFormat.setLayoutData( fdSpecifyFormat );
     wSpecifyFormat.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         jobEntry.setChanged();
         setDateTimeFormat();
@@ -985,6 +1005,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     fdAddDateBeforeExtension.right = new FormAttachment( 100, 0 );
     wAddDateBeforeExtension.setLayoutData( fdAddDateBeforeExtension );
     wAddDateBeforeExtension.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         jobEntry.setChanged();
       }
@@ -1016,6 +1037,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     wIfFileExists.setLayoutData( fdIfFileExists );
 
     wIfFileExists.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
 
         activeDestinationFolder();
@@ -1079,12 +1101,14 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
 
     // Whenever something changes, set the tooltip to the expanded version:
     wDestinationFolder.addModifyListener( new ModifyListener() {
+      @Override
       public void modifyText( ModifyEvent e ) {
         wDestinationFolder.setToolTipText( jobMeta.environmentSubstitute( wDestinationFolder.getText() ) );
       }
     } );
 
     wbDestinationFolder.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         DirectoryDialog dialog = new DirectoryDialog( shell, SWT.OPEN );
         if ( wDestinationFolder.getText() != null ) {
@@ -1117,6 +1141,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     fdCreateMoveToFolder.right = new FormAttachment( 100, 0 );
     wCreateMoveToFolder.setLayoutData( fdCreateMoveToFolder );
     wCreateMoveToFolder.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         jobEntry.setChanged();
       }
@@ -1140,6 +1165,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     fdAddMovedDate.right = new FormAttachment( 100, 0 );
     wAddMovedDate.setLayoutData( fdAddMovedDate );
     wAddMovedDate.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         jobEntry.setChanged();
         setAddMovedDateBeforeExtension();
@@ -1163,6 +1189,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     fdAddMovedTime.right = new FormAttachment( 100, 0 );
     wAddMovedTime.setLayoutData( fdAddMovedTime );
     wAddMovedTime.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         jobEntry.setChanged();
         setAddMovedDateBeforeExtension();
@@ -1188,6 +1215,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     fdSpecifyMoveFormat.right = new FormAttachment( 100, 0 );
     wSpecifyMoveFormat.setLayoutData( fdSpecifyMoveFormat );
     wSpecifyMoveFormat.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         jobEntry.setChanged();
         setMovedDateTimeFormat();
@@ -1238,6 +1266,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     fdAddMovedDateBeforeExtension.right = new FormAttachment( 100, 0 );
     wAddMovedDateBeforeExtension.setLayoutData( fdAddMovedDateBeforeExtension );
     wAddMovedDateBeforeExtension.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         jobEntry.setChanged();
       }
@@ -1351,6 +1380,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     fdSuccessCondition.right = new FormAttachment( 100, 0 );
     wSuccessCondition.setLayoutData( fdSuccessCondition );
     wSuccessCondition.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         activeSuccessCondition();
 
@@ -1419,6 +1449,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     fdAddFileToResult.right = new FormAttachment( 100, 0 );
     wAddFileToResult.setLayoutData( fdAddFileToResult );
     wAddFileToResult.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         jobEntry.setChanged();
       }
@@ -1463,11 +1494,13 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
 
     // Add listeners
     lsCancel = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         cancel();
       }
     };
     lsOK = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         ok();
       }
@@ -1477,6 +1510,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     wOK.addListener( SWT.Selection, lsOK );
 
     lsDef = new SelectionAdapter() {
+      @Override
       public void widgetDefaultSelected( SelectionEvent e ) {
         ok();
       }
@@ -1487,6 +1521,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
 
     // Detect X or ALT-F4 or something that kills this window...
     shell.addShellListener( new ShellAdapter() {
+      @Override
       public void shellClosed( ShellEvent e ) {
         cancel();
       }
@@ -1744,7 +1779,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
   }
 
   private void ok() {
-    if ( Const.isEmpty( wName.getText() ) ) {
+    if ( Utils.isEmpty( wName.getText() ) ) {
       MessageBox mb = new MessageBox( shell, SWT.OK | SWT.ICON_ERROR );
       mb.setMessage( "Please give this job entry a name!" );
       mb.setText( "Enter a name" );
@@ -1786,7 +1821,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
 
     jobEntry.setDestinationFolder( wDestinationFolder.getText() );
 
-    jobEntry.setGPGPLocation( wGpgExe.getText() );
+    jobEntry.setGPGLocation( wGpgExe.getText() );
 
     if ( wIfMovedFileExists.getSelectionIndex() == 1 ) {
       jobEntry.setIfMovedFileExists( "overwrite_file" );
@@ -1845,6 +1880,7 @@ public class JobEntryPGPEncryptFilesDialog extends JobEntryDialog implements Job
     dispose();
   }
 
+  @Override
   public String toString() {
     return this.getClass().getName();
   }

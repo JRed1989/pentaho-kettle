@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -55,13 +55,15 @@ import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.ini4j.Wini;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Props;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.fileinput.FileInputList;
 import org.pentaho.di.core.row.RowMeta;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaFactory;
+import org.pentaho.di.core.row.value.ValueMetaString;
 import org.pentaho.di.core.vfs.KettleVFS;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.Trans;
@@ -242,6 +244,7 @@ public class PropertyInputDialog extends BaseStepDialog implements StepDialogInt
     input = (PropertyInputMeta) in;
   }
 
+  @Override
   public String open() {
     Shell parent = getParent();
     Display display = parent.getDisplay();
@@ -251,6 +254,7 @@ public class PropertyInputDialog extends BaseStepDialog implements StepDialogInt
     setShellImage( shell, input );
 
     lsMod = new ModifyListener() {
+      @Override
       public void modifyText( ModifyEvent e ) {
         input.setChanged();
       }
@@ -334,6 +338,7 @@ public class PropertyInputDialog extends BaseStepDialog implements StepDialogInt
     fdFileField.top = new FormAttachment( 0, margin );
     wFileField.setLayoutData( fdFileField );
     SelectionAdapter lfilefield = new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent arg0 ) {
         ActiveFileField();
         input.setChanged();
@@ -361,9 +366,11 @@ public class PropertyInputDialog extends BaseStepDialog implements StepDialogInt
     fdFilenameField.right = new FormAttachment( 100, -margin );
     wFilenameField.setLayoutData( fdFilenameField );
     wFilenameField.addFocusListener( new FocusListener() {
+      @Override
       public void focusLost( org.eclipse.swt.events.FocusEvent e ) {
       }
 
+      @Override
       public void focusGained( org.eclipse.swt.events.FocusEvent e ) {
         setFileField();
       }
@@ -591,6 +598,7 @@ public class PropertyInputDialog extends BaseStepDialog implements StepDialogInt
     fdFileType.right = new FormAttachment( 100, 0 );
     wFileType.setLayoutData( fdFileType );
     wFileType.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         setFileType();
       }
@@ -614,9 +622,11 @@ public class PropertyInputDialog extends BaseStepDialog implements StepDialogInt
     fdEncoding.right = new FormAttachment( 100, 0 );
     wEncoding.setLayoutData( fdEncoding );
     wEncoding.addFocusListener( new FocusListener() {
+      @Override
       public void focusLost( org.eclipse.swt.events.FocusEvent e ) {
       }
 
+      @Override
       public void focusGained( org.eclipse.swt.events.FocusEvent e ) {
         setEncodings();
       }
@@ -639,6 +649,7 @@ public class PropertyInputDialog extends BaseStepDialog implements StepDialogInt
     fdbSection.top = new FormAttachment( wEncoding, margin );
     wbbSection.setLayoutData( fdbSection );
     wbbSection.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         getSections();
       }
@@ -922,7 +933,7 @@ public class PropertyInputDialog extends BaseStepDialog implements StepDialogInt
 
         new ColumnInfo(
           BaseMessages.getString( PKG, "PropertyInputDialog.FieldsTable.Type.Column" ),
-          ColumnInfo.COLUMN_TYPE_CCOMBO, ValueMeta.getTypes(), true ),
+          ColumnInfo.COLUMN_TYPE_CCOMBO, ValueMetaFactory.getValueMetaNames(), true ),
         new ColumnInfo(
           BaseMessages.getString( PKG, "PropertyInputDialog.FieldsTable.Format.Column" ),
           ColumnInfo.COLUMN_TYPE_FORMAT, 3 ),
@@ -997,21 +1008,25 @@ public class PropertyInputDialog extends BaseStepDialog implements StepDialogInt
 
     // Add listeners
     lsOK = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         ok();
       }
     };
     lsGet = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         get();
       }
     };
     lsPreview = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         preview();
       }
     };
     lsCancel = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         cancel();
       }
@@ -1023,6 +1038,7 @@ public class PropertyInputDialog extends BaseStepDialog implements StepDialogInt
     wCancel.addListener( SWT.Selection, lsCancel );
 
     lsDef = new SelectionAdapter() {
+      @Override
       public void widgetDefaultSelected( SelectionEvent e ) {
         ok();
       }
@@ -1035,6 +1051,7 @@ public class PropertyInputDialog extends BaseStepDialog implements StepDialogInt
 
     // Add the file to the list of files...
     SelectionAdapter selA = new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent arg0 ) {
         wFilenameList.add( new String[] {
           wFilename.getText(), wFilemask.getText(), wExcludeFilemask.getText(),
@@ -1052,6 +1069,7 @@ public class PropertyInputDialog extends BaseStepDialog implements StepDialogInt
 
     // Delete files from the list of files...
     wbdFilename.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent arg0 ) {
         int[] idx = wFilenameList.getSelectionIndices();
         wFilenameList.remove( idx );
@@ -1062,6 +1080,7 @@ public class PropertyInputDialog extends BaseStepDialog implements StepDialogInt
 
     // Edit the selected file & remove from the list...
     wbeFilename.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent arg0 ) {
         int idx = wFilenameList.getSelectionIndex();
         if ( idx >= 0 ) {
@@ -1078,6 +1097,7 @@ public class PropertyInputDialog extends BaseStepDialog implements StepDialogInt
 
     // Show the files that are selected at this time...
     wbShowFiles.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         try {
           PropertyInputMeta tfii = new PropertyInputMeta();
@@ -1107,12 +1127,14 @@ public class PropertyInputDialog extends BaseStepDialog implements StepDialogInt
 
     // Enable/disable the right fields to allow a filename to be added to each row...
     wInclFilename.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         setIncludeFilename();
       }
     } );
     // Enable/disable the right fields to allow a filename to be added to each row...
     wInclINIsection.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         setIncludeSection();
       }
@@ -1120,6 +1142,7 @@ public class PropertyInputDialog extends BaseStepDialog implements StepDialogInt
 
     // Enable/disable the right fields to allow a row number to be added to each row...
     wInclRownum.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         setIncludeRownum();
       }
@@ -1127,6 +1150,7 @@ public class PropertyInputDialog extends BaseStepDialog implements StepDialogInt
 
     // Whenever something changes, set the tooltip to the expanded version of the filename:
     wFilename.addModifyListener( new ModifyListener() {
+      @Override
       public void modifyText( ModifyEvent e ) {
         wFilename.setToolTipText( "" );
       }
@@ -1134,10 +1158,9 @@ public class PropertyInputDialog extends BaseStepDialog implements StepDialogInt
 
     // Listen to the Browse... button
     wbbFilename.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
-        if ( !Const.isEmpty( wFilemask.getText() ) || !Const.isEmpty( wExcludeFilemask.getText() ) ) // A mask: a
-                                                                                                     // directory!
-        {
+        if ( !Utils.isEmpty( wFilemask.getText() ) || !Utils.isEmpty( wExcludeFilemask.getText() ) ) { // A mask: a directory!
           DirectoryDialog dialog = new DirectoryDialog( shell, SWT.OPEN );
           if ( wFilename.getText() != null ) {
             String fpath = "";
@@ -1178,6 +1201,7 @@ public class PropertyInputDialog extends BaseStepDialog implements StepDialogInt
 
     // Detect X or ALT-F4 or something that kills this window...
     shell.addShellListener( new ShellAdapter() {
+      @Override
       public void shellClosed( ShellEvent e ) {
         cancel();
       }
@@ -1277,9 +1301,9 @@ public class PropertyInputDialog extends BaseStepDialog implements StepDialogInt
         if ( inputList.getFiles().size() > 0 ) {
 
           ValueMetaInterface field =
-            new ValueMeta( PropertyInputField.getColumnDesc( 0 ), ValueMetaInterface.TYPE_STRING );
+            new ValueMetaString( PropertyInputField.getColumnDesc( 0 ) );
           fields.addValueMeta( field );
-          field = new ValueMeta( PropertyInputField.getColumnDesc( 1 ), ValueMetaInterface.TYPE_STRING );
+          field = new ValueMetaString( PropertyInputField.getColumnDesc( 1 ) );
           fields.addValueMeta( field );
 
         }
@@ -1371,7 +1395,7 @@ public class PropertyInputDialog extends BaseStepDialog implements StepDialogInt
 
       for ( int i = 0; i < in.getFileName().length; i++ ) {
         wFilenameList.add( new String[] {
-          in.getFileName()[i], in.getFileMask()[i], in.getExludeFileMask()[i],
+          in.getFileName()[i], in.getFileMask()[i], in.getExcludeFileMask()[i],
           in.getRequiredFilesDesc( in.getFileRequired()[i] ),
           in.getRequiredFilesDesc( in.getIncludeSubFolders()[i] ) } );
       }
@@ -1509,7 +1533,7 @@ public class PropertyInputDialog extends BaseStepDialog implements StepDialogInt
   }
 
   private void ok() {
-    if ( Const.isEmpty( wStepname.getText() ) ) {
+    if ( Utils.isEmpty( wStepname.getText() ) ) {
       return;
     }
 
@@ -1559,7 +1583,7 @@ public class PropertyInputDialog extends BaseStepDialog implements StepDialogInt
 
       field.setName( item.getText( 1 ) );
       field.setColumn( PropertyInputField.getColumnByDesc( item.getText( 2 ) ) );
-      field.setType( ValueMeta.getType( item.getText( 3 ) ) );
+      field.setType( ValueMetaFactory.getIdForValueMeta( item.getText( 3 ) ) );
       field.setFormat( item.getText( 4 ) );
       field.setLength( Const.toInt( item.getText( 5 ), -1 ) );
       field.setPrecision( Const.toInt( item.getText( 6 ), -1 ) );

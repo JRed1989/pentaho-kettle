@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -26,6 +26,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.RowMetaAndData;
 import org.pentaho.di.core.database.Database;
 import org.pentaho.di.core.exception.KettleDatabaseException;
@@ -72,8 +73,7 @@ public class DBProc extends BaseStep implements StepInterface {
 
       data.argnrs = new int[meta.getArgument().length];
       for ( int i = 0; i < meta.getArgument().length; i++ ) {
-        if ( !meta.getArgumentDirection()[i].equalsIgnoreCase( "OUT" ) ) // IN or INOUT
-        {
+        if ( !meta.getArgumentDirection()[i].equalsIgnoreCase( "OUT" ) ) { // IN or INOUT
           data.argnrs[i] = rowMeta.indexOfValue( meta.getArgument()[i] );
           if ( data.argnrs[i] < 0 ) {
             logError( BaseMessages.getString( PKG, "DBProc.Log.ErrorFindingField" ) + meta.getArgument()[i] + "]" );
@@ -92,7 +92,7 @@ public class DBProc extends BaseStep implements StepInterface {
     Object[] outputRowData = RowDataUtil.resizeArray( rowData, data.outputMeta.size() );
     int outputIndex = rowMeta.size();
 
-    data.db.setProcValues( rowMeta, rowData, data.argnrs, meta.getArgumentDirection(), !Const.isEmpty( meta
+    data.db.setProcValues( rowMeta, rowData, data.argnrs, meta.getArgumentDirection(), !Utils.isEmpty( meta
       .getResultName() ) );
 
     RowMetaAndData add =
@@ -101,7 +101,7 @@ public class DBProc extends BaseStep implements StepInterface {
     int addIndex = 0;
 
     // Function return?
-    if ( !Const.isEmpty( meta.getResultName() ) ) {
+    if ( !Utils.isEmpty( meta.getResultName() ) ) {
       outputRowData[outputIndex++] = add.getData()[addIndex++]; // first is the function return
     }
 

@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -40,13 +40,14 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableItem;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleValueException;
 import org.pentaho.di.core.logging.LogChannel;
 import org.pentaho.di.core.logging.LogChannelInterface;
 import org.pentaho.di.core.row.RowMeta;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaString;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.ui.core.PropsUI;
@@ -188,16 +189,18 @@ public class PreviewRowsDialog {
     wClose = new Button( shell, SWT.PUSH );
     wClose.setText( BaseMessages.getString( PKG, "System.Button.Close" ) );
     wClose.addListener( SWT.Selection, new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         close();
       }
     } );
     buttons.add( wClose );
 
-    if ( !Const.isEmpty( loggingText ) ) {
+    if ( !Utils.isEmpty( loggingText ) ) {
       wLog = new Button( shell, SWT.PUSH );
       wLog.setText( BaseMessages.getString( PKG, "PreviewRowsDialog.Button.ShowLog" ) );
       wLog.addListener( SWT.Selection, new Listener() {
+        @Override
         public void handleEvent( Event e ) {
           log();
         }
@@ -210,6 +213,7 @@ public class PreviewRowsDialog {
       wStop.setText( BaseMessages.getString( PKG, "PreviewRowsDialog.Button.Stop.Label" ) );
       wStop.setToolTipText( BaseMessages.getString( PKG, "PreviewRowsDialog.Button.Stop.ToolTip" ) );
       wStop.addListener( SWT.Selection, new Listener() {
+        @Override
         public void handleEvent( Event e ) {
           askingToStop = true;
           close();
@@ -223,6 +227,7 @@ public class PreviewRowsDialog {
       wNext.setText( BaseMessages.getString( PKG, "PreviewRowsDialog.Button.Next.Label" ) );
       wNext.setToolTipText( BaseMessages.getString( PKG, "PreviewRowsDialog.Button.Next.ToolTip" ) );
       wNext.addListener( SWT.Selection, new Listener() {
+        @Override
         public void handleEvent( Event e ) {
           askingForMoreRows = true;
           close();
@@ -243,6 +248,7 @@ public class PreviewRowsDialog {
 
     // Detect X or ALT-F4 or something that kills this window...
     shell.addShellListener( new ShellAdapter() {
+      @Override
       public void shellClosed( ShellEvent e ) {
         close();
       }
@@ -282,7 +288,7 @@ public class PreviewRowsDialog {
 
     if ( dynamic && rowMeta == null ) {
       rowMeta = new RowMeta();
-      rowMeta.addValueMeta( new ValueMeta( "<waiting for rows>", ValueMetaInterface.TYPE_STRING ) );
+      rowMeta.addValueMeta( new ValueMetaString( "<waiting for rows>" ) );
       waitingForRows = true;
     }
     if ( !dynamic ) {
@@ -337,6 +343,7 @@ public class PreviewRowsDialog {
    */
   private void getData() {
     shell.getDisplay().asyncExec( new Runnable() {
+      @Override
       public void run() {
         lineNr = 0;
         for ( int i = 0; i < buffer.size(); i++ ) {
@@ -528,6 +535,7 @@ public class PreviewRowsDialog {
 
     Display.getDefault().syncExec( new Runnable() {
 
+      @Override
       public void run() {
 
         if ( wFields.isDisposed() ) {

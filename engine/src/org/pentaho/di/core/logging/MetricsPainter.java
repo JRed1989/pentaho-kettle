@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -25,7 +25,7 @@ package org.pentaho.di.core.logging;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.gui.GCInterface;
 import org.pentaho.di.core.gui.Point;
 import org.pentaho.di.core.gui.PrimitiveGCInterface.EColor;
@@ -66,13 +66,13 @@ public class MetricsPainter {
 
   /**
    * Draws a metrics tab.
-   * 
+   *
    * @param durations
    *          is a list of metrics durations
    * @return list of drawing areas.Throw IllegalArgumentException in case if input parameter is null or an empty
    */
   public List<MetricsDrawArea> paint( List<MetricsDuration> durations ) {
-    if ( Const.isEmpty( durations ) ) {
+    if ( Utils.isEmpty( durations ) ) {
       throw new IllegalArgumentException();
     }
 

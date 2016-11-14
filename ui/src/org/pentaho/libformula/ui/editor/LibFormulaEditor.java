@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -64,6 +64,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeItem;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.ui.core.gui.GUIResource;
 import org.pentaho.libformula.editor.FormulaEvaluator;
@@ -305,7 +306,7 @@ public class LibFormulaEditor extends Dialog implements KeyListener {
     // We need to provide an array of styles for this event.
     //
     Vector<StyleRange> styles = new Vector<StyleRange>();
-    StringBuffer report = new StringBuffer();
+    StringBuilder report = new StringBuilder();
 
     for ( FormulaMessage message : messages.values() ) {
       ParsePosition position = message.getPosition();
@@ -385,7 +386,7 @@ public class LibFormulaEditor extends Dialog implements KeyListener {
     if ( ctrl && e.character == ' ' ) {
       // Gab the content before the cursor position...
       //
-      StringBuffer beforeBuffer = new StringBuffer();
+      StringBuilder beforeBuffer = new StringBuilder();
       String editor = expressionEditor.getText();
       int pos = expressionEditor.getCaretOffset() - 1;
       while ( pos >= 0 && pos < editor.length() ) {
@@ -411,7 +412,7 @@ public class LibFormulaEditor extends Dialog implements KeyListener {
           proposals.add( new CompletionProposal( "[" + fieldName + "] (input field)", fieldName + "]", fieldName
             .length() + 1 ) );
         }
-      } else if ( Const.isEmpty( before ) ) {
+      } else if ( Utils.isEmpty( before ) ) {
         for ( String fieldName : inputFields ) {
           proposals.add( new CompletionProposal(
             "[" + fieldName + "] (input field)", "[" + fieldName + "]", fieldName.length() + 2 ) );

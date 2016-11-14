@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,11 +22,9 @@
 
 package org.pentaho.di.job.entries.unzip;
 
-import static org.pentaho.di.job.entry.validator.AbstractFileValidator.putVariableSpace;
-import static org.pentaho.di.job.entry.validator.AndValidator.putValidators;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.andValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.fileDoesNotExistValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notBlankValidator;
+import org.pentaho.di.job.entry.validator.AbstractFileValidator;
+import org.pentaho.di.job.entry.validator.AndValidator;
+import org.pentaho.di.job.entry.validator.JobEntryValidatorUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,6 +44,7 @@ import org.apache.commons.vfs2.FileType;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.ResultFile;
 import org.pentaho.di.core.RowMetaAndData;
@@ -178,7 +177,7 @@ public class JobEntryUnZip extends JobEntryBase implements Cloneable, JobEntryIn
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 50 );
+    StringBuilder retval = new StringBuilder( 550 ); // 450 chars in just spaces and tag names alone
 
     retval.append( super.getXML() );
     retval.append( "      " ).append( XMLHandler.addTagValue( "zipfilename", zipFilename ) );
@@ -230,7 +229,7 @@ public class JobEntryUnZip extends JobEntryBase implements Cloneable, JobEntryIn
       nr_limit = XMLHandler.getTagValue( entrynode, "nr_limit" );
       wildcardSource = XMLHandler.getTagValue( entrynode, "wildcardSource" );
       success_condition = XMLHandler.getTagValue( entrynode, "success_condition" );
-      if ( Const.isEmpty( success_condition ) ) {
+      if ( Utils.isEmpty( success_condition ) ) {
         success_condition = SUCCESS_IF_NO_ERRORS;
       }
       iffileexist = getIfFileExistsInt( XMLHandler.getTagValue( entrynode, "iffileexists" ) );
@@ -264,7 +263,7 @@ public class JobEntryUnZip extends JobEntryBase implements Cloneable, JobEntryIn
       nr_limit = rep.getJobEntryAttributeString( id_jobentry, "nr_limit" );
       wildcardSource = rep.getJobEntryAttributeString( id_jobentry, "wildcardSource" );
       success_condition = rep.getJobEntryAttributeString( id_jobentry, "success_condition" );
-      if ( Const.isEmpty( success_condition ) ) {
+      if ( Utils.isEmpty( success_condition ) ) {
         success_condition = SUCCESS_IF_NO_ERRORS;
       }
       iffileexist = getIfFileExistsInt( rep.getJobEntryAttributeString( id_jobentry, "iffileexists" ) );
@@ -339,7 +338,7 @@ public class JobEntryUnZip extends JobEntryBase implements Cloneable, JobEntryIn
         return result;
       }
     } else {
-      if ( Const.isEmpty( zipFilename ) ) {
+      if ( Utils.isEmpty( zipFilename ) ) {
         // Zip file/folder is missing
         logError( BaseMessages.getString( PKG, "JobUnZip.No_ZipFile_Defined.Label" ) );
         return result;
@@ -354,7 +353,7 @@ public class JobEntryUnZip extends JobEntryBase implements Cloneable, JobEntryIn
 
       // Let's make some checks here, before running job entry ...
 
-      if ( Const.isEmpty( realTargetdirectory ) ) {
+      if ( Utils.isEmpty( realTargetdirectory ) ) {
         logError( BaseMessages.getString( PKG, "JobUnZip.Error.TargetFolderMissing" ) );
         return result;
       }
@@ -389,7 +388,7 @@ public class JobEntryUnZip extends JobEntryBase implements Cloneable, JobEntryIn
       // If user want to move zip files after process
       // movetodirectory must be provided
       if ( afterunzip == 2 ) {
-        if ( Const.isEmpty( movetodirectory ) ) {
+        if ( Utils.isEmpty( movetodirectory ) ) {
           log.logError(  BaseMessages.getString( PKG, "JobUnZip.MoveToDirectoryEmpty.Label" ) );
           exitjobentry = true;
         } else {
@@ -414,8 +413,7 @@ public class JobEntryUnZip extends JobEntryBase implements Cloneable, JobEntryIn
       }
 
       if ( isfromprevious ) {
-        if ( rows != null ) // Copy the input row to the (command line) arguments
-        {
+        if ( rows != null ) { // Copy the input row to the (command line) arguments
           for ( int iteration = 0; iteration < rows.size() && !parentJob.isStopped(); iteration++ ) {
             if ( successConditionBroken ) {
               if ( !successConditionBrokenExit ) {
@@ -453,7 +451,7 @@ public class JobEntryUnZip extends JobEntryBase implements Cloneable, JobEntryIn
         if ( log.isDetailed() ) {
           logDetailed( BaseMessages.getString( PKG, "JobUnZip.Zip_FileExists.Label", realFilenameSource ) );
         }
-        if ( Const.isEmpty( sourcedirectory ) ) {
+        if ( Utils.isEmpty( sourcedirectory ) ) {
           log.logError( BaseMessages.getString( PKG, "JobUnZip.SourceFolderNotFound.Label" ) );
           return result;
         }
@@ -540,7 +538,7 @@ public class JobEntryUnZip extends JobEntryBase implements Cloneable, JobEntryIn
 
             Pattern patternSource = null;
 
-            if ( !Const.isEmpty( realWildcardSource ) ) {
+            if ( !Utils.isEmpty( realWildcardSource ) ) {
               patternSource = Pattern.compile( realWildcardSource );
             }
 
@@ -633,12 +631,12 @@ public class JobEntryUnZip extends JobEntryBase implements Cloneable, JobEntryIn
       } );
 
       Pattern pattern = null;
-      if ( !Const.isEmpty( realWildcard ) ) {
+      if ( !Utils.isEmpty( realWildcard ) ) {
         pattern = Pattern.compile( realWildcard );
 
       }
       Pattern patternexclude = null;
-      if ( !Const.isEmpty( realWildcardExclude ) ) {
+      if ( !Utils.isEmpty( realWildcardExclude ) ) {
         patternexclude = Pattern.compile( realWildcardExclude );
 
       }
@@ -1249,7 +1247,7 @@ public class JobEntryUnZip extends JobEntryBase implements Cloneable, JobEntryIn
       timestamp = new Date( file.getContent().getLastModifiedTime() );
     }
 
-    if ( SpecifyFormat && !Const.isEmpty( date_time_format ) ) {
+    if ( SpecifyFormat && !Utils.isEmpty( date_time_format ) ) {
       if ( !dateFormatSet ) {
         daf.applyPattern( date_time_format );
       }
@@ -1287,17 +1285,20 @@ public class JobEntryUnZip extends JobEntryBase implements Cloneable, JobEntryIn
   public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
     ValidatorContext ctx1 = new ValidatorContext();
-    putVariableSpace( ctx1, getVariables() );
-    putValidators( ctx1, notBlankValidator(), fileDoesNotExistValidator() );
+    AbstractFileValidator.putVariableSpace( ctx1, getVariables() );
+    AndValidator.putValidators( ctx1, JobEntryValidatorUtils.notBlankValidator(),
+        JobEntryValidatorUtils.fileDoesNotExistValidator() );
 
-    andValidator().validate( this, "zipFilename", remarks, ctx1 );
+    JobEntryValidatorUtils.andValidator().validate( this, "zipFilename", remarks, ctx1 );
 
     if ( 2 == afterunzip ) {
       // setting says to move
-      andValidator().validate( this, "moveToDirectory", remarks, putValidators( notBlankValidator() ) );
+      JobEntryValidatorUtils.andValidator().validate( this, "moveToDirectory", remarks,
+          AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
     }
 
-    andValidator().validate( this, "sourceDirectory", remarks, putValidators( notBlankValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "sourceDirectory", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
 
   }
 

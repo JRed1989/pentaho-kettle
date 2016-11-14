@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,16 +22,15 @@
 
 package org.pentaho.di.job.entries.mailvalidator;
 
-import static org.pentaho.di.job.entry.validator.AndValidator.putValidators;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.andValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.emailValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notBlankValidator;
+import org.pentaho.di.job.entry.validator.AndValidator;
+import org.pentaho.di.job.entry.validator.JobEntryValidatorUtils;
 
 import java.util.List;
 
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleDatabaseException;
@@ -145,7 +144,7 @@ public class JobEntryMailValidator extends JobEntryBase implements Cloneable, Jo
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer();
+    StringBuilder retval = new StringBuilder( 100 );
     retval.append( "      " ).append( XMLHandler.addTagValue( "smtpCheck", smtpCheck ) );
     retval.append( "      " ).append( XMLHandler.addTagValue( "timeout", timeout ) );
     retval.append( "      " ).append( XMLHandler.addTagValue( "defaultSMTP", defaultSMTP ) );
@@ -216,14 +215,14 @@ public class JobEntryMailValidator extends JobEntryBase implements Cloneable, Jo
     result.setResult( false );
 
     String realEmailAddress = environmentSubstitute( emailAddress );
-    if ( Const.isEmpty( realEmailAddress ) ) {
+    if ( Utils.isEmpty( realEmailAddress ) ) {
       logError( BaseMessages.getString( PKG, "JobEntryMailValidator.Error.EmailEmpty" ) );
       return result;
     }
     String realSender = environmentSubstitute( emailSender );
     if ( smtpCheck ) {
       // check sender
-      if ( Const.isEmpty( realSender ) ) {
+      if ( Utils.isEmpty( realSender ) ) {
         logError( BaseMessages.getString( PKG, "JobEntryMailValidator.Error.EmailSenderEmpty" ) );
         return result;
       }
@@ -283,11 +282,14 @@ public class JobEntryMailValidator extends JobEntryBase implements Cloneable, Jo
   public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
 
-    andValidator().validate( this, "emailAddress", remarks, putValidators( notBlankValidator() ) );
-    andValidator().validate( this, "emailSender", remarks, putValidators( notBlankValidator(), emailValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "emailAddress", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "emailSender", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator(), JobEntryValidatorUtils.emailValidator() ) );
 
     if ( isSMTPCheck() ) {
-      andValidator().validate( this, "defaultSMTP", remarks, putValidators( notBlankValidator() ) );
+      JobEntryValidatorUtils.andValidator().validate( this, "defaultSMTP", remarks,
+          AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
     }
   }
 }

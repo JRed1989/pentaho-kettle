@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,13 +22,9 @@
 
 package org.pentaho.di.job.entries.sftp;
 
-import static org.pentaho.di.job.entry.validator.AbstractFileValidator.putVariableSpace;
-import static org.pentaho.di.job.entry.validator.AndValidator.putValidators;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.andValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.fileExistsValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.integerValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notBlankValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notNullValidator;
+import org.pentaho.di.job.entry.validator.AbstractFileValidator;
+import org.pentaho.di.job.entry.validator.AndValidator;
+import org.pentaho.di.job.entry.validator.JobEntryValidatorUtils;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -41,6 +37,7 @@ import org.apache.commons.vfs2.FileObject;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.ResultFile;
 import org.pentaho.di.core.RowMetaAndData;
@@ -127,7 +124,7 @@ public class JobEntrySFTP extends JobEntryBase implements Cloneable, JobEntryInt
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 200 );
+    StringBuilder retval = new StringBuilder( 200 );
 
     retval.append( super.getXML() );
 
@@ -175,7 +172,7 @@ public class JobEntrySFTP extends JobEntryBase implements Cloneable, JobEntryInt
 
       String addresult = XMLHandler.getTagValue( entrynode, "isaddresult" );
 
-      if ( Const.isEmpty( addresult ) ) {
+      if ( Utils.isEmpty( addresult ) ) {
         isaddresult = true;
       } else {
         isaddresult = "Y".equalsIgnoreCase( addresult );
@@ -215,11 +212,11 @@ public class JobEntrySFTP extends JobEntryBase implements Cloneable, JobEntryInt
       wildcard = rep.getJobEntryAttributeString( id_jobentry, "wildcard" );
       remove = rep.getJobEntryAttributeBoolean( id_jobentry, "remove" );
 
-      String addToResult = rep.getStepAttributeString( id_jobentry, "add_to_result_filenames" );
-      if ( Const.isEmpty( addToResult ) ) {
+      String addToResult = rep.getJobEntryAttributeString( id_jobentry, "isaddresult" );
+      if ( Utils.isEmpty( addToResult ) ) {
         isaddresult = true;
       } else {
-        isaddresult = rep.getStepAttributeBoolean( id_jobentry, "add_to_result_filenames" );
+        isaddresult = rep.getJobEntryAttributeBoolean( id_jobentry, "isaddresult" );
       }
 
       createtargetfolder = rep.getJobEntryAttributeBoolean( id_jobentry, "createtargetfolder" );
@@ -382,12 +379,28 @@ public class JobEntrySFTP extends JobEntryBase implements Cloneable, JobEntryInt
     return targetDirectory;
   }
 
+  /**
+   * @deprecated use {@link #setCreateTargetFolder(boolean)} instead
+   */
   public void setcreateTargetFolder( boolean createtargetfolder ) {
     this.createtargetfolder = createtargetfolder;
   }
 
+  /**
+   * @deprecated use {@link #isCreateTargetFolder()} instead.
+   * @return createTargetFolder
+   */
+  @Deprecated
   public boolean iscreateTargetFolder() {
     return createtargetfolder;
+  }
+
+  public boolean isCreateTargetFolder() {
+    return createtargetfolder;
+  }
+
+  public void setCreateTargetFolder( boolean createtargetfolder ) {
+    this.createtargetfolder = createtargetfolder;
   }
 
   public boolean isCopyPrevious() {
@@ -522,7 +535,7 @@ public class JobEntrySFTP extends JobEntryBase implements Cloneable, JobEntryInt
 
           // Get file names
           String file_previous = resultRow.getString( 0, null );
-          if ( !Const.isEmpty( file_previous ) ) {
+          if ( !Utils.isEmpty( file_previous ) ) {
             list_previous_filenames.add( file_previous );
             if ( log.isDebug() ) {
               logDebug( BaseMessages.getString( PKG, "JobSFTP.Log.FilenameFromResult", file_previous ) );
@@ -555,7 +568,7 @@ public class JobEntrySFTP extends JobEntryBase implements Cloneable, JobEntryInt
       if ( isUseKeyFile() ) {
         // We must have here a private keyfilename
         realKeyFilename = environmentSubstitute( getKeyFilename() );
-        if ( Const.isEmpty( realKeyFilename ) ) {
+        if ( Utils.isEmpty( realKeyFilename ) ) {
           // Error..Missing keyfile
           logError( BaseMessages.getString( PKG, "JobSFTP.Error.KeyFileMissing" ) );
           result.setNrErrors( 1 );
@@ -570,7 +583,7 @@ public class JobEntrySFTP extends JobEntryBase implements Cloneable, JobEntryInt
         realPassPhrase = environmentSubstitute( getKeyPassPhrase() );
       }
 
-      if ( !Const.isEmpty( realTargetDirectory ) ) {
+      if ( !Utils.isEmpty( realTargetDirectory ) ) {
         TargetFolder = KettleVFS.getFileObject( realTargetDirectory, this );
         boolean TargetFolderExists = TargetFolder.exists();
         if ( TargetFolderExists ) {
@@ -613,11 +626,12 @@ public class JobEntrySFTP extends JobEntryBase implements Cloneable, JobEntryInt
 
       // Set proxy?
       String realProxyHost = environmentSubstitute( getProxyHost() );
-      if ( !Const.isEmpty( realProxyHost ) ) {
+      if ( !Utils.isEmpty( realProxyHost ) ) {
         // Set proxy
+        String password = Utils.resolvePassword( variables, getProxyPassword() );
         sftpclient.setProxy(
           realProxyHost, environmentSubstitute( getProxyPort() ), environmentSubstitute( getProxyUsername() ),
-          environmentSubstitute( getProxyPassword() ), getProxyType() );
+            password, getProxyType() );
       }
 
       // login to ftp host ...
@@ -626,7 +640,7 @@ public class JobEntrySFTP extends JobEntryBase implements Cloneable, JobEntryInt
       // logDetailed("logged in using password "+realPassword); // Logging this seems a bad idea! Oh well.
 
       // move to spool dir ...
-      if ( !Const.isEmpty( realSftpDirString ) ) {
+      if ( !Utils.isEmpty( realSftpDirString ) ) {
         try {
           sftpclient.chdir( realSftpDirString );
         } catch ( Exception e ) {
@@ -653,7 +667,7 @@ public class JobEntrySFTP extends JobEntryBase implements Cloneable, JobEntryInt
       }
 
       if ( !copyprevious ) {
-        if ( !Const.isEmpty( realWildcard ) ) {
+        if ( !Utils.isEmpty( realWildcard ) ) {
           pattern = Pattern.compile( realWildcard );
         }
       }
@@ -749,7 +763,7 @@ public class JobEntrySFTP extends JobEntryBase implements Cloneable, JobEntryInt
 
   public List<ResourceReference> getResourceDependencies( JobMeta jobMeta ) {
     List<ResourceReference> references = super.getResourceDependencies( jobMeta );
-    if ( !Const.isEmpty( serverName ) ) {
+    if ( !Utils.isEmpty( serverName ) ) {
       String realServerName = jobMeta.environmentSubstitute( serverName );
       ResourceReference reference = new ResourceReference( this );
       reference.getEntries().add( new ResourceEntry( realServerName, ResourceType.SERVER ) );
@@ -761,16 +775,16 @@ public class JobEntrySFTP extends JobEntryBase implements Cloneable, JobEntryInt
   @Override
   public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
-    andValidator().validate( this, "serverName", remarks, putValidators( notBlankValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "serverName", remarks, AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
 
     ValidatorContext ctx = new ValidatorContext();
-    putVariableSpace( ctx, getVariables() );
-    putValidators( ctx, notBlankValidator(), fileExistsValidator() );
-    andValidator().validate( this, "targetDirectory", remarks, ctx );
+    AbstractFileValidator.putVariableSpace( ctx, getVariables() );
+    AndValidator.putValidators( ctx, JobEntryValidatorUtils.notBlankValidator(), JobEntryValidatorUtils.fileExistsValidator() );
+    JobEntryValidatorUtils.andValidator().validate( this, "targetDirectory", remarks, ctx );
 
-    andValidator().validate( this, "userName", remarks, putValidators( notBlankValidator() ) );
-    andValidator().validate( this, "password", remarks, putValidators( notNullValidator() ) );
-    andValidator().validate( this, "serverPort", remarks, putValidators( integerValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "userName", remarks, AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "password", remarks, AndValidator.putValidators( JobEntryValidatorUtils.notNullValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "serverPort", remarks, AndValidator.putValidators( JobEntryValidatorUtils.integerValidator() ) );
   }
 
   public static void main( String[] args ) {

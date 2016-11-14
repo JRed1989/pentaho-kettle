@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -23,6 +23,7 @@
 package org.pentaho.di.core.database;
 
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.row.ValueMetaInterface;
 
 /**
@@ -71,7 +72,7 @@ public class H2DatabaseMeta extends BaseDatabaseMeta implements DatabaseInterfac
       // If the database is an in-memory DB or if there is no valid port and hostname, go embedded
       //
       if ( ( databaseName != null && databaseName.startsWith( "mem:" ) )
-        || ( ( Const.isEmpty( port ) || "-1".equals( port ) ) && Const.isEmpty( hostname ) ) ) {
+        || ( ( Utils.isEmpty( port ) || "-1".equals( port ) ) && Utils.isEmpty( hostname ) ) ) {
         return "jdbc:h2:" + databaseName;
       } else {
         // Connect over TCP/IP
@@ -187,6 +188,7 @@ public class H2DatabaseMeta extends BaseDatabaseMeta implements DatabaseInterfac
 
     int type = v.getType();
     switch ( type ) {
+      case ValueMetaInterface.TYPE_TIMESTAMP:
       case ValueMetaInterface.TYPE_DATE:
         retval += "TIMESTAMP";
         break;

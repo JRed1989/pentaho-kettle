@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -30,15 +30,17 @@ import org.apache.commons.vfs2.FileObject;
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.KettleAttributeInterface;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
 import org.pentaho.di.core.exception.KettleXMLException;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.core.row.value.ValueMetaFactory;
+import org.pentaho.di.core.row.value.ValueMetaInteger;
+import org.pentaho.di.core.row.value.ValueMetaString;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.vfs.KettleVFS;
 import org.pentaho.di.core.xml.XMLHandler;
@@ -107,15 +109,18 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
     allocate( 0 );
   }
 
+  @Override
   public void loadXML( Node stepnode, List<DatabaseMeta> databases, IMetaStore metaStore ) throws KettleXMLException {
     readData( stepnode );
   }
 
+  @Override
   public Object clone() {
     Object retval = super.clone();
     return retval;
   }
 
+  @Override
   public void setDefault() {
     delimiter = ",";
     enclosure = "\"";
@@ -147,7 +152,7 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
       isaddresult = "Y".equalsIgnoreCase( XMLHandler.getTagValue( stepnode, getXmlCode( "ADD_FILENAME_RESULT" ) ) );
       runningInParallel = "Y".equalsIgnoreCase( XMLHandler.getTagValue( stepnode, getXmlCode( "PARALLEL" ) ) );
       String nlp = XMLHandler.getTagValue( stepnode, getXmlCode( "NEWLINE_POSSIBLE" ) );
-      if ( Const.isEmpty( nlp ) ) {
+      if ( Utils.isEmpty( nlp ) ) {
         if ( runningInParallel ) {
           newlinePossibleInFields = false;
         } else {
@@ -169,7 +174,8 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
         Node fnode = XMLHandler.getSubNodeByNr( fields, getXmlCode( "FIELD" ), i );
 
         inputFields[i].setName( XMLHandler.getTagValue( fnode, getXmlCode( "FIELD_NAME" ) ) );
-        inputFields[i].setType( ValueMeta.getType( XMLHandler.getTagValue( fnode, getXmlCode( "FIELD_TYPE" ) ) ) );
+        inputFields[i].setType(
+          ValueMetaFactory.getIdForValueMeta( XMLHandler.getTagValue( fnode, getXmlCode( "FIELD_TYPE" ) ) ) );
         inputFields[i].setFormat( XMLHandler.getTagValue( fnode, getXmlCode( "FIELD_FORMAT" ) ) );
         inputFields[i].setCurrencySymbol( XMLHandler.getTagValue( fnode, getXmlCode( "FIELD_CURRENCY" ) ) );
         inputFields[i].setDecimalSymbol( XMLHandler.getTagValue( fnode, getXmlCode( "FIELD_DECIMAL" ) ) );
@@ -178,7 +184,7 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
           .setLength( Const.toInt( XMLHandler.getTagValue( fnode, getXmlCode( "FIELD_LENGTH" ) ), -1 ) );
         inputFields[i].setPrecision( Const.toInt(
           XMLHandler.getTagValue( fnode, getXmlCode( "FIELD_PRECISION" ) ), -1 ) );
-        inputFields[i].setTrimType( ValueMeta.getTrimTypeByCode( XMLHandler.getTagValue(
+        inputFields[i].setTrimType( ValueMetaString.getTrimTypeByCode( XMLHandler.getTagValue(
           fnode, getXmlCode( "FIELD_TRIM_TYPE" ) ) ) );
       }
     } catch ( Exception e ) {
@@ -190,8 +196,9 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
     inputFields = new TextFileInputField[nrFields];
   }
 
+  @Override
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 500 );
+    StringBuilder retval = new StringBuilder( 500 );
 
     retval.append( "    " ).append( XMLHandler.addTagValue( getXmlCode( "FILENAME" ), filename ) );
     retval.append( "    " ).append( XMLHandler.addTagValue( getXmlCode( "FILENAME_FIELD" ), filenameField ) );
@@ -216,7 +223,7 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
       retval.append( "      " ).append( XMLHandler.openTag( getXmlCode( "FIELD" ) ) ).append( Const.CR );
       retval.append( "        " ).append( XMLHandler.addTagValue( getXmlCode( "FIELD_NAME" ), field.getName() ) );
       retval.append( "        " ).append(
-        XMLHandler.addTagValue( getXmlCode( "FIELD_TYPE" ), ValueMeta.getTypeDesc( field.getType() ) ) );
+        XMLHandler.addTagValue( getXmlCode( "FIELD_TYPE" ), ValueMetaFactory.getValueMetaName( field.getType() ) ) );
       retval
         .append( "        " ).append( XMLHandler.addTagValue( getXmlCode( "FIELD_FORMAT" ), field.getFormat() ) );
       retval.append( "        " ).append(
@@ -231,7 +238,7 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
         XMLHandler.addTagValue( getXmlCode( "FIELD_PRECISION" ), field.getPrecision() ) );
       retval.append( "        " ).append(
         XMLHandler
-          .addTagValue( getXmlCode( "FIELD_TRIM_TYPE" ), ValueMeta.getTrimTypeCode( field.getTrimType() ) ) );
+          .addTagValue( getXmlCode( "FIELD_TRIM_TYPE" ), ValueMetaString.getTrimTypeCode( field.getTrimType() ) ) );
       retval.append( "      " ).append( XMLHandler.closeTag( getXmlCode( "FIELD" ) ) ).append( Const.CR );
     }
     retval.append( "    " ).append( XMLHandler.closeTag( getXmlCode( "FIELDS" ) ) ).append( Const.CR );
@@ -239,6 +246,7 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
     return retval.toString();
   }
 
+  @Override
   public void readRep( Repository rep, IMetaStore metaStore, ObjectId id_step, List<DatabaseMeta> databases ) throws KettleException {
     try {
       filename = rep.getStepAttributeString( id_step, getRepCode( "FILENAME" ) );
@@ -264,7 +272,7 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
         inputFields[i] = new TextFileInputField();
 
         inputFields[i].setName( rep.getStepAttributeString( id_step, i, getRepCode( "FIELD_NAME" ) ) );
-        inputFields[i].setType( ValueMeta.getType( rep.getStepAttributeString(
+        inputFields[i].setType( ValueMetaFactory.getIdForValueMeta( rep.getStepAttributeString(
           id_step, i, getRepCode( "FIELD_TYPE" ) ) ) );
         inputFields[i].setFormat( rep.getStepAttributeString( id_step, i, getRepCode( "FIELD_FORMAT" ) ) );
         inputFields[i]
@@ -274,7 +282,7 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
         inputFields[i].setLength( (int) rep.getStepAttributeInteger( id_step, i, getRepCode( "FIELD_LENGTH" ) ) );
         inputFields[i].setPrecision( (int) rep
           .getStepAttributeInteger( id_step, i, getRepCode( "FIELD_PRECISION" ) ) );
-        inputFields[i].setTrimType( ValueMeta.getTrimTypeByCode( rep.getStepAttributeString(
+        inputFields[i].setTrimType( ValueMetaString.getTrimTypeByCode( rep.getStepAttributeString(
           id_step, i, getRepCode( "FIELD_TRIM_TYPE" ) ) ) );
       }
     } catch ( Exception e ) {
@@ -282,6 +290,7 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
     }
   }
 
+  @Override
   public void saveRep( Repository rep, IMetaStore metaStore, ObjectId id_transformation, ObjectId id_step ) throws KettleException {
     try {
       rep.saveStepAttribute( id_transformation, id_step, getRepCode( "FILENAME" ), filename );
@@ -304,8 +313,8 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
         TextFileInputField field = inputFields[i];
 
         rep.saveStepAttribute( id_transformation, id_step, i, getRepCode( "FIELD_NAME" ), field.getName() );
-        rep.saveStepAttribute( id_transformation, id_step, i, getRepCode( "FIELD_TYPE" ), ValueMeta
-          .getTypeDesc( field.getType() ) );
+        rep.saveStepAttribute( id_transformation, id_step, i, getRepCode( "FIELD_TYPE" ),
+          ValueMetaFactory.getValueMetaName( field.getType() ) );
         rep.saveStepAttribute( id_transformation, id_step, i, getRepCode( "FIELD_FORMAT" ), field.getFormat() );
         rep.saveStepAttribute( id_transformation, id_step, i, getRepCode( "FIELD_CURRENCY" ), field
           .getCurrencySymbol() );
@@ -315,7 +324,7 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
         rep.saveStepAttribute( id_transformation, id_step, i, getRepCode( "FIELD_LENGTH" ), field.getLength() );
         rep.saveStepAttribute( id_transformation, id_step, i, getRepCode( "FIELD_PRECISION" ), field
           .getPrecision() );
-        rep.saveStepAttribute( id_transformation, id_step, i, getRepCode( "FIELD_TRIM_TYPE" ), ValueMeta
+        rep.saveStepAttribute( id_transformation, id_step, i, getRepCode( "FIELD_TRIM_TYPE" ), ValueMetaString
           .getTrimTypeCode( field.getTrimType() ) );
       }
     } catch ( Exception e ) {
@@ -323,6 +332,7 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
     }
   }
 
+  @Override
   public void getFields( RowMetaInterface rowMeta, String origin, RowMetaInterface[] info, StepMeta nextStep,
     VariableSpace space, Repository repository, IMetaStore metaStore ) throws KettleStepException {
     try {
@@ -361,18 +371,18 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
         rowMeta.addValueMeta( valueMeta );
       }
 
-      if ( !Const.isEmpty( filenameField ) && includingFilename ) {
-        ValueMetaInterface filenameMeta = new ValueMeta( filenameField, ValueMetaInterface.TYPE_STRING );
+      if ( !Utils.isEmpty( filenameField ) && includingFilename ) {
+        ValueMetaInterface filenameMeta = new ValueMetaString( filenameField );
         filenameMeta.setOrigin( origin );
         if ( lazyConversionActive ) {
           filenameMeta.setStorageType( ValueMetaInterface.STORAGE_TYPE_BINARY_STRING );
-          filenameMeta.setStorageMetadata( new ValueMeta( filenameField, ValueMetaInterface.TYPE_STRING ) );
+          filenameMeta.setStorageMetadata( new ValueMetaString( filenameField ) );
         }
         rowMeta.addValueMeta( filenameMeta );
       }
 
-      if ( !Const.isEmpty( rowNumField ) ) {
-        ValueMetaInterface rowNumMeta = new ValueMeta( rowNumField, ValueMetaInterface.TYPE_INTEGER );
+      if ( !Utils.isEmpty( rowNumField ) ) {
+        ValueMetaInterface rowNumMeta = new ValueMetaInteger( rowNumField );
         rowNumMeta.setLength( 10 );
         rowNumMeta.setOrigin( origin );
         rowMeta.addValueMeta( rowNumMeta );
@@ -383,6 +393,7 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
 
   }
 
+  @Override
   public void check( List<CheckResultInterface> remarks, TransMeta transMeta, StepMeta stepMeta,
     RowMetaInterface prev, String[] input, String[] output, RowMetaInterface info, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
@@ -413,11 +424,13 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
     }
   }
 
+  @Override
   public StepInterface getStep( StepMeta stepMeta, StepDataInterface stepDataInterface, int cnr, TransMeta tr,
     Trans trans ) {
     return new CsvInput( stepMeta, stepDataInterface, cnr, tr, trans );
   }
 
+  @Override
   public StepDataInterface getStepData() {
     return new CsvInputData();
   }
@@ -502,6 +515,7 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
   /**
    * @return the enclosure
    */
+  @Override
   public String getEnclosure() {
     return enclosure;
   }
@@ -520,7 +534,7 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
 
     ResourceReference reference = new ResourceReference( stepInfo );
     references.add( reference );
-    if ( !Const.isEmpty( filename ) ) {
+    if ( !Utils.isEmpty( filename ) ) {
       // Add the filename to the references, including a reference to this
       // step meta data.
       //
@@ -533,6 +547,7 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
   /**
    * @return the inputFields
    */
+  @Override
   public TextFileInputField[] getInputFields() {
     return inputFields;
   }
@@ -545,58 +560,72 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
     this.inputFields = inputFields;
   }
 
+  @Override
   public int getFileFormatTypeNr() {
     return TextFileInputMeta.FILE_FORMAT_MIXED; // TODO: check this
   }
 
+  @Override
   public String[] getFilePaths( VariableSpace space ) {
     return new String[] { space.environmentSubstitute( filename ), };
   }
 
+  @Override
   public int getNrHeaderLines() {
     return 1;
   }
 
+  @Override
   public boolean hasHeader() {
     return isHeaderPresent();
   }
 
+  @Override
   public String getErrorCountField() {
     return null;
   }
 
+  @Override
   public String getErrorFieldsField() {
     return null;
   }
 
+  @Override
   public String getErrorTextField() {
     return null;
   }
 
+  @Override
   public String getEscapeCharacter() {
     return null;
   }
 
+  @Override
   public String getFileType() {
     return "CSV";
   }
 
+  @Override
   public String getSeparator() {
     return delimiter;
   }
 
+  @Override
   public boolean includeFilename() {
     return false;
   }
 
+  @Override
   public boolean includeRowNumber() {
     return false;
   }
 
+  @Override
   public boolean isErrorIgnored() {
     return false;
   }
 
+  @Override
   public boolean isErrorLineSkipped() {
     return false;
   }
@@ -703,6 +732,7 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
    *
    * @return the filename of the exported resource
    */
+  @Override
   public String exportResources( VariableSpace space, Map<String, ResourceDefinition> definitions,
     ResourceNamingInterface resourceNamingInterface, Repository repository, IMetaStore metaStore ) throws KettleException {
     try {
@@ -710,7 +740,7 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
       // So let's change the filename from relative to absolute by grabbing the file object...
       // In case the name of the file comes from previous steps, forget about this!
       //
-      if ( Const.isEmpty( filenameField ) ) {
+      if ( Utils.isEmpty( filenameField ) && !Utils.isEmpty( filename ) ) {
         // From : ${Internal.Transformation.Filename.Directory}/../foo/bar.csv
         // To : /home/matt/test/files/foo/bar.csv
         //
@@ -732,15 +762,18 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
     }
   }
 
+  @Override
   public boolean supportsErrorHandling() {
     return true;
   }
 
+  @Override
   public StepMetaInjectionInterface getStepMetaInjectionInterface() {
 
     return this;
   }
 
+  @Override
   public void injectStepMetadataEntries( List<StepInjectionMetaEntry> metadata ) {
     for ( StepInjectionMetaEntry entry : metadata ) {
       KettleAttributeInterface attr = findAttribute( entry.getKey() );
@@ -796,7 +829,7 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
               if ( fieldAttr.getKey().equals( "FIELD_NAME" ) ) {
                 inputField.setName( attributeValue );
               } else if ( fieldAttr.getKey().equals( "FIELD_TYPE" ) ) {
-                inputField.setType( ValueMeta.getType( attributeValue ) );
+                inputField.setType( ValueMetaFactory.getIdForValueMeta( attributeValue ) );
               } else if ( fieldAttr.getKey().equals( "FIELD_FORMAT" ) ) {
                 inputField.setFormat( attributeValue );
               } else if ( fieldAttr.getKey().equals( "FIELD_LENGTH" ) ) {
@@ -810,7 +843,7 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
               } else if ( fieldAttr.getKey().equals( "FIELD_GROUP" ) ) {
                 inputField.setGroupSymbol( attributeValue );
               } else if ( fieldAttr.getKey().equals( "FIELD_TRIM_TYPE" ) ) {
-                inputField.setTrimType( ValueMeta.getTrimTypeByCode( attributeValue ) );
+                inputField.setTrimType( ValueMetaString.getTrimTypeByCode( attributeValue ) );
               } else {
                 throw new RuntimeException( "Unhandled metadata injection of attribute: "
                   + fieldAttr.toString() + " - " + fieldAttr.getDescription() );
@@ -824,6 +857,7 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
     }
   }
 
+  @Override
   public List<StepInjectionMetaEntry> extractStepMetadataEntries() throws KettleException {
     return null;
   }
@@ -833,6 +867,7 @@ public class CsvInputMeta extends BaseStepMeta implements StepMetaInterface, Inp
    *
    * @throws KettleException
    */
+  @Override
   public List<StepInjectionMetaEntry> getStepInjectionMetadataEntries() throws KettleException {
     return getStepInjectionMetadataEntries( PKG );
   }

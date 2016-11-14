@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -39,6 +39,7 @@ import org.pentaho.di.compatibility.Value;
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
@@ -214,15 +215,12 @@ public class ScriptValuesMetaMod extends BaseStepMeta implements StepMetaInterfa
     int nrfields = fieldname.length;
 
     retval.allocate( nrfields );
-
-    for ( int i = 0; i < nrfields; i++ ) {
-      retval.fieldname[i] = fieldname[i];
-      retval.rename[i] = rename[i];
-      retval.type[i] = type[i];
-      retval.length[i] = length[i];
-      retval.precision[i] = precision[i];
-      retval.replace[i] = replace[i];
-    }
+    System.arraycopy( fieldname, 0, retval.fieldname, 0, nrfields );
+    System.arraycopy( rename, 0, retval.rename, 0, nrfields );
+    System.arraycopy( type, 0, retval.type, 0, nrfields );
+    System.arraycopy( length, 0, retval.length, 0, nrfields );
+    System.arraycopy( precision, 0, retval.precision, 0, nrfields );
+    System.arraycopy( replace, 0, retval.replace, 0, nrfields );
 
     return retval;
   }
@@ -241,7 +239,7 @@ public class ScriptValuesMetaMod extends BaseStepMeta implements StepMetaInterfa
 
       // When in compatibility mode, we load the script, not the other tabs...
       //
-      if ( !Const.isEmpty( script ) ) {
+      if ( !Utils.isEmpty( script ) ) {
         jsScripts = new ScriptValuesScript[1];
         jsScripts[0] = new ScriptValuesScript( ScriptValuesScript.TRANSFORM_SCRIPT, "ScriptValue", script );
       } else {
@@ -309,14 +307,14 @@ public class ScriptValuesMetaMod extends BaseStepMeta implements StepMetaInterfa
     VariableSpace space, Repository repository, IMetaStore metaStore ) throws KettleStepException {
     try {
       for ( int i = 0; i < fieldname.length; i++ ) {
-        if ( !Const.isEmpty( fieldname[i] ) ) {
+        if ( !Utils.isEmpty( fieldname[i] ) ) {
           int valueIndex = -1;
           ValueMetaInterface v;
           if ( replace[i] ) {
             valueIndex = row.indexOfValue( fieldname[i] );
             if ( valueIndex < 0 ) {
               // The field was not found using the "name" field
-              if ( Const.isEmpty( rename[i] ) ) {
+              if ( Utils.isEmpty( rename[i] ) ) {
                 // There is no "rename" field to try; Therefore we cannot find the
                 // field to replace
                 throw new KettleStepException( BaseMessages.getString(
@@ -340,7 +338,7 @@ public class ScriptValuesMetaMod extends BaseStepMeta implements StepMetaInterfa
             v = ValueMetaFactory.cloneValueMeta( source, type[i] );
             row.setValueMeta( valueIndex, v );
           } else {
-            if ( !Const.isEmpty( rename[i] ) ) {
+            if ( !Utils.isEmpty( rename[i] ) ) {
               v = ValueMetaFactory.createValueMeta( rename[i], type[i] );
             } else {
               v = ValueMetaFactory.createValueMeta( fieldname[i], type[i] );
@@ -360,7 +358,7 @@ public class ScriptValuesMetaMod extends BaseStepMeta implements StepMetaInterfa
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 300 );
+    StringBuilder retval = new StringBuilder( 300 );
 
     retval.append( "    " ).append( XMLHandler.addTagValue( "compatible", compatible ) );
     retval.append( "    " ).append( XMLHandler.addTagValue( "optimizationLevel", optimizationLevel ) );
@@ -401,7 +399,7 @@ public class ScriptValuesMetaMod extends BaseStepMeta implements StepMetaInterfa
 
       // When in compatibility mode, we load the script, not the other tabs...
       //
-      if ( !Const.isEmpty( script ) ) {
+      if ( !Utils.isEmpty( script ) ) {
         jsScripts = new ScriptValuesScript[1];
         jsScripts[0] = new ScriptValuesScript( ScriptValuesScript.TRANSFORM_SCRIPT, "ScriptValue", script );
       } else {
@@ -659,8 +657,8 @@ public class ScriptValuesMetaMod extends BaseStepMeta implements StepMetaInterfa
           remarks.add( cr );
 
           if ( fieldname.length > 0 ) {
-            StringBuffer message =
-              new StringBuffer( BaseMessages.getString(
+            StringBuilder message =
+              new StringBuilder( BaseMessages.getString(
                 PKG, "ScriptValuesMetaMod.CheckResult.FailedToGetValues", String.valueOf( fieldname.length ) )
                 + Const.CR + Const.CR );
 
@@ -748,7 +746,7 @@ public class ScriptValuesMetaMod extends BaseStepMeta implements StepMetaInterfa
     return sRC;
   }
 
-  public boolean getValue( Scriptable scope, int i, Value res, StringBuffer message ) {
+  public boolean getValue( Scriptable scope, int i, Value res, StringBuilder message ) {
     boolean error_found = false;
 
     if ( fieldname[i] != null && fieldname[i].length() > 0 ) {

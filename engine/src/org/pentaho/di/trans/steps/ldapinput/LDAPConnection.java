@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -45,10 +45,10 @@ import javax.naming.ldap.PagedResultsResponseControl;
 import javax.naming.ldap.SortControl;
 
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.logging.LogChannelInterface;
 import org.pentaho.di.core.row.RowMeta;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.core.row.value.ValueMetaFactory;
 import org.pentaho.di.core.variables.VariableSpace;
@@ -192,7 +192,7 @@ public class LDAPConnection {
     setFilter( Const.NVL( correctFilter( filter ), DEFAUL_FILTER_STRING ) );
     try {
 
-      if ( Const.isEmpty( getSearchBase() ) ) {
+      if ( Utils.isEmpty( getSearchBase() ) ) {
         // get Search Base
         Attributes attrs = getInitialContext().getAttributes( "", new String[] { "namingContexts" } );
         Attribute attr = attrs.get( "namingContexts" );
@@ -429,7 +429,7 @@ public class LDAPConnection {
     Attributes attrs = new javax.naming.directory.BasicAttributes( true );
     int nrAttributes = attributes.length;
     for ( int i = 0; i < nrAttributes; i++ ) {
-      if ( !Const.isEmpty( values[i] ) ) {
+      if ( !Utils.isEmpty( values[i] ) ) {
         // We have a value
         String value = values[i].trim();
         if ( multValuedSeparator != null && value.indexOf( multValuedSeparator ) > 0 ) {
@@ -623,7 +623,7 @@ public class LDAPConnection {
    * @return corrected filter
    */
   private static String correctFilter( String filter ) {
-    return Const.isEmpty( filter ) ? "" : filter.replaceAll( "(\\r|\\n)", "" );
+    return Utils.isEmpty( filter ) ? "" : filter.replaceAll( "(\\r|\\n)", "" );
   }
 
   public static String extractBytesAndConvertToString( Attribute attr, boolean isSID ) throws Exception {
@@ -683,9 +683,9 @@ public class LDAPConnection {
    * @return the formatted GUID
    */
   private static String byteToHexEncode( byte[] inArr ) {
-    StringBuffer guid = new StringBuffer();
+    StringBuilder guid = new StringBuilder();
     for ( int i = 0; i < inArr.length; i++ ) {
-      StringBuffer dblByte = new StringBuffer( Integer.toHexString( inArr[i] & 0xff ) );
+      StringBuilder dblByte = new StringBuilder( Integer.toHexString( inArr[i] & 0xff ) );
       if ( dblByte.length() == 1 ) {
         guid.append( "0" );
       }
@@ -717,13 +717,13 @@ public class LDAPConnection {
             // Try to determine the data type
             //
             if ( IsDate( attributeValue ) ) {
-              valueType = ValueMeta.TYPE_DATE;
+              valueType = ValueMetaInterface.TYPE_DATE;
             } else if ( IsInteger( attributeValue ) ) {
-              valueType = ValueMeta.TYPE_INTEGER;
+              valueType = ValueMetaInterface.TYPE_INTEGER;
             } else if ( IsNumber( attributeValue ) ) {
-              valueType = ValueMeta.TYPE_NUMBER;
+              valueType = ValueMetaInterface.TYPE_NUMBER;
             } else {
-              valueType = ValueMeta.TYPE_STRING;
+              valueType = ValueMetaInterface.TYPE_STRING;
             }
 
             ValueMetaInterface value = ValueMetaFactory.createValueMeta( fieldName, valueType );

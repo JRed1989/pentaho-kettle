@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -23,6 +23,7 @@
 package org.pentaho.di.core.database;
 
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.row.ValueMetaInterface;
 
 /**
@@ -39,7 +40,7 @@ public class VectorWiseDatabaseMeta extends IngresDatabaseMeta implements Databa
     if ( getAccessType() == DatabaseMeta.TYPE_ACCESS_ODBC ) {
       return "jdbc:odbc:" + databaseName;
     } else {
-      if ( Const.isEmpty( port ) || "-1".equals( port ) ) {
+      if ( Utils.isEmpty( port ) || "-1".equals( port ) ) {
         return "jdbc:ingres://" + hostname + ":VW7/" + databaseName;
       } else {
         return "jdbc:ingres://" + hostname + ":" + port + "/" + databaseName;
@@ -132,6 +133,7 @@ public class VectorWiseDatabaseMeta extends IngresDatabaseMeta implements Databa
 
     int type = v.getType();
     switch ( type ) {
+      case ValueMetaInterface.TYPE_TIMESTAMP:
       case ValueMetaInterface.TYPE_DATE:
         retval += "TIMESTAMP";
         break;
@@ -155,8 +157,7 @@ public class VectorWiseDatabaseMeta extends IngresDatabaseMeta implements Databa
             if ( length > 9 ) {
               retval += "BIGINT";
             } else {
-              if ( length == -1 || length > 4 ) // If the length is undefined or greater than 4, use a standard INTEGER
-              {
+              if ( length == -1 || length > 4 ) { // If the length is undefined or greater than 4, use a standard INTEGER
                 retval += "INTEGER";
               } else {
                 if ( length > 2 ) {

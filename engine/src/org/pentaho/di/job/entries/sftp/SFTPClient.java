@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -31,10 +31,12 @@ import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileType;
 import org.apache.commons.vfs2.FileUtil;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleFileException;
 import org.pentaho.di.core.exception.KettleJobException;
 import org.pentaho.di.core.vfs.KettleVFS;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.ChannelSftp.LsEntry;
@@ -57,6 +59,14 @@ public class SFTPClient {
   public static final String HTTP_DEFAULT_PORT = "80";
   public static final String SOCKS5_DEFAULT_PORT = "1080";
   public static final int SSH_DEFAULT_PORT = 22;
+
+  // -D parameter telling whether we should use GSSAPI authentication or not
+  static final String ENV_PARAM_USERAUTH_GSSAPI = "userauth.gssapi.enabled";
+
+  private static final String PREFERRED_AUTH_CONFIG_NAME = "PreferredAuthentications";
+  private static final String PREFERRED_AUTH_DEFAULT = "publickey,keyboard-interactive,password";
+  // adding GSSAPI to be the last one
+  private static final String PREFERRED_AUTH_WITH_GSSAPI = PREFERRED_AUTH_DEFAULT + ",gssapi-with-mic";
 
   private InetAddress serverIP;
   private int serverPort;
@@ -128,22 +138,23 @@ public class SFTPClient {
     this.serverPort = serverPort;
     this.userName = userName;
 
-    JSch jsch = new JSch();
+    JSch jsch = createJSch();
     try {
-      if ( !Const.isEmpty( privateKeyFilename ) ) {
+      if ( !Utils.isEmpty( privateKeyFilename ) ) {
         // We need to use private key authentication
         this.prvkey = privateKeyFilename;
         byte[] passphrasebytes = new byte[0];
-        if ( !Const.isEmpty( passPhrase ) ) {
+        if ( !Utils.isEmpty( passPhrase ) ) {
           // Set passphrase
           this.passphrase = passPhrase;
           passphrasebytes = GetPrivateKeyPassPhrase().getBytes();
         }
         jsch.addIdentity( getUserName(), FileUtil.getContent( KettleVFS.getFileObject( prvkey ) ), // byte[] privateKey
           null, // byte[] publicKey
-          passphrasebytes ); // byte[] passPhrase          
+          passphrasebytes ); // byte[] passPhrase
       }
       s = jsch.getSession( userName, serverIP.getHostAddress(), serverPort );
+      s.setConfig( PREFERRED_AUTH_CONFIG_NAME, getPreferredAuthentications() );
     } catch ( IOException e ) {
       throw new KettleJobException( e );
     } catch ( KettleFileException e ) {
@@ -233,6 +244,12 @@ public class SFTPClient {
     }
   }
 
+  /**
+   * @deprecated use {@link #get(FileObject, String)}
+   * @param localFilePath
+   * @param remoteFile
+   * @throws KettleJobException
+   */
   @Deprecated
   public void get( String localFilePath, String remoteFile ) throws KettleJobException {
     int mode = ChannelSftp.OVERWRITE;
@@ -360,7 +377,7 @@ public class SFTPClient {
 
   public void setProxy( String host, String port, String user, String pass, String proxyType ) throws KettleJobException {
 
-    if ( Const.isEmpty( host ) || Const.toInt( port, 0 ) == 0 ) {
+    if ( Utils.isEmpty( host ) || Const.toInt( port, 0 ) == 0 ) {
       throw new KettleJobException( "Proxy server name must be set and server port must be greater than zero." );
     }
     Proxy proxy = null;
@@ -368,12 +385,12 @@ public class SFTPClient {
 
     if ( proxyType.equals( PROXY_TYPE_HTTP ) ) {
       proxy = new ProxyHTTP( proxyhost );
-      if ( !Const.isEmpty( user ) ) {
+      if ( !Utils.isEmpty( user ) ) {
         ( (ProxyHTTP) proxy ).setUserPasswd( user, pass );
       }
     } else if ( proxyType.equals( PROXY_TYPE_SOCKS5 ) ) {
       proxy = new ProxySOCKS5( proxyhost );
-      if ( !Const.isEmpty( user ) ) {
+      if ( !Utils.isEmpty( user ) ) {
         ( (ProxySOCKS5) proxy ).setUserPasswd( user, pass );
       }
     }
@@ -425,5 +442,18 @@ public class SFTPClient {
       return null;
     }
     return this.compression;
+  }
+
+  @VisibleForTesting
+  JSch createJSch() {
+    return new JSch();
+  }
+
+  /**
+   * Whether we should use GSSAPI when authenticating or not.
+   */
+  private String getPreferredAuthentications() {
+    String param = Const.getEnvironmentVariable( ENV_PARAM_USERAUTH_GSSAPI, null );
+    return Boolean.valueOf( param ) ? PREFERRED_AUTH_WITH_GSSAPI : PREFERRED_AUTH_DEFAULT;
   }
 }

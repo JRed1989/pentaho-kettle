@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.KettleClientEnvironment;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.RowMetaAndData;
@@ -105,17 +106,17 @@ public class TransLogTable extends BaseLogTable implements Cloneable, LogTableIn
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer();
+    StringBuilder retval = new StringBuilder();
 
-    retval.append( XMLHandler.openTag( XML_TAG ) );
-    retval.append( XMLHandler.addTagValue( "connection", connectionName ) );
-    retval.append( XMLHandler.addTagValue( "schema", schemaName ) );
-    retval.append( XMLHandler.addTagValue( "table", tableName ) );
-    retval.append( XMLHandler.addTagValue( "size_limit_lines", logSizeLimit ) );
-    retval.append( XMLHandler.addTagValue( "interval", logInterval ) );
-    retval.append( XMLHandler.addTagValue( "timeout_days", timeoutInDays ) );
+    retval.append( "      " ).append( XMLHandler.openTag( XML_TAG ) ).append( Const.CR );
+    retval.append( "        " ).append( XMLHandler.addTagValue( "connection", connectionName ) );
+    retval.append( "        " ).append( XMLHandler.addTagValue( "schema", schemaName ) );
+    retval.append( "        " ).append( XMLHandler.addTagValue( "table", tableName ) );
+    retval.append( "        " ).append( XMLHandler.addTagValue( "size_limit_lines", logSizeLimit ) );
+    retval.append( "        " ).append( XMLHandler.addTagValue( "interval", logInterval ) );
+    retval.append( "        " ).append( XMLHandler.addTagValue( "timeout_days", timeoutInDays ) );
     retval.append( super.getFieldsXML() );
-    retval.append( XMLHandler.closeTag( XML_TAG ) ).append( Const.CR );
+    retval.append( "      " ).append( XMLHandler.closeTag( XML_TAG ) ).append( Const.CR );
 
     return retval.toString();
   }
@@ -171,7 +172,7 @@ public class TransLogTable extends BaseLogTable implements Cloneable, LogTableIn
           // BaseLogTable.loadFromRepository sets subject as a String
           //
           String stepname = (String) field.getSubject();
-          if ( !Const.isEmpty( stepname ) ) {
+          if ( !Utils.isEmpty( stepname ) ) {
             field.setSubject( StepMeta.findStep( steps, stepname ) );
           } else {
             field.setSubject( null );
@@ -507,5 +508,13 @@ public class TransLogTable extends BaseLogTable implements Cloneable, LogTableIn
     indexes.add( lookupIndex );
 
     return indexes;
+  }
+
+  @Override
+  public void setAllGlobalParametersToNull()  {
+    super.setAllGlobalParametersToNull();
+
+    logInterval = isGlobalParameter( logInterval ) ? null : logInterval;
+    logSizeLimit = isGlobalParameter( logSizeLimit ) ? null : logSizeLimit;
   }
 }

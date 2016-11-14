@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -26,14 +26,17 @@ import java.util.List;
 
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
-import org.pentaho.di.core.Const;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
 import org.pentaho.di.core.exception.KettleXMLException;
+import org.pentaho.di.core.injection.Injection;
+import org.pentaho.di.core.injection.InjectionSupported;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaBoolean;
+import org.pentaho.di.core.row.value.ValueMetaString;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.i18n.BaseMessages;
@@ -54,28 +57,57 @@ import org.w3c.dom.Node;
  * Created on 03-Juin-2008
  *
  */
-
+@InjectionSupported( localizationPrefix = "GetTableNames.Injection.", groups = { "FIELDS", "SETTINGS", "OUTPUT" } )
 public class GetTableNamesMeta extends BaseStepMeta implements StepMetaInterface {
   private static Class<?> PKG = GetTableNamesMeta.class; // for i18n purposes, needed by Translator2!!
 
   /** database connection */
   private DatabaseMeta database;
+
+  @Injection( name = "SCHEMANAME", group = "FIELDS" )
   private String schemaname;
+
+  @Injection( name = "TABLENAMEFIELDNAME", group = "OUTPUT" )
   /** function result: new value name */
   private String tablenamefieldname;
+
+  @Injection( name = "SQLCREATIONFIELDNAME", group = "OUTPUT" )
   private String sqlcreationfieldname;
+
+  @Injection( name = "OBJECTTYPEFIELDNAME", group = "OUTPUT" )
   private String objecttypefieldname;
+
+  @Injection( name = "ISSYSTEMOBJECTFIELDNAME", group = "OUTPUT" )
   private String issystemobjectfieldname;
 
+  @Injection( name = "INCLUDECATALOG", group = "SETTINGS" )
   private boolean includeCatalog;
+
+  @Injection( name = "INCLUDESCHEMA", group = "SETTINGS" )
   private boolean includeSchema;
+
+  @Injection( name = "INCLUDETABLE", group = "SETTINGS" )
   private boolean includeTable;
+
+  @Injection( name = "INCLUDEVIEW", group = "SETTINGS" )
   private boolean includeView;
+
+  @Injection( name = "INCLUDEPROCEDURE", group = "SETTINGS" )
   private boolean includeProcedure;
+
+  @Injection( name = "INCLUDESYNONYM", group = "SETTINGS" )
   private boolean includeSynonym;
+
+  @Injection( name = "ADDSCHEMAINOUTPUT", group = "SETTINGS" )
   private boolean addSchemaInOutput;
+
+  @Injection( name = "DYNAMICSCHEMA", group = "FIELDS" )
   private boolean dynamicSchema;
+
+  @Injection( name = "SCHENAMENAMEFIELD", group = "FIELDS" )
   private String schenameNameField;
+
+  private List<? extends SharedObjectInterface> databases;
 
   public GetTableNamesMeta() {
     super(); // allocate BaseStepMeta
@@ -153,7 +185,12 @@ public class GetTableNamesMeta extends BaseStepMeta implements StepMetaInterface
    * @param issystemobjectfieldname
    *          The issystemobjectfieldname to set.
    */
+  // TODO deprecate one of these
   public void setIsSystemObjectFieldName( String issystemobjectfieldname ) {
+    this.issystemobjectfieldname = issystemobjectfieldname;
+  }
+
+  public void setSystemObjectFieldName( String issystemobjectfieldname ) {
     this.issystemobjectfieldname = issystemobjectfieldname;
   }
 
@@ -250,6 +287,11 @@ public class GetTableNamesMeta extends BaseStepMeta implements StepMetaInterface
     return this.addSchemaInOutput;
   }
 
+  @Injection( name = "CONNECTIONNAME" )
+  public void setConnection( String connectionName ) {
+    database = DatabaseMeta.findDatabase( databases, connectionName );
+  }
+
   public void loadXML( Node stepnode, List<DatabaseMeta> databases, IMetaStore metaStore ) throws KettleXMLException {
     readData( stepnode, databases );
   }
@@ -281,8 +323,8 @@ public class GetTableNamesMeta extends BaseStepMeta implements StepMetaInterface
   public void getFields( RowMetaInterface r, String name, RowMetaInterface[] info, StepMeta nextStep,
     VariableSpace space, Repository repository, IMetaStore metaStore ) throws KettleStepException {
     String realtablename = space.environmentSubstitute( tablenamefieldname );
-    if ( !Const.isEmpty( realtablename ) ) {
-      ValueMetaInterface v = new ValueMeta( realtablename, ValueMeta.TYPE_STRING );
+    if ( !Utils.isEmpty( realtablename ) ) {
+      ValueMetaInterface v = new ValueMetaString( realtablename );
       v.setLength( 500 );
       v.setPrecision( -1 );
       v.setOrigin( name );
@@ -290,23 +332,23 @@ public class GetTableNamesMeta extends BaseStepMeta implements StepMetaInterface
     }
 
     String realObjectType = space.environmentSubstitute( objecttypefieldname );
-    if ( !Const.isEmpty( realObjectType ) ) {
-      ValueMetaInterface v = new ValueMeta( realObjectType, ValueMeta.TYPE_STRING );
+    if ( !Utils.isEmpty( realObjectType ) ) {
+      ValueMetaInterface v = new ValueMetaString( realObjectType );
       v.setLength( 500 );
       v.setPrecision( -1 );
       v.setOrigin( name );
       r.addValueMeta( v );
     }
     String sysobject = space.environmentSubstitute( issystemobjectfieldname );
-    if ( !Const.isEmpty( sysobject ) ) {
-      ValueMetaInterface v = new ValueMeta( sysobject, ValueMeta.TYPE_BOOLEAN );
+    if ( !Utils.isEmpty( sysobject ) ) {
+      ValueMetaInterface v = new ValueMetaBoolean( sysobject );
       v.setOrigin( name );
       r.addValueMeta( v );
     }
 
     String realSQLCreation = space.environmentSubstitute( sqlcreationfieldname );
-    if ( !Const.isEmpty( realSQLCreation ) ) {
-      ValueMetaInterface v = new ValueMeta( realSQLCreation, ValueMeta.TYPE_STRING );
+    if ( !Utils.isEmpty( realSQLCreation ) ) {
+      ValueMetaInterface v = new ValueMetaString( realSQLCreation );
       v.setLength( 500 );
       v.setPrecision( -1 );
       v.setOrigin( name );
@@ -315,7 +357,7 @@ public class GetTableNamesMeta extends BaseStepMeta implements StepMetaInterface
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer();
+    StringBuilder retval = new StringBuilder();
 
     retval.append( "    " + XMLHandler.addTagValue( "connection", database == null ? "" : database.getName() ) );
     retval.append( "    " + XMLHandler.addTagValue( "schemaname", schemaname ) );
@@ -339,7 +381,7 @@ public class GetTableNamesMeta extends BaseStepMeta implements StepMetaInterface
 
   private void readData( Node stepnode, List<? extends SharedObjectInterface> databases ) throws KettleXMLException {
     try {
-
+      this.databases = databases;
       String con = XMLHandler.getTagValue( stepnode, "connection" );
       database = DatabaseMeta.findDatabase( databases, con );
       schemaname = XMLHandler.getTagValue( stepnode, "schemaname" );
@@ -365,6 +407,7 @@ public class GetTableNamesMeta extends BaseStepMeta implements StepMetaInterface
 
   public void readRep( Repository rep, IMetaStore metaStore, ObjectId id_step, List<DatabaseMeta> databases ) throws KettleException {
     try {
+      this.databases = databases;
       database = rep.loadDatabaseMetaFromStepAttribute( id_step, "id_connection", databases );
       schemaname = rep.getStepAttributeString( id_step, "schemaname" );
       tablenamefieldname = rep.getStepAttributeString( id_step, "tablenamefieldname" );
@@ -426,7 +469,7 @@ public class GetTableNamesMeta extends BaseStepMeta implements StepMetaInterface
       cr = new CheckResult( CheckResult.TYPE_RESULT_ERROR, error_message, stepMeta );
       remarks.add( cr );
     }
-    if ( Const.isEmpty( tablenamefieldname ) ) {
+    if ( Utils.isEmpty( tablenamefieldname ) ) {
       error_message = BaseMessages.getString( PKG, "GetTableNamesMeta.CheckResult.TablenameFieldNameMissing" );
       cr = new CheckResult( CheckResult.TYPE_RESULT_ERROR, error_message, stepMeta );
       remarks.add( cr );

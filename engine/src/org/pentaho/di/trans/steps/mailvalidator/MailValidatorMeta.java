@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -26,14 +26,15 @@ import java.util.List;
 
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
-import org.pentaho.di.core.Const;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
 import org.pentaho.di.core.exception.KettleXMLException;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaBoolean;
+import org.pentaho.di.core.row.value.ValueMetaString;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.i18n.BaseMessages;
@@ -94,10 +95,16 @@ public class MailValidatorMeta extends BaseStepMeta implements StepMetaInterface
   }
 
   /**
+   * @deprecated use {@link #setEmailField(String)} instead
    * @param emailfield
    *          The emailfield to set.
    */
+  @Deprecated
   public void setEmailfield( String emailfield ) {
+    setEmailField( emailfield );
+  }
+
+  public void setEmailField( String emailfield ) {
     this.emailfield = emailfield;
   }
 
@@ -125,16 +132,28 @@ public class MailValidatorMeta extends BaseStepMeta implements StepMetaInterface
   }
 
   /**
+   * @deprecated use {@link #getEmailValideMsg()} instead
    * @return Returns the emailValideMsg.
    */
+  @Deprecated
   public String getEMailValideMsg() {
+    return getEmailValideMsg();
+  }
+
+  public String getEmailValideMsg() {
     return emailValideMsg;
   }
 
   /**
+   * @deprecated use {@link #getEmailNotValideMsg()} instead
    * @return Returns the emailNotValideMsg.
    */
+  @Deprecated
   public String getEMailNotValideMsg() {
+    return getEmailNotValideMsg();
+  }
+
+  public String getEmailNotValideMsg() {
     return emailNotValideMsg;
   }
 
@@ -184,17 +203,29 @@ public class MailValidatorMeta extends BaseStepMeta implements StepMetaInterface
   }
 
   /**
+   * @deprecated use {@link #getEmailSender()} instead
    * @return Returns the emailSender.
    */
+  @Deprecated
   public String geteMailSender() {
+    return getEmailSender();
+  }
+
+  public String getEmailSender() {
     return emailSender;
   }
 
   /**
+   * @deprecated use {@link #setEmailSender(String)} instead
    * @param emailSender
    *          The emailSender to set.
    */
+  @Deprecated
   public void seteMailSender( String emailSender ) {
+    setEmailSender( emailSender );
+  }
+
+  public void setEmailSender( String emailSender ) {
     this.emailSender = emailSender;
   }
 
@@ -214,17 +245,29 @@ public class MailValidatorMeta extends BaseStepMeta implements StepMetaInterface
   }
 
   /**
+   * @deprecated use {@link #isDynamicDefaultSMTP()} instead
    * @return Returns the isdynamicDefaultSMTP.
    */
+  @Deprecated
   public boolean isdynamicDefaultSMTP() {
+    return isDynamicDefaultSMTP();
+  }
+
+  public boolean isDynamicDefaultSMTP() {
     return isdynamicDefaultSMTP;
   }
 
   /**
+   * @deprecated use {@link #setDynamicDefaultSMTP(boolean)} instead
    * @param isdynamicDefaultSMTP
    *          The isdynamicDefaultSMTP to set.
    */
+  @Deprecated
   public void setdynamicDefaultSMTP( boolean isdynamicDefaultSMTP ) {
+    setDynamicDefaultSMTP( isdynamicDefaultSMTP );
+  }
+
+  public void setDynamicDefaultSMTP( boolean isdynamicDefaultSMTP ) {
     this.isdynamicDefaultSMTP = isdynamicDefaultSMTP;
   }
 
@@ -281,20 +324,20 @@ public class MailValidatorMeta extends BaseStepMeta implements StepMetaInterface
 
     String realResultFieldName = space.environmentSubstitute( resultfieldname );
     if ( ResultAsString ) {
-      ValueMetaInterface v = new ValueMeta( realResultFieldName, ValueMeta.TYPE_STRING );
+      ValueMetaInterface v = new ValueMetaString( realResultFieldName );
       v.setLength( 100, -1 );
       v.setOrigin( name );
       r.addValueMeta( v );
 
     } else {
-      ValueMetaInterface v = new ValueMeta( realResultFieldName, ValueMeta.TYPE_BOOLEAN );
+      ValueMetaInterface v = new ValueMetaBoolean( realResultFieldName );
       v.setOrigin( name );
       r.addValueMeta( v );
     }
 
     String realErrorsFieldName = space.environmentSubstitute( errorsFieldName );
-    if ( !Const.isEmpty( realErrorsFieldName ) ) {
-      ValueMetaInterface v = new ValueMeta( realErrorsFieldName, ValueMeta.TYPE_STRING );
+    if ( !Utils.isEmpty( realErrorsFieldName ) ) {
+      ValueMetaInterface v = new ValueMetaString( realErrorsFieldName );
       v.setLength( 100, -1 );
       v.setOrigin( name );
       r.addValueMeta( v );
@@ -302,7 +345,7 @@ public class MailValidatorMeta extends BaseStepMeta implements StepMetaInterface
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer();
+    StringBuilder retval = new StringBuilder();
 
     retval.append( "    " + XMLHandler.addTagValue( "emailfield", emailfield ) );
     retval.append( "    " + XMLHandler.addTagValue( "resultfieldname", resultfieldname ) );
@@ -396,7 +439,7 @@ public class MailValidatorMeta extends BaseStepMeta implements StepMetaInterface
     Repository repository, IMetaStore metaStore ) {
     CheckResult cr;
 
-    if ( Const.isEmpty( resultfieldname ) ) {
+    if ( Utils.isEmpty( resultfieldname ) ) {
       cr =
         new CheckResult( CheckResult.TYPE_RESULT_ERROR, BaseMessages.getString(
           PKG, "MailValidatorMeta.CheckResult.ResultFieldMissing" ), stepMeta );
@@ -408,7 +451,7 @@ public class MailValidatorMeta extends BaseStepMeta implements StepMetaInterface
     remarks.add( cr );
 
     if ( this.ResultAsString ) {
-      if ( Const.isEmpty( emailValideMsg ) ) {
+      if ( Utils.isEmpty( emailValideMsg ) ) {
         cr =
           new CheckResult( CheckResult.TYPE_RESULT_ERROR, BaseMessages.getString(
             PKG, "MailValidatorMeta.CheckResult.EmailValidMsgMissing" ), stepMeta );
@@ -419,7 +462,7 @@ public class MailValidatorMeta extends BaseStepMeta implements StepMetaInterface
       }
       remarks.add( cr );
 
-      if ( Const.isEmpty( emailNotValideMsg ) ) {
+      if ( Utils.isEmpty( emailNotValideMsg ) ) {
         cr =
           new CheckResult( CheckResult.TYPE_RESULT_ERROR, BaseMessages.getString(
             PKG, "MailValidatorMeta.CheckResult.EmailNotValidMsgMissing" ), stepMeta );
@@ -431,7 +474,7 @@ public class MailValidatorMeta extends BaseStepMeta implements StepMetaInterface
       remarks.add( cr );
     }
 
-    if ( Const.isEmpty( emailfield ) ) {
+    if ( Utils.isEmpty( emailfield ) ) {
       cr =
         new CheckResult( CheckResult.TYPE_RESULT_ERROR, BaseMessages.getString(
           PKG, "MailValidatorMeta.CheckResult.eMailFieldMissing" ), stepMeta );
@@ -454,7 +497,7 @@ public class MailValidatorMeta extends BaseStepMeta implements StepMetaInterface
     }
     remarks.add( cr );
     if ( ResultAsString ) {
-      if ( Const.isEmpty( emailValideMsg ) ) {
+      if ( Utils.isEmpty( emailValideMsg ) ) {
         cr =
           new CheckResult( CheckResult.TYPE_RESULT_ERROR, BaseMessages.getString(
             PKG, "MailValidatorMeta.CheckResult.eMailValidMsgMissing" ), stepMeta );
@@ -465,7 +508,7 @@ public class MailValidatorMeta extends BaseStepMeta implements StepMetaInterface
       }
       remarks.add( cr );
 
-      if ( Const.isEmpty( emailNotValideMsg ) ) {
+      if ( Utils.isEmpty( emailNotValideMsg ) ) {
         cr =
           new CheckResult( CheckResult.TYPE_RESULT_ERROR, BaseMessages.getString(
             PKG, "MailValidatorMeta.CheckResult.eMailNotValidMsgMissing" ), stepMeta );
@@ -479,7 +522,7 @@ public class MailValidatorMeta extends BaseStepMeta implements StepMetaInterface
     // SMTP check
     if ( smtpCheck ) {
       // sender
-      if ( Const.isEmpty( emailSender ) ) {
+      if ( Utils.isEmpty( emailSender ) ) {
         cr =
           new CheckResult( CheckResult.TYPE_RESULT_ERROR, BaseMessages.getString(
             PKG, "MailValidatorMeta.CheckResult.eMailSenderMissing" ), stepMeta );
@@ -492,7 +535,7 @@ public class MailValidatorMeta extends BaseStepMeta implements StepMetaInterface
 
       // dynamic default SMTP
       if ( isdynamicDefaultSMTP ) {
-        if ( Const.isEmpty( defaultSMTPField ) ) {
+        if ( Utils.isEmpty( defaultSMTPField ) ) {
           cr =
             new CheckResult( CheckResult.TYPE_RESULT_ERROR, BaseMessages.getString(
               PKG, "MailValidatorMeta.CheckResult.dynamicDefaultSMTPFieldMissing" ), stepMeta );

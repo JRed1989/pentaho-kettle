@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -27,6 +27,7 @@ import java.util.List;
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettlePluginException;
@@ -35,6 +36,7 @@ import org.pentaho.di.core.exception.KettleXMLException;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaBoolean;
 import org.pentaho.di.core.row.value.ValueMetaFactory;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.xml.XMLHandler;
@@ -93,20 +95,17 @@ public class RegexEvalMeta extends BaseStepMeta implements StepMetaInterface {
     int nrfields = fieldName.length;
 
     retval.allocate( nrfields );
-
-    for ( int i = 0; i < nrfields; i++ ) {
-      retval.fieldName[i] = fieldName[i];
-      retval.fieldType[i] = fieldType[i];
-      retval.fieldLength[i] = fieldLength[i];
-      retval.fieldPrecision[i] = fieldPrecision[i];
-      retval.fieldFormat[i] = fieldFormat[i];
-      retval.fieldGroup[i] = fieldGroup[i];
-      retval.fieldDecimal[i] = fieldDecimal[i];
-      retval.fieldCurrency[i] = fieldCurrency[i];
-      retval.fieldNullIf[i] = fieldNullIf[i];
-      retval.fieldIfNull[i] = fieldIfNull[i];
-      retval.fieldTrimType[i] = fieldTrimType[i];
-    }
+    System.arraycopy( fieldName, 0, retval.fieldName, 0, nrfields );
+    System.arraycopy( fieldType, 0, retval.fieldType, 0, nrfields );
+    System.arraycopy( fieldLength, 0, retval.fieldLength, 0, nrfields );
+    System.arraycopy( fieldPrecision, 0, retval.fieldPrecision, 0, nrfields );
+    System.arraycopy( fieldFormat, 0, retval.fieldFormat, 0, nrfields );
+    System.arraycopy( fieldGroup, 0, retval.fieldGroup, 0, nrfields );
+    System.arraycopy( fieldDecimal, 0, retval.fieldDecimal, 0, nrfields );
+    System.arraycopy( fieldCurrency, 0, retval.fieldCurrency, 0, nrfields );
+    System.arraycopy( fieldNullIf, 0, retval.fieldNullIf, 0, nrfields );
+    System.arraycopy( fieldIfNull, 0, retval.fieldIfNull, 0, nrfields );
+    System.arraycopy( fieldTrimType, 0, retval.fieldTrimType, 0, nrfields );
 
     return retval;
   }
@@ -257,6 +256,10 @@ public class RegexEvalMeta extends BaseStepMeta implements StepMetaInterface {
     return fieldName;
   }
 
+  public void setFieldName( String[] value ) {
+    this.fieldName = value;
+  }
+
   public int[] getFieldType() {
     return fieldType;
   }
@@ -372,7 +375,7 @@ public class RegexEvalMeta extends BaseStepMeta implements StepMetaInterface {
         fieldNullIf[i] = XMLHandler.getTagValue( fnode, "nullif" );
         fieldIfNull[i] = XMLHandler.getTagValue( fnode, "ifnull" );
         final String trim = XMLHandler.getTagValue( fnode, "trimtype" );
-        fieldType[i] = ValueMeta.getType( stype );
+        fieldType[i] = ValueMetaFactory.getIdForValueMeta( stype );
         fieldLength[i] = Const.toInt( slen, -1 );
         fieldPrecision[i] = Const.toInt( sprc, -1 );
         fieldTrimType[i] = ValueMeta.getTrimTypeByCode( trim );
@@ -404,12 +407,12 @@ public class RegexEvalMeta extends BaseStepMeta implements StepMetaInterface {
   public void getFields( RowMetaInterface inputRowMeta, String name, RowMetaInterface[] infos, StepMeta nextSteps,
     VariableSpace space, Repository repositorys, IMetaStore metaStores ) throws KettleStepException {
     try {
-      if ( !Const.isEmpty( resultfieldname ) ) {
+      if ( !Utils.isEmpty( resultfieldname ) ) {
         if ( replacefields ) {
           int replaceIndex = inputRowMeta.indexOfValue( resultfieldname );
           if ( replaceIndex < 0 ) {
             ValueMetaInterface v =
-              new ValueMeta( space.environmentSubstitute( resultfieldname ), ValueMeta.TYPE_BOOLEAN );
+              new ValueMetaBoolean( space.environmentSubstitute( resultfieldname ) );
             v.setOrigin( name );
             inputRowMeta.addValueMeta( v );
           } else {
@@ -421,7 +424,7 @@ public class RegexEvalMeta extends BaseStepMeta implements StepMetaInterface {
           }
         } else {
           ValueMetaInterface v =
-            new ValueMeta( space.environmentSubstitute( resultfieldname ), ValueMeta.TYPE_BOOLEAN );
+            new ValueMetaBoolean( space.environmentSubstitute( resultfieldname ) );
           v.setOrigin( name );
           inputRowMeta.addValueMeta( v );
         }
@@ -429,7 +432,7 @@ public class RegexEvalMeta extends BaseStepMeta implements StepMetaInterface {
 
       if ( allowcapturegroups == true ) {
         for ( int i = 0; i < fieldName.length; i++ ) {
-          if ( Const.isEmpty( fieldName[i] ) ) {
+          if ( Utils.isEmpty( fieldName[i] ) ) {
             continue;
           }
 
@@ -504,7 +507,8 @@ public class RegexEvalMeta extends BaseStepMeta implements StepMetaInterface {
         retval.append( "      <field>" ).append( Const.CR );
         retval.append( "        " ).append( XMLHandler.addTagValue( "name", fieldName[i] ) );
         retval
-          .append( "        " ).append( XMLHandler.addTagValue( "type", ValueMeta.getTypeDesc( fieldType[i] ) ) );
+          .append( "        " ).append( XMLHandler.addTagValue( "type",
+            ValueMetaFactory.getValueMetaName( fieldType[i] ) ) );
         retval.append( "        " ).append( XMLHandler.addTagValue( "format", fieldFormat[i] ) );
         retval.append( "        " ).append( XMLHandler.addTagValue( "group", fieldGroup[i] ) );
         retval.append( "        " ).append( XMLHandler.addTagValue( "decimal", fieldDecimal[i] ) );
@@ -514,6 +518,7 @@ public class RegexEvalMeta extends BaseStepMeta implements StepMetaInterface {
         retval.append( "        " ).append( XMLHandler.addTagValue( "ifnull", fieldIfNull[i] ) );
         retval.append( "        " ).append(
           XMLHandler.addTagValue( "trimtype", ValueMeta.getTrimTypeCode( fieldTrimType[i] ) ) );
+        retval.append( "        " ).append( XMLHandler.addTagValue( "currency", fieldCurrency[i] ) );
         retval.append( "      </field>" ).append( Const.CR );
       }
     }
@@ -544,7 +549,7 @@ public class RegexEvalMeta extends BaseStepMeta implements StepMetaInterface {
 
       for ( int i = 0; i < nrfields; i++ ) {
         fieldName[i] = rep.getStepAttributeString( id_step, i, "field_name" );
-        fieldType[i] = ValueMeta.getType( rep.getStepAttributeString( id_step, i, "field_type" ) );
+        fieldType[i] = ValueMetaFactory.getIdForValueMeta( rep.getStepAttributeString( id_step, i, "field_type" ) );
 
         fieldFormat[i] = rep.getStepAttributeString( id_step, i, "field_format" );
         fieldGroup[i] = rep.getStepAttributeString( id_step, i, "field_group" );
@@ -553,6 +558,7 @@ public class RegexEvalMeta extends BaseStepMeta implements StepMetaInterface {
         fieldPrecision[i] = (int) rep.getStepAttributeInteger( id_step, i, "field_precision" );
         fieldNullIf[i] = rep.getStepAttributeString( id_step, i, "field_nullif" );
         fieldIfNull[i] = rep.getStepAttributeString( id_step, i, "field_ifnull" );
+        fieldCurrency[i] = rep.getStepAttributeString( id_step, i, "field_currency" );
         fieldTrimType[i] =
           ValueMeta.getTrimTypeByCode( rep.getStepAttributeString( id_step, i, "field_trimtype" ) );
       }
@@ -569,8 +575,8 @@ public class RegexEvalMeta extends BaseStepMeta implements StepMetaInterface {
         if ( fieldName[i] != null && fieldName[i].length() != 0 ) {
           rep.saveStepAttribute( id_transformation, id_step, i, "field_name", fieldName[i] );
           rep
-            .saveStepAttribute( id_transformation, id_step, i, "field_type", ValueMeta
-              .getTypeDesc( fieldType[i] ) );
+            .saveStepAttribute( id_transformation, id_step, i, "field_type",
+              ValueMetaFactory.getValueMetaName( fieldType[i] ) );
           rep.saveStepAttribute( id_transformation, id_step, i, "field_format", fieldFormat[i] );
           rep.saveStepAttribute( id_transformation, id_step, i, "field_group", fieldGroup[i] );
           rep.saveStepAttribute( id_transformation, id_step, i, "field_decimal", fieldDecimal[i] );
@@ -578,6 +584,7 @@ public class RegexEvalMeta extends BaseStepMeta implements StepMetaInterface {
           rep.saveStepAttribute( id_transformation, id_step, i, "field_precision", fieldPrecision[i] );
           rep.saveStepAttribute( id_transformation, id_step, i, "field_nullif", fieldNullIf[i] );
           rep.saveStepAttribute( id_transformation, id_step, i, "field_ifnull", fieldIfNull[i] );
+          rep.saveStepAttribute( id_transformation, id_step, i, "field_currency", fieldCurrency[i] );
           rep.saveStepAttribute( id_transformation, id_step, i, "field_trimtype", ValueMeta
             .getTrimTypeCode( fieldTrimType[i] ) );
         }
@@ -620,7 +627,7 @@ public class RegexEvalMeta extends BaseStepMeta implements StepMetaInterface {
     }
 
     // Check Field to evaluate
-    if ( !Const.isEmpty( matcher ) ) {
+    if ( !Utils.isEmpty( matcher ) ) {
       cr =
         new CheckResult( CheckResult.TYPE_RESULT_OK, BaseMessages.getString(
           PKG, "RegexEvalMeta.CheckResult.MatcherOK" ), stepMeta );
@@ -634,7 +641,7 @@ public class RegexEvalMeta extends BaseStepMeta implements StepMetaInterface {
     }
 
     // Check Result Field name
-    if ( !Const.isEmpty( resultfieldname ) ) {
+    if ( !Utils.isEmpty( resultfieldname ) ) {
       cr =
         new CheckResult( CheckResult.TYPE_RESULT_OK, BaseMessages.getString(
           PKG, "RegexEvalMeta.CheckResult.ResultFieldnameOK" ), stepMeta );

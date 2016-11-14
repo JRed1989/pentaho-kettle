@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2015 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,11 +22,9 @@
 
 package org.pentaho.di.job.entries.copyfiles;
 
-import static org.pentaho.di.job.entry.validator.AbstractFileValidator.putVariableSpace;
-import static org.pentaho.di.job.entry.validator.AndValidator.putValidators;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.andValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.fileExistsValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notNullValidator;
+import org.pentaho.di.job.entry.validator.AbstractFileValidator;
+import org.pentaho.di.job.entry.validator.AndValidator;
+import org.pentaho.di.job.entry.validator.JobEntryValidatorUtils;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -47,6 +45,7 @@ import org.apache.commons.vfs2.provider.url.UrlFileNameParser;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.ResultFile;
 import org.pentaho.di.core.RowMetaAndData;
@@ -76,7 +75,7 @@ import org.w3c.dom.Node;
  */
 public class JobEntryCopyFiles extends JobEntryBase implements Cloneable, JobEntryInterface {
   private static Class<?> PKG = JobEntryCopyFiles.class; // for i18n purposes, needed by Translator2!!
-  
+
   public static final String SOURCE_CONFIGURATION_NAME = "source_configuration_name";
   public static final String SOURCE_FILE_FOLDER = "source_filefolder";
 
@@ -103,7 +102,7 @@ public class JobEntryCopyFiles extends JobEntryBase implements Cloneable, JobEnt
   HashSet<String> list_files_remove = new HashSet<String>();
   HashSet<String> list_add_result = new HashSet<String>();
   int NbrFail = 0;
-  
+
   private Map<String, String> configurationMappings = new HashMap<String, String>();
 
   public JobEntryCopyFiles( String n ) {
@@ -125,8 +124,21 @@ public class JobEntryCopyFiles extends JobEntryBase implements Cloneable, JobEnt
     this( "" );
   }
 
+  public void allocate( int nrFields ) {
+    source_filefolder = new String[nrFields];
+    destination_filefolder = new String[nrFields];
+    wildcard = new String[nrFields];
+  }
+
   public Object clone() {
     JobEntryCopyFiles je = (JobEntryCopyFiles) super.clone();
+    if ( source_filefolder != null ) {
+      int nrFields = source_filefolder.length;
+      je.allocate( nrFields );
+      System.arraycopy( source_filefolder, 0, je.source_filefolder, 0, nrFields );
+      System.arraycopy( destination_filefolder, 0, je.destination_filefolder, 0, nrFields );
+      System.arraycopy( wildcard, 0, je.wildcard, 0, nrFields );
+    }
     return je;
   }
 
@@ -177,9 +189,7 @@ public class JobEntryCopyFiles extends JobEntryBase implements Cloneable, JobEnt
 
       // How many field arguments?
       int nrFields = XMLHandler.countNodes( fields, "field" );
-      source_filefolder = new String[nrFields];
-      destination_filefolder = new String[nrFields];
-      wildcard = new String[nrFields];
+      allocate( nrFields );
 
       // Read them all...
       for ( int i = 0; i < nrFields; i++ ) {
@@ -260,9 +270,7 @@ public class JobEntryCopyFiles extends JobEntryBase implements Cloneable, JobEnt
 
       // How many arguments?
       int argnr = rep.countNrJobEntryAttributes( id_jobentry, "source_filefolder" );
-      source_filefolder = new String[argnr];
-      destination_filefolder = new String[argnr];
-      wildcard = new String[argnr];
+      allocate( argnr );
 
       // Read them all...
       for ( int a = 0; a < argnr; a++ ) {
@@ -333,8 +341,7 @@ public class JobEntryCopyFiles extends JobEntryBase implements Cloneable, JobEnt
         }
       }
 
-      if ( arg_from_previous && rows != null ) // Copy the input row to the (command line) arguments
-      {
+      if ( arg_from_previous && rows != null ) { // Copy the input row to the (command line) arguments
         for ( int iteration = 0; iteration < rows.size() && !parentJob.isStopped(); iteration++ ) {
           resultRow = rows.get( iteration );
 
@@ -343,7 +350,7 @@ public class JobEntryCopyFiles extends JobEntryBase implements Cloneable, JobEnt
           String vdestinationfilefolder_previous = resultRow.getString( 1, null );
           String vwildcard_previous = resultRow.getString( 2, null );
 
-          if ( !Const.isEmpty( vsourcefilefolder_previous ) && !Const.isEmpty( vdestinationfilefolder_previous ) ) {
+          if ( !Utils.isEmpty( vsourcefilefolder_previous ) && !Utils.isEmpty( vdestinationfilefolder_previous ) ) {
             if ( isDetailed() ) {
               logDetailed( BaseMessages.getString( PKG, "JobCopyFiles.Log.ProcessingRow", vsourcefilefolder_previous,
                   vdestinationfilefolder_previous, vwildcard_previous ) );
@@ -363,7 +370,7 @@ public class JobEntryCopyFiles extends JobEntryBase implements Cloneable, JobEnt
         }
       } else if ( vsourcefilefolder != null && vdestinationfilefolder != null ) {
         for ( int i = 0; i < vsourcefilefolder.length && !parentJob.isStopped(); i++ ) {
-          if ( !Const.isEmpty( vsourcefilefolder[i] ) && !Const.isEmpty( vdestinationfilefolder[i] ) ) {
+          if ( !Utils.isEmpty( vsourcefilefolder[i] ) && !Utils.isEmpty( vdestinationfilefolder[i] ) ) {
 
             // ok we can process this file/folder
 
@@ -428,8 +435,7 @@ public class JobEntryCopyFiles extends JobEntryBase implements Cloneable, JobEnt
         if ( CreateDestinationFolder( destinationfilefolder ) ) {
 
           // Basic Tests
-          if ( sourcefilefolder.getType().equals( FileType.FOLDER ) && destination_is_a_file )
-          {
+          if ( sourcefilefolder.getType().equals( FileType.FOLDER ) && destination_is_a_file ) {
             // Source is a folder, destination is a file
             // WARNING !!! CAN NOT COPY FOLDER TO FILE !!!
 
@@ -716,7 +722,7 @@ public class JobEntryCopyFiles extends JobEntryBase implements Cloneable, JobEnt
     /**********************************************************
      *
      * @param selectedfile
-     * @param wildcard
+     * @param sourceWildcard
      * @return True if the selectedfile matches the wildcard
      **********************************************************/
     private boolean GetFileWildcard( String selectedfile ) {
@@ -739,7 +745,7 @@ public class JobEntryCopyFiles extends JobEntryBase implements Cloneable, JobEnt
         destinationFolderObject = destinationfolderin;
         destinationFolder = destinationFolderObject.toString();
       }
-      if ( !Const.isEmpty( filewildcard ) ) {
+      if ( !Utils.isEmpty( filewildcard ) ) {
         fileWildcard = filewildcard;
         pattern = Pattern.compile( fileWildcard );
       }
@@ -770,7 +776,7 @@ public class JobEntryCopyFiles extends JobEntryBase implements Cloneable, JobEnt
             if ( include_subfolders ) {
               // Folders..only if include subfolders
               if ( info.getFile().getType() == FileType.FOLDER ) {
-                if ( include_subfolders && copy_empty_folders && Const.isEmpty( fileWildcard ) ) {
+                if ( include_subfolders && copy_empty_folders && Utils.isEmpty( fileWildcard ) ) {
                   if ( ( file_name == null ) || ( !file_name.exists() ) ) {
                     if ( isDetailed() ) {
                       logDetailed( " ------ " );
@@ -831,7 +837,7 @@ public class JobEntryCopyFiles extends JobEntryBase implements Cloneable, JobEnt
             // In the Base Folder...
             // Folders..only if include subfolders
             if ( info.getFile().getType() == FileType.FOLDER ) {
-              if ( include_subfolders && copy_empty_folders && Const.isEmpty( fileWildcard ) ) {
+              if ( include_subfolders && copy_empty_folders && Utils.isEmpty( fileWildcard ) ) {
                 if ( ( file_name == null ) || ( !file_name.exists() ) ) {
                   if ( isDetailed() ) {
                     logDetailed( "", " ------ " );
@@ -957,14 +963,14 @@ public class JobEntryCopyFiles extends JobEntryBase implements Cloneable, JobEnt
     private int traverseCount;
 
     public TextOneFileSelector( String sourcefolderin, String sourcefilenamein, String destfolderin ) {
-      if ( !Const.isEmpty( sourcefilenamein ) ) {
+      if ( !Utils.isEmpty( sourcefilenamein ) ) {
         filename = sourcefilenamein;
       }
 
-      if ( !Const.isEmpty( sourcefolderin ) ) {
+      if ( !Utils.isEmpty( sourcefolderin ) ) {
         foldername = sourcefolderin;
       }
-      if ( !Const.isEmpty( destfolderin ) ) {
+      if ( !Utils.isEmpty( destfolderin ) ) {
         destfolder = destfolderin;
       }
     }
@@ -1105,40 +1111,40 @@ public class JobEntryCopyFiles extends JobEntryBase implements Cloneable, JobEnt
 
   public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
-    boolean res = andValidator().validate( this, "arguments", remarks, putValidators( notNullValidator() ) );
+    boolean res = JobEntryValidatorUtils.andValidator().validate( this, "arguments", remarks, AndValidator.putValidators( JobEntryValidatorUtils.notNullValidator() ) );
 
     if ( res == false ) {
       return;
     }
 
     ValidatorContext ctx = new ValidatorContext();
-    putVariableSpace( ctx, getVariables() );
-    putValidators( ctx, notNullValidator(), fileExistsValidator() );
+    AbstractFileValidator.putVariableSpace( ctx, getVariables() );
+    AndValidator.putValidators( ctx, JobEntryValidatorUtils.notNullValidator(), JobEntryValidatorUtils.fileExistsValidator() );
 
     for ( int i = 0; i < source_filefolder.length; i++ ) {
-      andValidator().validate( this, "arguments[" + i + "]", remarks, ctx );
+      JobEntryValidatorUtils.andValidator().validate( this, "arguments[" + i + "]", remarks, ctx );
     }
   }
 
   public boolean evaluates() {
     return true;
   }
-  
+
   public String loadURL( String url, String ncName, IMetaStore metastore, Map mappings ) {
-    if ( !Const.isEmpty( ncName ) && !Const.isEmpty( url ) ) {
+    if ( !Utils.isEmpty( ncName ) && !Utils.isEmpty( url ) ) {
       mappings.put( url, ncName );
     }
     return url;
   }
-  
+
   public void setConfigurationMappings( Map<String, String> mappings ) {
     this.configurationMappings = mappings;
   }
-  
+
   public String getConfigurationBy( String url ) {
     return this.configurationMappings.get( url );
   }
-  
+
   public String getUrlPath( String incomingURL ) {
     String path = null;
     try {

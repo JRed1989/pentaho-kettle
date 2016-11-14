@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -24,12 +24,11 @@ package org.pentaho.di.trans.steps.terafast;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.SystemUtils;
-import org.pentaho.di.core.Const;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.core.util.Assert;
 import org.pentaho.di.core.util.StringListPluginProperty;
+import org.pentaho.di.core.util.Utils;
 
 /**
  * @author <a href="mailto:thomas.hoedl@aschauer-edv.at">Thomas Hoedl(asc042)</a>
@@ -199,7 +198,7 @@ public class FastloadControlBuilder {
       int tableIndex = tableFieldList.getValue().indexOf( targetTableFields.getValueMeta( i ).getName() );
       if ( tableIndex >= 0 ) {
         this.builder.append( ":" + targetTableFields.getValueMeta( i ).getName() );
-        if ( targetTableFields.getValueMeta( i ).getType() == ValueMeta.TYPE_DATE ) {
+        if ( targetTableFields.getValueMeta( i ).getType() == ValueMetaInterface.TYPE_DATE ) {
           this.builder.append( "(DATE, FORMAT '" );
           this.builder.append( DEFAULT_DATE_FORMAT );
           this.builder.append( "')" );
@@ -244,7 +243,7 @@ public class FastloadControlBuilder {
     this.builder.append( "BEGIN LOADING " );
     this.builder.append( table );
     this.builder.append( " ERRORFILES " );
-    if ( !Const.isEmpty( schemaName ) ) {
+    if ( !Utils.isEmpty( schemaName ) ) {
       this.builder.append( schemaName );
       this.builder.append( "." );
       this.builder.append( DEFAULT_ERROR_TABLE1 );

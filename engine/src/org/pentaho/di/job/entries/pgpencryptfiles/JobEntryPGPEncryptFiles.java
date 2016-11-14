@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,11 +22,9 @@
 
 package org.pentaho.di.job.entries.pgpencryptfiles;
 
-import static org.pentaho.di.job.entry.validator.AbstractFileValidator.putVariableSpace;
-import static org.pentaho.di.job.entry.validator.AndValidator.putValidators;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.andValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.fileExistsValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notNullValidator;
+import org.pentaho.di.job.entry.validator.AbstractFileValidator;
+import org.pentaho.di.job.entry.validator.AndValidator;
+import org.pentaho.di.job.entry.validator.JobEntryValidatorUtils;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -42,6 +40,7 @@ import org.apache.commons.vfs2.FileType;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.ResultFile;
 import org.pentaho.di.core.RowMetaAndData;
@@ -163,13 +162,30 @@ public class JobEntryPGPEncryptFiles extends JobEntryBase implements Cloneable, 
     this( "" );
   }
 
+  public void allocate( int nrFields ) {
+    action_type = new int[nrFields];
+    source_filefolder = new String[nrFields];
+    userid = new String[nrFields];
+    destination_filefolder = new String[nrFields];
+    wildcard = new String[nrFields];
+  }
+
   public Object clone() {
     JobEntryPGPEncryptFiles je = (JobEntryPGPEncryptFiles) super.clone();
+    if ( action_type != null ) {
+      int nrFields = action_type.length;
+      je.allocate( nrFields );
+      System.arraycopy( action_type, 0, je.action_type, 0, nrFields );
+      System.arraycopy( source_filefolder, 0, je.source_filefolder, 0, nrFields );
+      System.arraycopy( userid, 0, je.userid, 0, nrFields );
+      System.arraycopy( destination_filefolder, 0, je.destination_filefolder, 0, nrFields );
+      System.arraycopy( wildcard, 0, je.wildcard, 0, nrFields );
+    }
     return je;
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 300 );
+    StringBuilder retval = new StringBuilder( 450 );
 
     retval.append( super.getXML() );
     retval.append( "      " ).append( XMLHandler.addTagValue( "gpglocation", gpglocation ) );
@@ -263,11 +279,7 @@ public class JobEntryPGPEncryptFiles extends JobEntryBase implements Cloneable, 
 
       // How many field arguments?
       int nrFields = XMLHandler.countNodes( fields, "field" );
-      action_type = new int[nrFields];
-      source_filefolder = new String[nrFields];
-      userid = new String[nrFields];
-      destination_filefolder = new String[nrFields];
-      wildcard = new String[nrFields];
+      allocate( nrFields );
 
       // Read them all...
       for ( int i = 0; i < nrFields; i++ ) {
@@ -328,11 +340,7 @@ public class JobEntryPGPEncryptFiles extends JobEntryBase implements Cloneable, 
 
       // How many arguments?
       int argnr = rep.countNrJobEntryAttributes( id_jobentry, "source_filefolder" );
-      action_type = new int[argnr];
-      source_filefolder = new String[argnr];
-      userid = new String[argnr];
-      destination_filefolder = new String[argnr];
-      wildcard = new String[argnr];
+      allocate( argnr );
 
       // Read them all...
       for ( int a = 0; a < argnr; a++ ) {
@@ -426,7 +434,7 @@ public class JobEntryPGPEncryptFiles extends JobEntryBase implements Cloneable, 
       String[] vwildcard = wildcard;
 
       if ( iffileexists.equals( "move_file" ) ) {
-        if ( Const.isEmpty( MoveToFolder ) ) {
+        if ( Utils.isEmpty( MoveToFolder ) ) {
           logError( toString(), BaseMessages.getString( PKG, "JobPGPEncryptFiles.Log.Error.MoveToFolderMissing" ) );
           return result;
         }
@@ -495,7 +503,7 @@ public class JobEntryPGPEncryptFiles extends JobEntryBase implements Cloneable, 
           String vuserid_previous = resultRow.getString( 3, null );
           String vdestinationfilefolder_previous = resultRow.getString( 4, null );
 
-          if ( !Const.isEmpty( vsourcefilefolder_previous ) && !Const.isEmpty( vdestinationfilefolder_previous ) ) {
+          if ( !Utils.isEmpty( vsourcefilefolder_previous ) && !Utils.isEmpty( vdestinationfilefolder_previous ) ) {
             if ( isDetailed() ) {
               logDetailed( BaseMessages.getString(
                 PKG, "JobPGPEncryptFiles.Log.ProcessingRow", vsourcefilefolder_previous,
@@ -531,7 +539,7 @@ public class JobEntryPGPEncryptFiles extends JobEntryBase implements Cloneable, 
             return result;
           }
 
-          if ( !Const.isEmpty( vsourcefilefolder[i] ) && !Const.isEmpty( vdestinationfilefolder[i] ) ) {
+          if ( !Utils.isEmpty( vsourcefilefolder[i] ) && !Utils.isEmpty( vdestinationfilefolder[i] ) ) {
             // ok we can process this file/folder
             if ( isDetailed() ) {
               logDetailed( BaseMessages.getString(
@@ -639,7 +647,7 @@ public class JobEntryPGPEncryptFiles extends JobEntryBase implements Cloneable, 
 
       sourcefilefolder = KettleVFS.getFileObject( realSourceFilefoldername );
       destinationfilefolder = KettleVFS.getFileObject( realDestinationFilefoldername );
-      if ( !Const.isEmpty( MoveToFolder ) ) {
+      if ( !Utils.isEmpty( MoveToFolder ) ) {
         movetofolderfolder = KettleVFS.getFileObject( MoveToFolder );
       }
 
@@ -1157,7 +1165,7 @@ public class JobEntryPGPEncryptFiles extends JobEntryBase implements Cloneable, 
     Pattern pattern = null;
     boolean getIt = true;
 
-    if ( !Const.isEmpty( wildcard ) ) {
+    if ( !Utils.isEmpty( wildcard ) ) {
       pattern = Pattern.compile( wildcard );
       // First see if the file matches the regular expression!
       if ( pattern != null ) {
@@ -1186,7 +1194,7 @@ public class JobEntryPGPEncryptFiles extends JobEntryBase implements Cloneable, 
     }
     Date now = new Date();
 
-    if ( isSpecifyFormat() && !Const.isEmpty( getDateTimeFormat() ) ) {
+    if ( isSpecifyFormat() && !Utils.isEmpty( getDateTimeFormat() ) ) {
       daf.applyPattern( getDateTimeFormat() );
       String dt = daf.format( now );
       shortfilename += dt;
@@ -1230,7 +1238,7 @@ public class JobEntryPGPEncryptFiles extends JobEntryBase implements Cloneable, 
       shortfilename += dt;
     } else {
 
-      if ( isSpecifyMoveFormat() && !Const.isEmpty( getMovedDateTimeFormat() ) ) {
+      if ( isSpecifyMoveFormat() && !Utils.isEmpty( getMovedDateTimeFormat() ) ) {
         daf.applyPattern( getMovedDateTimeFormat() );
         String dt = daf.format( now );
         shortfilename += dt;
@@ -1370,7 +1378,16 @@ public class JobEntryPGPEncryptFiles extends JobEntryBase implements Cloneable, 
     return destinationFolder;
   }
 
+  /**
+   * @deprecated use {@link #setGPGLocation(String)} instead
+   * @param gpglocation
+   */
+  @Deprecated
   public void setGPGPLocation( String gpglocation ) {
+    this.gpglocation = gpglocation;
+  }
+
+  public void setGPGLocation( String gpglocation ) {
     this.gpglocation = gpglocation;
   }
 
@@ -1443,18 +1460,20 @@ public class JobEntryPGPEncryptFiles extends JobEntryBase implements Cloneable, 
 
   public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
-    boolean res = andValidator().validate( this, "arguments", remarks, putValidators( notNullValidator() ) );
+    boolean res = JobEntryValidatorUtils.andValidator().validate( this, "arguments", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notNullValidator() ) );
 
     if ( res == false ) {
       return;
     }
 
     ValidatorContext ctx = new ValidatorContext();
-    putVariableSpace( ctx, getVariables() );
-    putValidators( ctx, notNullValidator(), fileExistsValidator() );
+    AbstractFileValidator.putVariableSpace( ctx, getVariables() );
+    AndValidator.putValidators( ctx, JobEntryValidatorUtils.notNullValidator(),
+        JobEntryValidatorUtils.fileExistsValidator() );
 
     for ( int i = 0; i < source_filefolder.length; i++ ) {
-      andValidator().validate( this, "arguments[" + i + "]", remarks, ctx );
+      JobEntryValidatorUtils.andValidator().validate( this, "arguments[" + i + "]", remarks, ctx );
     }
   }
 

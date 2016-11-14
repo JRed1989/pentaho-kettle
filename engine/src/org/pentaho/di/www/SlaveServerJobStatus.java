@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -23,9 +23,11 @@
 package org.pentaho.di.www;
 
 import java.io.IOException;
+import java.util.Date;
 
 import org.pentaho.di.cluster.HttpUtil;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.xml.XMLHandler;
@@ -43,6 +45,7 @@ public class SlaveServerJobStatus {
   private String loggingString;
   private int firstLoggingLineNr;
   private int lastLoggingLineNr;
+  private Date logDate;
 
   private Result result;
 
@@ -61,24 +64,24 @@ public class SlaveServerJobStatus {
   }
 
   public String getXML() throws KettleException {
-    StringBuffer xml = new StringBuffer();
+    StringBuilder xml = new StringBuilder();
 
-    xml.append( "<" + XML_TAG + ">" ).append( Const.CR );
-    xml.append( XMLHandler.addTagValue( "jobname", jobName ) );
-    xml.append( XMLHandler.addTagValue( "id", id ) );
-    xml.append( XMLHandler.addTagValue( "status_desc", statusDescription ) );
-    xml.append( XMLHandler.addTagValue( "error_desc", errorDescription ) );
-
-    xml.append( XMLHandler.addTagValue( "logging_string", XMLHandler.buildCDATA( loggingString ) ) );
-    xml.append( XMLHandler.addTagValue( "first_log_line_nr", firstLoggingLineNr ) );
-    xml.append( XMLHandler.addTagValue( "last_log_line_nr", lastLoggingLineNr ) );
+    xml.append( XMLHandler.openTag( XML_TAG ) ).append( Const.CR );
+    xml.append( "  " ).append( XMLHandler.addTagValue( "jobname", jobName ) );
+    xml.append( "  " ).append( XMLHandler.addTagValue( "id", id ) );
+    xml.append( "  " ).append( XMLHandler.addTagValue( "status_desc", statusDescription ) );
+    xml.append( "  " ).append( XMLHandler.addTagValue( "error_desc", errorDescription ) );
+    xml.append( "  " ).append( XMLHandler.addTagValue( "log_date", XMLHandler.date2string( logDate ) ) );
+    xml.append( "  " ).append( XMLHandler.addTagValue( "logging_string", XMLHandler.buildCDATA( loggingString ) ) );
+    xml.append( "  " ).append( XMLHandler.addTagValue( "first_log_line_nr", firstLoggingLineNr ) );
+    xml.append( "  " ).append( XMLHandler.addTagValue( "last_log_line_nr", lastLoggingLineNr ) );
 
     if ( result != null ) {
       String resultXML = result.getXML();
       xml.append( resultXML );
     }
 
-    xml.append( "</" + XML_TAG + ">" );
+    xml.append( XMLHandler.closeTag( XML_TAG ) );
 
     return xml.toString();
   }
@@ -89,13 +92,13 @@ public class SlaveServerJobStatus {
     id = XMLHandler.getTagValue( jobStatusNode, "id" );
     statusDescription = XMLHandler.getTagValue( jobStatusNode, "status_desc" );
     errorDescription = XMLHandler.getTagValue( jobStatusNode, "error_desc" );
-
+    logDate = XMLHandler.stringToDate( XMLHandler.getTagValue( jobStatusNode, "log_date" ) );
     firstLoggingLineNr = Const.toInt( XMLHandler.getTagValue( jobStatusNode, "first_log_line_nr" ), 0 );
     lastLoggingLineNr = Const.toInt( XMLHandler.getTagValue( jobStatusNode, "last_log_line_nr" ), 0 );
 
     String loggingString64 = XMLHandler.getTagValue( jobStatusNode, "logging_string" );
 
-    if ( !Const.isEmpty( loggingString64 ) ) {
+    if ( !Utils.isEmpty( loggingString64 ) ) {
       // This is a CDATA block with a Base64 encoded GZIP compressed stream of data.
       //
       String dataString64 =
@@ -241,6 +244,20 @@ public class SlaveServerJobStatus {
    */
   public void setLastLoggingLineNr( int lastLoggingLineNr ) {
     this.lastLoggingLineNr = lastLoggingLineNr;
+  }
+
+  /**
+   * @return the logDate
+   */
+  public Date getLogDate() {
+    return logDate;
+  }
+
+  /**
+   * @param the logDate
+   */
+  public void setLogDate( Date logDate ) {
+    this.logDate = logDate;
   }
 
   /**

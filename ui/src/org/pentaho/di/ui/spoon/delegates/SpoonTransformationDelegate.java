@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -34,6 +34,7 @@ import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.EngineMetaInterface;
 import org.pentaho.di.core.NotePadMeta;
 import org.pentaho.di.core.Result;
@@ -178,11 +179,12 @@ public class SpoonTransformationDelegate extends SpoonDelegate {
 
       if ( addTab ) {
         TransGraph transGraph = new TransGraph( spoon.tabfolder.getSwtTabset(), spoon, transMeta );
-        TabItem tabItem = new TabItem( spoon.tabfolder, tabName, tabName );
+        PropsUI props = PropsUI.getInstance();
+        TabItem tabItem = new TabItem( spoon.tabfolder, tabName, tabName, props.getSashWeights() );
         String toolTipText =
           BaseMessages.getString( PKG, "Spoon.TabTrans.Tooltip", spoon.delegates.tabs.makeTabName(
             transMeta, showLocation ) );
-        if ( !Const.isEmpty( transMeta.getFilename() ) ) {
+        if ( !Utils.isEmpty( transMeta.getFilename() ) ) {
           toolTipText += Const.CR + Const.CR + transMeta.getFilename();
         }
         tabItem.setToolTipText( toolTipText );
@@ -192,7 +194,7 @@ public class SpoonTransformationDelegate extends SpoonDelegate {
 
         // OK, also see if we need to open a new history window.
         if ( logTable.getDatabaseMeta() != null
-          && !Const.isEmpty( logTable.getTableName() ) && !transMeta.isSlaveTransformation() ) {
+          && !Utils.isEmpty( logTable.getTableName() ) && !transMeta.isSlaveTransformation() ) {
           transGraph.addAllTabs();
           transGraph.extraViewTabFolder.setSelection( transGraph.transHistoryDelegate.getTransHistoryTab() );
         }
@@ -825,7 +827,7 @@ public class SpoonTransformationDelegate extends SpoonDelegate {
     variableMap.putAll( executionConfiguration.getVariables() ); // the default
     for ( int idx = 0; idx < fields.length; idx++ ) {
       String value = executionConfiguration.getVariables().get( fields[idx] );
-      if ( Const.isEmpty( value ) ) {
+      if ( Utils.isEmpty( value ) ) {
         value = data[idx].toString();
       }
       variableMap.put( fields[idx], value );
@@ -840,7 +842,7 @@ public class SpoonTransformationDelegate extends SpoonDelegate {
 
     boolean execConfigAnswer = true;
 
-    if ( debugAnswer == TransDebugDialog.DEBUG_CONFIG && replayDate == null ) {
+    if ( debugAnswer == TransDebugDialog.DEBUG_CONFIG && replayDate == null && transMeta.isShowDialog() ) {
       TransExecutionConfigurationDialog dialog =
         new TransExecutionConfigurationDialog( spoon.getShell(), executionConfiguration, transMeta );
       execConfigAnswer = dialog.open();
@@ -912,8 +914,8 @@ public class SpoonTransformationDelegate extends SpoonDelegate {
       }
     }
   }
-  
-  private static void showSaveTransformationBeforeRunningDialog(Shell shell) {
+
+  private static void showSaveTransformationBeforeRunningDialog( Shell shell ) {
     MessageBox m = new MessageBox( shell, SWT.OK | SWT.ICON_WARNING );
     m.setText( BaseMessages.getString( PKG, "TransLog.Dialog.SaveTransformationBeforeRunning.Title" ) );
     m.setMessage( BaseMessages.getString( PKG, "TransLog.Dialog.SaveTransformationBeforeRunning.Message" ) );
@@ -984,7 +986,7 @@ public class SpoonTransformationDelegate extends SpoonDelegate {
         String value =
           Const.NVL( ot.getParameterValue( param ), Const.NVL( ot.getParameterDefault( param ), ot
             .getVariable( param ) ) );
-        if ( !Const.isEmpty( value ) ) {
+        if ( !Utils.isEmpty( value ) ) {
           executionConfiguration.getVariables().put( param, value );
         }
       }

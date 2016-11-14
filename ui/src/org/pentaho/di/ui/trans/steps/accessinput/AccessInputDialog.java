@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -55,13 +55,14 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Props;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.fileinput.FileInputList;
 import org.pentaho.di.core.row.RowMeta;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaFactory;
 import org.pentaho.di.core.vfs.KettleVFS;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.Trans;
@@ -223,6 +224,7 @@ public class AccessInputDialog extends BaseStepDialog implements StepDialogInter
     input = (AccessInputMeta) in;
   }
 
+  @Override
   public String open() {
     Shell parent = getParent();
     Display display = parent.getDisplay();
@@ -232,6 +234,7 @@ public class AccessInputDialog extends BaseStepDialog implements StepDialogInter
     setShellImage( shell, input );
 
     lsMod = new ModifyListener() {
+      @Override
       public void modifyText( ModifyEvent e ) {
         input.setChanged();
       }
@@ -315,6 +318,7 @@ public class AccessInputDialog extends BaseStepDialog implements StepDialogInter
     fdFileField.top = new FormAttachment( 0, margin );
     wFileField.setLayoutData( fdFileField );
     SelectionAdapter lfilefield = new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent arg0 ) {
         ActiveFileField();
         input.setChanged();
@@ -342,9 +346,11 @@ public class AccessInputDialog extends BaseStepDialog implements StepDialogInter
     fdFilenameField.right = new FormAttachment( 100, -margin );
     wFilenameField.setLayoutData( fdFilenameField );
     wFilenameField.addFocusListener( new FocusListener() {
+      @Override
       public void focusLost( org.eclipse.swt.events.FocusEvent e ) {
       }
 
+      @Override
       public void focusGained( org.eclipse.swt.events.FocusEvent e ) {
         Cursor busy = new Cursor( shell.getDisplay(), SWT.CURSOR_WAIT );
         shell.setCursor( busy );
@@ -553,6 +559,7 @@ public class AccessInputDialog extends BaseStepDialog implements StepDialogInter
     wbbTablename.setLayoutData( fdbTablename );
 
     wbbTablename.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         getTableName();
       }
@@ -812,7 +819,7 @@ public class AccessInputDialog extends BaseStepDialog implements StepDialogInter
           ColumnInfo.COLUMN_TYPE_TEXT, false ),
         new ColumnInfo(
           BaseMessages.getString( PKG, "AccessInputDialog.FieldsTable.Type.Column" ),
-          ColumnInfo.COLUMN_TYPE_CCOMBO, ValueMeta.getTypes(), true ),
+          ColumnInfo.COLUMN_TYPE_CCOMBO, ValueMetaFactory.getValueMetaNames(), true ),
         new ColumnInfo(
           BaseMessages.getString( PKG, "AccessInputDialog.FieldsTable.Format.Column" ),
           ColumnInfo.COLUMN_TYPE_FORMAT, 3 ),
@@ -889,21 +896,25 @@ public class AccessInputDialog extends BaseStepDialog implements StepDialogInter
 
     // Add listeners
     lsOK = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         ok();
       }
     };
     lsGet = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         get();
       }
     };
     lsPreview = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         preview();
       }
     };
     lsCancel = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         cancel();
       }
@@ -915,6 +926,7 @@ public class AccessInputDialog extends BaseStepDialog implements StepDialogInter
     wCancel.addListener( SWT.Selection, lsCancel );
 
     lsDef = new SelectionAdapter() {
+      @Override
       public void widgetDefaultSelected( SelectionEvent e ) {
         ok();
       }
@@ -928,6 +940,7 @@ public class AccessInputDialog extends BaseStepDialog implements StepDialogInter
 
     // Add the file to the list of files...
     SelectionAdapter selA = new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent arg0 ) {
         wFilenameList.add( new String[] {
           wFilename.getText(), wFilemask.getText(), wExcludeFilemask.getText(),
@@ -945,6 +958,7 @@ public class AccessInputDialog extends BaseStepDialog implements StepDialogInter
 
     // Delete files from the list of files...
     wbdFilename.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent arg0 ) {
         int[] idx = wFilenameList.getSelectionIndices();
         wFilenameList.remove( idx );
@@ -955,6 +969,7 @@ public class AccessInputDialog extends BaseStepDialog implements StepDialogInter
 
     // Edit the selected file & remove from the list...
     wbeFilename.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent arg0 ) {
         int idx = wFilenameList.getSelectionIndex();
         if ( idx >= 0 ) {
@@ -971,6 +986,7 @@ public class AccessInputDialog extends BaseStepDialog implements StepDialogInter
 
     // Show the files that are selected at this time...
     wbShowFiles.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         try {
           AccessInputMeta tfii = new AccessInputMeta();
@@ -1001,6 +1017,7 @@ public class AccessInputDialog extends BaseStepDialog implements StepDialogInter
 
     // Enable/disable the right fields to allow a filename to be added to each row...
     wInclFilename.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         setIncludeFilename();
       }
@@ -1008,18 +1025,21 @@ public class AccessInputDialog extends BaseStepDialog implements StepDialogInter
 
     // Enable/disable the right fields to allow a row number to be added to each row...
     wInclRownum.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         setIncludeRownum();
       }
     } );
     // Enable/disable the right fields to allow a table name to be added to each row...
     wInclTablename.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         setIncludeTablename();
       }
     } );
     // Whenever something changes, set the tooltip to the expanded version of the filename:
     wFilename.addModifyListener( new ModifyListener() {
+      @Override
       public void modifyText( ModifyEvent e ) {
         wFilename.setToolTipText( "" ); // StringUtil.environmentSubstitute( wFilename.getText() ) );
       }
@@ -1027,8 +1047,9 @@ public class AccessInputDialog extends BaseStepDialog implements StepDialogInter
 
     // Listen to the Browse... button
     wbbFilename.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
-        if ( !Const.isEmpty( wFilemask.getText() ) || !Const.isEmpty( wExcludeFilemask.getText() ) ) {
+        if ( !Utils.isEmpty( wFilemask.getText() ) || !Utils.isEmpty( wExcludeFilemask.getText() ) ) {
           DirectoryDialog dialog = new DirectoryDialog( shell, SWT.OPEN );
           if ( wFilename.getText() != null ) {
             String fpath = ""; // StringUtil.environmentSubstitute(wFilename.getText());
@@ -1061,6 +1082,7 @@ public class AccessInputDialog extends BaseStepDialog implements StepDialogInter
 
     // Detect X or ALT-F4 or something that kills this window...
     shell.addShellListener( new ShellAdapter() {
+      @Override
       public void shellClosed( ShellEvent e ) {
         cancel();
       }
@@ -1370,7 +1392,7 @@ public class AccessInputDialog extends BaseStepDialog implements StepDialogInter
   }
 
   private void ok() {
-    if ( Const.isEmpty( wStepname.getText() ) ) {
+    if ( Utils.isEmpty( wStepname.getText() ) ) {
       return;
     }
 
@@ -1418,7 +1440,7 @@ public class AccessInputDialog extends BaseStepDialog implements StepDialogInter
 
       field.setName( item.getText( 1 ) );
       field.setColumn( item.getText( 2 ) );
-      field.setType( ValueMeta.getType( item.getText( 3 ) ) );
+      field.setType( ValueMetaFactory.getIdForValueMeta( item.getText( 3 ) ) );
       field.setFormat( item.getText( 4 ) );
       field.setLength( Const.toInt( item.getText( 5 ), -1 ) );
       field.setPrecision( Const.toInt( item.getText( 6 ), -1 ) );

@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -31,13 +31,12 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSelectInfo;
 import org.apache.commons.vfs2.FileSelector;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.KettleEnvironment;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.vfs.KettleVFS;
@@ -47,6 +46,8 @@ import org.pentaho.di.repository.filerep.KettleFileRepository;
 import org.pentaho.di.repository.filerep.KettleFileRepositoryMeta;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.metastore.api.IMetaStore;
+
+import junit.framework.TestCase;
 
 public class KettleFileRepositoryTest extends TestCase {
 
@@ -105,6 +106,11 @@ public class KettleFileRepositoryTest extends TestCase {
       KettleMetaStoreTestBase testBase = new KettleMetaStoreTestBase();
       testBase.testFunctionality( metaStore );
 
+      // Test directory deletion
+      repository.deleteRepositoryDirectory( samplesDirectory );
+      RepositoryDirectoryInterface checkDelete = tree.findDirectory( "/foo/bar/samples" );
+      assertNull( checkDelete );
+
       // Finally test disconnecting
       repository.disconnect();
       assertFalse( repository.isConnected() );
@@ -122,6 +128,7 @@ public class KettleFileRepositoryTest extends TestCase {
   private void verifyTransformationSamples( RepositoryDirectoryInterface samplesDirectory ) throws Exception {
     File transSamplesFolder = new File( "samples/transformations/" );
     String[] files = transSamplesFolder.list( new FilenameFilter() {
+      @Override
       public boolean accept( File dir, String name ) {
         return name.endsWith( ".ktr" ) && !name.contains( "HL7" );
       }
@@ -214,7 +221,7 @@ public class KettleFileRepositoryTest extends TestCase {
       jobMeta.setName( Const.createName( file.getName().getBaseName() ) );
       jobMeta.setName( jobMeta.getName().replace( '/', '-' ) );
 
-      if ( Const.isEmpty( jobMeta.getName() ) ) {
+      if ( Utils.isEmpty( jobMeta.getName() ) ) {
         jobMeta.setName( Const.createName( file.getName().getBaseName() ) );
       }
       if ( jobMeta.getName().contains( "/" ) ) {

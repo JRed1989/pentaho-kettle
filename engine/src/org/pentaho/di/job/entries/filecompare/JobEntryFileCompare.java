@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,11 +22,9 @@
 
 package org.pentaho.di.job.entries.filecompare;
 
-import static org.pentaho.di.job.entry.validator.AbstractFileValidator.putVariableSpace;
-import static org.pentaho.di.job.entry.validator.AndValidator.putValidators;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.andValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.fileExistsValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notNullValidator;
+import org.pentaho.di.job.entry.validator.AbstractFileValidator;
+import org.pentaho.di.job.entry.validator.AndValidator;
+import org.pentaho.di.job.entry.validator.JobEntryValidatorUtils;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
@@ -37,7 +35,7 @@ import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileType;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.CheckResultInterface;
-import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.ResultFile;
 import org.pentaho.di.core.database.DatabaseMeta;
@@ -93,7 +91,7 @@ public class JobEntryFileCompare extends JobEntryBase implements Cloneable, JobE
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 50 );
+    StringBuilder retval = new StringBuilder( 50 );
 
     retval.append( super.getXML() );
     retval.append( "      " ).append( XMLHandler.addTagValue( "filename1", filename1 ) );
@@ -303,7 +301,7 @@ public class JobEntryFileCompare extends JobEntryBase implements Cloneable, JobE
 
   public List<ResourceReference> getResourceDependencies( JobMeta jobMeta ) {
     List<ResourceReference> references = super.getResourceDependencies( jobMeta );
-    if ( ( !Const.isEmpty( filename1 ) ) && ( !Const.isEmpty( filename2 ) ) ) {
+    if ( ( !Utils.isEmpty( filename1 ) ) && ( !Utils.isEmpty( filename2 ) ) ) {
       String realFilename1 = jobMeta.environmentSubstitute( filename1 );
       String realFilename2 = jobMeta.environmentSubstitute( filename2 );
       ResourceReference reference = new ResourceReference( this );
@@ -317,10 +315,11 @@ public class JobEntryFileCompare extends JobEntryBase implements Cloneable, JobE
   public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
     ValidatorContext ctx = new ValidatorContext();
-    putVariableSpace( ctx, getVariables() );
-    putValidators( ctx, notNullValidator(), fileExistsValidator() );
-    andValidator().validate( this, "filename1", remarks, ctx );
-    andValidator().validate( this, "filename2", remarks, ctx );
+    AbstractFileValidator.putVariableSpace( ctx, getVariables() );
+    AndValidator.putValidators( ctx, JobEntryValidatorUtils.notNullValidator(),
+        JobEntryValidatorUtils.fileExistsValidator() );
+    JobEntryValidatorUtils.andValidator().validate( this, "filename1", remarks, ctx );
+    JobEntryValidatorUtils.andValidator().validate( this, "filename2", remarks, ctx );
   }
 
 }

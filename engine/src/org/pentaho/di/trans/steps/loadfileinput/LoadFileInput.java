@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -30,6 +30,7 @@ import java.util.List;
 
 import org.apache.commons.vfs2.FileObject;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.ResultFile;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.fileinput.FileInputList;
@@ -100,7 +101,7 @@ public class LoadFileInput extends BaseStep implements StepInterface {
 
           if ( meta.getIsInFields() ) {
             // Check is filename field is provided
-            if ( Const.isEmpty( meta.getDynamicFilenameField() ) ) {
+            if ( Utils.isEmpty( meta.getDynamicFilenameField() ) ) {
               logError( BaseMessages.getString( PKG, "LoadFileInput.Log.NoField" ) );
               throw new KettleException( BaseMessages.getString( PKG, "LoadFileInput.Log.NoField" ) );
             }
@@ -232,8 +233,7 @@ public class LoadFileInput extends BaseStep implements StepInterface {
 
       putRow( data.outputRowMeta, outputRowData );
 
-      if ( meta.getRowLimit() > 0 && data.rownr > meta.getRowLimit() ) // limit has been reached: stop now.
-      {
+      if ( meta.getRowLimit() > 0 && data.rownr > meta.getRowLimit() ) { // limit has been reached: stop now.
         setOutputDone();
         return false;
       }
@@ -278,19 +278,19 @@ public class LoadFileInput extends BaseStep implements StepInterface {
     try {
       inputStream = KettleVFS.getInputStream( vfsFilename );
 
-      if ( !Const.isEmpty( encoding ) ) {
+      if ( !Utils.isEmpty( encoding ) ) {
         reader = new InputStreamReader( new BufferedInputStream( inputStream ), encoding );
       } else {
         reader = new InputStreamReader( new BufferedInputStream( inputStream ) );
       }
 
       int c;
-      StringBuffer stringBuffer = new StringBuffer();
+      StringBuilder StringBuilder = new StringBuilder();
       while ( ( c = reader.read() ) != -1 ) {
-        stringBuffer.append( (char) c );
+        StringBuilder.append( (char) c );
       }
 
-      retval = stringBuffer.toString();
+      retval = StringBuilder.toString();
     } catch ( Exception e ) {
       throw new KettleException( BaseMessages.getString(
         PKG, "LoadFileInput.Error.GettingFileContent", vfsFilename, e.toString() ) );

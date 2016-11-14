@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,12 +22,6 @@
 
 package org.pentaho.di.job.entries.folderscompare;
 
-import static org.pentaho.di.job.entry.validator.AbstractFileValidator.putVariableSpace;
-import static org.pentaho.di.job.entry.validator.AndValidator.putValidators;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.andValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.fileExistsValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notNullValidator;
-
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -45,13 +39,13 @@ import org.apache.commons.vfs2.FileSelector;
 import org.apache.commons.vfs2.FileType;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.CheckResultInterface;
-import org.pentaho.di.core.Const;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleDatabaseException;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleFileException;
 import org.pentaho.di.core.exception.KettleXMLException;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.vfs.KettleVFS;
 import org.pentaho.di.core.xml.XMLHandler;
@@ -59,6 +53,9 @@ import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.job.JobMeta;
 import org.pentaho.di.job.entry.JobEntryBase;
 import org.pentaho.di.job.entry.JobEntryInterface;
+import org.pentaho.di.job.entry.validator.AbstractFileValidator;
+import org.pentaho.di.job.entry.validator.AndValidator;
+import org.pentaho.di.job.entry.validator.JobEntryValidatorUtils;
 import org.pentaho.di.job.entry.validator.ValidatorContext;
 import org.pentaho.di.repository.ObjectId;
 import org.pentaho.di.repository.Repository;
@@ -114,7 +111,7 @@ public class JobEntryFoldersCompare extends JobEntryBase implements Cloneable, J
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 50 );
+    StringBuilder retval = new StringBuilder( 200 ); // 133 chars in just spaces and tag names alone
 
     retval.append( super.getXML() );
     retval.append( "      " ).append( XMLHandler.addTagValue( "include_subfolders", includesubfolders ) );
@@ -514,7 +511,7 @@ public class JobEntryFoldersCompare extends JobEntryBase implements Cloneable, J
     String source_folder = null;
 
     public TextFileSelector( String sourcefolderin ) {
-      if ( !Const.isEmpty( sourcefolderin ) ) {
+      if ( !Utils.isEmpty( sourcefolderin ) ) {
         source_folder = sourcefolderin;
       }
 
@@ -565,14 +562,14 @@ public class JobEntryFoldersCompare extends JobEntryBase implements Cloneable, J
   /**********************************************************
    *
    * @param selectedfile
-   * @param wildcard
+   * @param sourceWildcard
    * @return True if the selectedfile matches the wildcard
    **********************************************************/
   private boolean GetFileWildcard( String selectedfile ) {
     Pattern pattern = null;
     boolean getIt = true;
 
-    if ( !Const.isEmpty( wildcard ) ) {
+    if ( !Utils.isEmpty( wildcard ) ) {
       pattern = Pattern.compile( wildcard );
       // First see if the file matches the regular expression!
       if ( pattern != null ) {
@@ -615,9 +612,9 @@ public class JobEntryFoldersCompare extends JobEntryBase implements Cloneable, J
   public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
     ValidatorContext ctx = new ValidatorContext();
-    putVariableSpace( ctx, getVariables() );
-    putValidators( ctx, notNullValidator(), fileExistsValidator() );
-    andValidator().validate( this, "filename1", remarks, ctx );
-    andValidator().validate( this, "filename2", remarks, ctx );
+    AbstractFileValidator.putVariableSpace( ctx, getVariables() );
+    AndValidator.putValidators( ctx, JobEntryValidatorUtils.notNullValidator(), JobEntryValidatorUtils.fileExistsValidator() );
+    JobEntryValidatorUtils.andValidator().validate( this, "filename1", remarks, ctx );
+    JobEntryValidatorUtils.andValidator().validate( this, "filename2", remarks, ctx );
   }
 }

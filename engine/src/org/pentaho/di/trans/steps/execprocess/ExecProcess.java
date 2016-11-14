@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -25,8 +25,11 @@ package org.pentaho.di.trans.steps.execprocess;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowDataUtil;
 import org.pentaho.di.i18n.BaseMessages;
@@ -57,6 +60,7 @@ public class ExecProcess extends BaseStep implements StepInterface {
     super( stepMeta, stepDataInterface, copyNr, transMeta, trans );
   }
 
+  @Override
   public boolean processRow( StepMetaInterface smi, StepDataInterface sdi ) throws KettleException {
     meta = (ExecProcessMeta) smi;
     data = (ExecProcessData) sdi;
@@ -77,7 +81,7 @@ public class ExecProcess extends BaseStep implements StepInterface {
       meta.getFields( data.outputRowMeta, getStepname(), null, null, this, repository, metaStore );
 
       // Check is process field is provided
-      if ( Const.isEmpty( meta.getProcessField() ) ) {
+      if ( Utils.isEmpty( meta.getProcessField() ) ) {
         logError( BaseMessages.getString( PKG, "ExecProcess.Error.ProcessFieldMissing" ) );
         throw new KettleException( BaseMessages.getString( PKG, "ExecProcess.Error.ProcessFieldMissing" ) );
       }
@@ -93,6 +97,21 @@ public class ExecProcess extends BaseStep implements StepInterface {
             .getProcessField() ) );
         }
       }
+      if ( meta.isArgumentsInFields() ) {
+        if ( data.indexOfArguments == null ) {
+          data.indexOfArguments = new int[meta.getArgumentFieldNames().length];
+          for ( int i = 0; i < data.indexOfArguments.length; i++ ) {
+            String fieldName = meta.getArgumentFieldNames()[i];
+            data.indexOfArguments[i] = data.previousRowMeta.indexOfValue( fieldName );
+            if ( data.indexOfArguments[i] < 0 ) {
+              logError( BaseMessages.getString( PKG, "ExecProcess.Exception.CouldnotFindField" )
+                + "[" + fieldName + "]" );
+              throw new KettleException(
+                BaseMessages.getString( PKG, "ExecProcess.Exception.CouldnotFindField", fieldName ) );
+            }
+          }
+        }
+      }
     } // End If first
 
     Object[] outputRow = RowDataUtil.allocateRowData( data.outputRowMeta.size() );
@@ -105,17 +124,31 @@ public class ExecProcess extends BaseStep implements StepInterface {
     ProcessResult processResult = new ProcessResult();
 
     try {
-      if ( Const.isEmpty( processString ) ) {
+      if ( Utils.isEmpty( processString ) ) {
         throw new KettleException( BaseMessages.getString( PKG, "ExecProcess.ProcessEmpty" ) );
       }
 
       // execute and return result
-      execProcess( processString, processResult );
+      if ( meta.isArgumentsInFields() ) {
+        List<String> cmdArray = new ArrayList<>();
+        cmdArray.add( processString );
+
+        for ( int i = 0; i < data.indexOfArguments.length; i++ ) {
+          // Runtime.exec will fail on null array elements
+          // Convert to an empty string if value is null
+          String argString = data.previousRowMeta.getString( r, data.indexOfArguments[i] );
+          cmdArray.add( Const.NVL( argString, "" ) );
+        }
+
+        execProcess( cmdArray.toArray( new String[0] ), processResult );
+      } else {
+        execProcess( processString, processResult );
+      }
 
       if ( meta.isFailWhenNotSuccess() ) {
         if ( processResult.getExistStatus() != 0 ) {
           String errorString = processResult.getErrorStream();
-          if ( Const.isEmpty( errorString ) ) {
+          if ( Utils.isEmpty( errorString ) ) {
             errorString = processResult.getOutputStream();
           }
           throw new KettleException( errorString );
@@ -164,13 +197,21 @@ public class ExecProcess extends BaseStep implements StepInterface {
   }
 
   private void execProcess( String process, ProcessResult processresult ) throws KettleException {
+    execProcess( new String[]{ process }, processresult );
+  }
+
+  private void execProcess( String[] process, ProcessResult processresult ) throws KettleException {
 
     Process p = null;
     try {
       String errorMsg = null;
       // execute process
       try {
-        p = data.runtime.exec( process );
+        if ( !meta.isArgumentsInFields() ) {
+          p = data.runtime.exec( process[0] );
+        } else {
+          p = data.runtime.exec( process );
+        }
       } catch ( Exception e ) {
         errorMsg = e.getMessage();
       }
@@ -205,7 +246,7 @@ public class ExecProcess extends BaseStep implements StepInterface {
   }
 
   private String getOutputString( BufferedReader b ) throws IOException {
-    StringBuffer retvalBuff = new StringBuffer();
+    StringBuilder retvalBuff = new StringBuilder();
     String line;
     String delim = meta.getOutputLineDelimiter();
     if ( delim == null ) {
@@ -223,12 +264,13 @@ public class ExecProcess extends BaseStep implements StepInterface {
     return retvalBuff.toString();
   }
 
+  @Override
   public boolean init( StepMetaInterface smi, StepDataInterface sdi ) {
     meta = (ExecProcessMeta) smi;
     data = (ExecProcessData) sdi;
 
     if ( super.init( smi, sdi ) ) {
-      if ( Const.isEmpty( meta.getResultFieldName() ) ) {
+      if ( Utils.isEmpty( meta.getResultFieldName() ) ) {
         logError( BaseMessages.getString( PKG, "ExecProcess.Error.ResultFieldMissing" ) );
         return false;
       }
@@ -238,6 +280,7 @@ public class ExecProcess extends BaseStep implements StepInterface {
     return false;
   }
 
+  @Override
   public void dispose( StepMetaInterface smi, StepDataInterface sdi ) {
     meta = (ExecProcessMeta) smi;
     data = (ExecProcessData) sdi;

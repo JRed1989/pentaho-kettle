@@ -22,6 +22,7 @@
 
 package org.pentaho.di.ui.xul;
 
+import org.eclipse.swt.graphics.Image;
 import org.pentaho.di.ui.core.PropsUI;
 import org.pentaho.di.ui.core.gui.WindowProperty;
 import org.pentaho.di.ui.trans.step.BaseStepDialog;
@@ -31,7 +32,11 @@ import org.pentaho.ui.xul.containers.XulRoot;
 import org.pentaho.ui.xul.dom.Element;
 import org.pentaho.ui.xul.swt.tags.SwtDialog;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class KettleDialog extends SwtDialog {
+  private final Map<String, Image[]> imagesCache = new HashMap<>();
 
   public KettleDialog( Element self, XulComponent parent, XulDomContainer container, String tagName ) {
     super( self, parent, container, tagName );
@@ -70,15 +75,16 @@ public class KettleDialog extends SwtDialog {
     //
     notifyListeners( XulRoot.EVENT_ON_LOAD );
 
+    setAppicon( appIcon );
+
     returnCode = dialog.open();
   }
 
   @Override
   public void hide() {
 
-    if ( closing
-      || dialog.getMainArea().isDisposed() || getParentShell( getParent() ).isDisposed()
-      || ( getParent() instanceof SwtDialog && ( (SwtDialog) getParent() ).isDisposing() ) ) {
+    if ( closing || dialog.getMainArea().isDisposed() || getParentShell( getParent() ).isDisposed()
+        || ( getParent() instanceof SwtDialog && ( (SwtDialog) getParent() ).isDisposing() ) ) {
       return;
     }
 
@@ -88,5 +94,32 @@ public class KettleDialog extends SwtDialog {
     PropsUI.getInstance().setScreen( windowProperty );
 
     super.hide();
+  }
+
+  @Override
+  public void setAppicon( String icon ) {
+    this.appIcon = icon;
+
+    if ( appIcon == null || dialog == null ) {
+      return;
+    }
+
+    Image[] images;
+    synchronized ( imagesCache ) {
+      images = imagesCache.get( icon );
+    }
+    if ( images == null ) {
+      images = KettleImageUtil.loadImages( domContainer, dialog.getShell(), icon );
+      synchronized ( imagesCache ) {
+        imagesCache.put( icon, images );
+      }
+    }
+    if ( images == null ) {
+      super.setAppicon( icon );
+    } else {
+      if ( images != null && dialog != null ) {
+        dialog.getShell().setImages( images );
+      }
+    }
   }
 }

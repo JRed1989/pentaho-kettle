@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2015 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,13 +22,13 @@
 
 package org.pentaho.di.trans.steps.xbaseinput;
 
-import org.pentaho.di.core.Const;
 import org.pentaho.di.core.ResultFile;
 import org.pentaho.di.core.RowSet;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowDataUtil;
 import org.pentaho.di.core.row.RowMeta;
 import org.pentaho.di.core.row.RowMetaInterface;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.vfs.KettleVFS;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.Trans;
@@ -119,8 +119,7 @@ public class XBaseInput extends BaseStep implements StepInterface {
     // Allocate the output row in advance, because we possibly want to add a few extra fields...
     //
     Object[] row = data.xbi.getRow( RowDataUtil.allocateRowData( data.outputRowMeta.size() ) );
-    while ( row == null && data.fileNr < data.files.nrOfFiles() ) // No more rows left in this file
-    {
+    while ( row == null && data.fileNr < data.files.nrOfFiles() ) { // No more rows left in this file
       openNextFile();
       row = data.xbi.getRow( RowDataUtil.allocateRowData( data.outputRowMeta.size() ) );
     }
@@ -150,8 +149,7 @@ public class XBaseInput extends BaseStep implements StepInterface {
       logBasic( BaseMessages.getString( PKG, "XBaseInput.Log.LineNr" ) + getLinesInput() );
     }
 
-    if ( meta.getRowLimit() > 0 && getLinesInput() >= meta.getRowLimit() ) // limit has been reached: stop now.
-    {
+    if ( meta.getRowLimit() > 0 && getLinesInput() >= meta.getRowLimit() ) { // limit has been reached: stop now.
       setOutputDone();
       return false;
     }
@@ -173,13 +171,13 @@ public class XBaseInput extends BaseStep implements StepInterface {
       }
       if ( meta.isAcceptingFilenames() ) {
         try {
-          if ( Const.isEmpty( meta.getAcceptingStepName() )
+          if ( Utils.isEmpty( meta.getAcceptingStepName() )
             || findInputRowSet( meta.getAcceptingStepName() ) == null ) {
             logError( BaseMessages.getString( PKG, "XBaseInput.Log.Error.InvalidAcceptingStepName" ) );
             return false;
           }
 
-          if ( Const.isEmpty( meta.getAcceptingField() ) ) {
+          if ( Utils.isEmpty( meta.getAcceptingField() ) ) {
             logError( BaseMessages.getString( PKG, "XBaseInput.Log.Error.InvalidAcceptingFieldName" ) );
             return false;
           }
@@ -208,7 +206,7 @@ public class XBaseInput extends BaseStep implements StepInterface {
       data.xbi = new XBase( log, KettleVFS.getInputStream( data.file_dbf ) );
       data.xbi.setDbfFile( data.file_dbf.getName().getURI() );
       data.xbi.open();
-      if ( !Const.isEmpty( meta.getCharactersetName() ) ) {
+      if ( !Utils.isEmpty( meta.getCharactersetName() ) ) {
         data.xbi.getReader().setCharactersetName( meta.getCharactersetName() );
       }
 

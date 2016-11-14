@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -30,6 +30,7 @@ import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSelectInfo;
 import org.apache.commons.vfs2.FileSelector;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleFileException;
 import org.pentaho.di.core.util.EnvUtil;
 import org.pentaho.di.core.vfs.KettleVFS;
@@ -103,7 +104,7 @@ public class PluginFolder implements PluginFolderInterface {
       for ( String folder : folders ) {
         folder = folder.trim();
         pluginFolders.add( new PluginFolder( folder, false, true ) );
-        if ( !Const.isEmpty( xmlSubfolder ) ) {
+        if ( !Utils.isEmpty( xmlSubfolder ) ) {
           pluginFolders.add( new PluginFolder( folder + File.separator + xmlSubfolder, true, false ) );
         }
       }
@@ -133,7 +134,8 @@ public class PluginFolder implements PluginFolderInterface {
 
         @Override
         public boolean includeFile( FileSelectInfo fileSelectInfo ) throws Exception {
-          return fileSelectInfo.getFile().toString().endsWith( ".jar" );
+          FileObject file = fileSelectInfo.getFile();
+          return file.isFile() && file.toString().endsWith( ".jar" );
         }
       } );
 

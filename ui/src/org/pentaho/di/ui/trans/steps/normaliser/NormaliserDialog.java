@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -47,6 +47,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.i18n.BaseMessages;
@@ -62,6 +63,12 @@ import org.pentaho.di.ui.trans.step.BaseStepDialog;
 
 public class NormaliserDialog extends BaseStepDialog implements StepDialogInterface {
   private static Class<?> PKG = NormaliserMeta.class; // for i18n purposes, needed by Translator2!!
+
+  private static final int NAME_INDEX = 1;
+
+  private static final int VALUE_INDEX = 2;
+
+  private static final int NORM_INDEX = 3;
 
   private Label wlTypefield;
   private Text wTypefield;
@@ -163,10 +170,10 @@ public class NormaliserDialog extends BaseStepDialog implements StepDialogInterf
 
     setButtonPositions( new Button[] { wOK, wCancel, wGet }, margin, null );
 
-    final int FieldsCols = 3;
-    final int FieldsRows = input.getFieldName().length;
+    final int fieldsCols = 3;
+    final int fieldsRows = input.getNormaliserFields().length;
 
-    colinf = new ColumnInfo[FieldsCols];
+    colinf = new ColumnInfo[fieldsCols];
     colinf[0] =
       new ColumnInfo(
         BaseMessages.getString( PKG, "NormaliserDialog.ColumnInfo.Fieldname" ), ColumnInfo.COLUMN_TYPE_CCOMBO,
@@ -181,7 +188,7 @@ public class NormaliserDialog extends BaseStepDialog implements StepDialogInterf
 
     wFields =
       new TableView(
-        transMeta, shell, SWT.BORDER | SWT.FULL_SELECTION | SWT.MULTI, colinf, FieldsRows, lsMod, props );
+        transMeta, shell, SWT.BORDER | SWT.FULL_SELECTION | SWT.MULTI, colinf, fieldsRows, lsMod, props );
 
     fdFields = new FormData();
     fdFields.left = new FormAttachment( 0, 0 );
@@ -285,16 +292,16 @@ public class NormaliserDialog extends BaseStepDialog implements StepDialogInterf
       wTypefield.setText( input.getTypeField() );
     }
 
-    for ( int i = 0; i < input.getFieldName().length; i++ ) {
+    for ( int i = 0; i < input.getNormaliserFields().length; i++ ) {
       TableItem item = wFields.table.getItem( i );
-      if ( input.getFieldName()[i] != null ) {
-        item.setText( 1, input.getFieldName()[i] );
+      if ( input.getNormaliserFields()[i].getName() != null ) {
+        item.setText( NAME_INDEX, input.getNormaliserFields()[i].getName() );
       }
-      if ( input.getFieldValue()[i] != null ) {
-        item.setText( 2, input.getFieldValue()[i] );
+      if ( input.getNormaliserFields()[i].getValue() != null ) {
+        item.setText( VALUE_INDEX, input.getNormaliserFields()[i].getValue() );
       }
-      if ( input.getFieldNorm()[i] != null ) {
-        item.setText( 3, input.getFieldNorm()[i] );
+      if ( input.getNormaliserFields()[i].getNorm() != null ) {
+        item.setText( NORM_INDEX, input.getNormaliserFields()[i].getNorm() );
       }
     }
 
@@ -312,7 +319,7 @@ public class NormaliserDialog extends BaseStepDialog implements StepDialogInterf
   }
 
   private void ok() {
-    if ( Const.isEmpty( wStepname.getText() ) ) {
+    if ( Utils.isEmpty( wStepname.getText() ) ) {
       return;
     }
 
@@ -329,9 +336,9 @@ public class NormaliserDialog extends BaseStepDialog implements StepDialogInterf
     //CHECKSTYLE:Indentation:OFF
     for ( i = 0; i < nrfields; i++ ) {
       TableItem item = wFields.getNonEmpty( i );
-      input.getFieldName()[i] = item.getText( 1 );
-      input.getFieldValue()[i] = item.getText( 2 );
-      input.getFieldNorm()[i] = item.getText( 3 );
+      input.getNormaliserFields()[i].setName( item.getText( NAME_INDEX ) );
+      input.getNormaliserFields()[i].setValue( item.getText( VALUE_INDEX ) );
+      input.getNormaliserFields()[i].setNorm( item.getText( NORM_INDEX ) );
     }
 
     dispose();

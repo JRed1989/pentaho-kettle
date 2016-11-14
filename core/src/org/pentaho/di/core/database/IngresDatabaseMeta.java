@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -23,6 +23,7 @@
 package org.pentaho.di.core.database;
 
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.row.ValueMetaInterface;
 
 /**
@@ -61,7 +62,7 @@ public class IngresDatabaseMeta extends BaseDatabaseMeta implements DatabaseInte
     if ( getAccessType() == DatabaseMeta.TYPE_ACCESS_ODBC ) {
       return "jdbc:odbc:" + databaseName;
     } else {
-      if ( Const.isEmpty( port ) ) {
+      if ( Utils.isEmpty( port ) ) {
         return "jdbc:ingres://" + hostname + ":II7/" + databaseName;
       } else {
         return "jdbc:ingres://" + hostname + ":" + port + "/" + databaseName;
@@ -170,6 +171,9 @@ public class IngresDatabaseMeta extends BaseDatabaseMeta implements DatabaseInte
 
     int type = v.getType();
     switch ( type ) {
+      case ValueMetaInterface.TYPE_TIMESTAMP:
+        retval += "TIMESTAMP";
+        break;
       case ValueMetaInterface.TYPE_DATE:
         retval += "DATE";
         break;

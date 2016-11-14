@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -23,6 +23,7 @@
 package org.pentaho.di.core.database;
 
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.row.ValueMetaInterface;
 
 /**
@@ -53,7 +54,7 @@ public class DerbyDatabaseMeta extends BaseDatabaseMeta implements DatabaseInter
   @Override
   public String getDriverClass() {
     if ( getAccessType() == DatabaseMeta.TYPE_ACCESS_NATIVE ) {
-      if ( Const.isEmpty( getHostname() ) ) {
+      if ( Utils.isEmpty( getHostname() ) ) {
         return "org.apache.derby.jdbc.EmbeddedDriver";
       } else {
         return "org.apache.derby.jdbc.ClientDriver";
@@ -67,9 +68,9 @@ public class DerbyDatabaseMeta extends BaseDatabaseMeta implements DatabaseInter
   @Override
   public String getURL( String hostname, String port, String databaseName ) {
     if ( getAccessType() == DatabaseMeta.TYPE_ACCESS_NATIVE ) {
-      if ( !Const.isEmpty( hostname ) ) {
+      if ( !Utils.isEmpty( hostname ) ) {
         String url = "jdbc:derby://" + hostname;
-        if ( !Const.isEmpty( port ) ) {
+        if ( !Utils.isEmpty( port ) ) {
           url += ":" + port;
         }
         url += "/" + databaseName;
@@ -173,6 +174,7 @@ public class DerbyDatabaseMeta extends BaseDatabaseMeta implements DatabaseInter
 
     int type = v.getType();
     switch ( type ) {
+      case ValueMetaInterface.TYPE_TIMESTAMP:
       case ValueMetaInterface.TYPE_DATE:
         retval += "TIMESTAMP";
         break;

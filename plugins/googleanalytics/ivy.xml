@@ -44,18 +44,24 @@ explicitly covering such access.
     <dependency org="com.google.api-client" name="google-api-client" rev="1.20.0" transitive="false" conf="default->default"/>
     <dependency org="com.google.oauth-client" name="google-oauth-client" rev="1.20.0" transitive="false" conf="default->default"/>
     <dependency org="com.google.http-client" name="google-http-client-jackson2" rev="1.20.0" transitive="true" conf="default->default"/>
-    <dependency org="com.google.http-client" name="google-http-client" rev="1.20.0" transitive="false" conf="default->default"/>
+    <dependency org="com.google.http-client" name="google-http-client" rev="1.20.0" transitive="false" conf="default->default">
+      <!-- Vulnerable component - need more recent version [PPP-3571] -->
+      <exclude org="org.apache.httpcomponents" conf="default->default" />
+    </dependency>
+
+    <dependency org="org.apache.httpcomponents" name="httpclient" rev="4.5.2" transitive="false" conf="default->default"/>
 
     <dependency org="pentaho-kettle" name="kettle-engine" rev="${dependency.kettle.revision}" transitive="true" changing="true"/>
     <dependency org="pentaho-kettle" name="kettle-core" rev="${dependency.kettle.revision}" transitive="true" changing="true"/>
     <dependency org="pentaho-kettle" name="kettle-ui-swt" rev="${dependency.kettle.revision}" transitive="false" changing="true"/>
     <!-- SWT it required to compile any version of any architecture will work -->
-    <dependency org="org.eclipse.swt" name="swt-linux-x86_64" rev="4.3.2" transitive="false"/>
+    <dependency org="org.eclipse.swt" name="org.eclipse.swt.gtk.linux.x86_64" rev="4.6" transitive="false"/>
     <dependency org="org.eclipse" name="jface" rev="3.3.0-I20070606-0010" transitive="false"/>
 
     <!-- test dependencies -->
     <dependency org="junit" name="junit" rev="4.11" conf="test->default"/>
     <dependency org="org.mockito" name="mockito-all" rev="1.9.5" conf="test->default" transitive="false" />
+    <dependency org="pentaho-kettle" name="kettle-engine-test" rev="${dependency.kettle.revision}" conf="test->default" transitive="true" changing="true"/>
 
   </dependencies>
 </ivy-module>

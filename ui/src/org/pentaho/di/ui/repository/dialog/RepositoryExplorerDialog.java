@@ -3,7 +3,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -77,6 +77,7 @@ import org.eclipse.swt.widgets.TreeItem;
 import org.pentaho.di.cluster.ClusterSchema;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.logging.LogChannelInterface;
@@ -366,6 +367,7 @@ public class RepositoryExplorerDialog extends Dialog {
       nameColumn.setWidth( 350 );
       nameColumn.setAlignment( 10 );
       nameColumn.addListener( SWT.Selection, new Listener() {
+        @Override
         public void handleEvent( Event e ) {
           setSort( 0 );
         }
@@ -376,6 +378,7 @@ public class RepositoryExplorerDialog extends Dialog {
       typeColumn.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.Column.Type" ) );
       typeColumn.setWidth( 100 );
       typeColumn.addListener( SWT.Selection, new Listener() {
+        @Override
         public void handleEvent( Event e ) {
           setSort( 1 );
         }
@@ -385,6 +388,7 @@ public class RepositoryExplorerDialog extends Dialog {
       userColumn.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.Column.User" ) );
       userColumn.setWidth( 100 );
       userColumn.addListener( SWT.Selection, new Listener() {
+        @Override
         public void handleEvent( Event e ) {
           setSort( 2 );
         }
@@ -394,6 +398,7 @@ public class RepositoryExplorerDialog extends Dialog {
       changedColumn.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.Column.Changed" ) );
       changedColumn.setWidth( 120 );
       changedColumn.addListener( SWT.Selection, new Listener() {
+        @Override
         public void handleEvent( Event e ) {
           setSort( 3 );
         }
@@ -403,6 +408,7 @@ public class RepositoryExplorerDialog extends Dialog {
       descriptionColumn.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.Column.Description" ) );
       descriptionColumn.setWidth( 120 );
       descriptionColumn.addListener( SWT.Selection, new Listener() {
+        @Override
         public void handleEvent( Event e ) {
           setSort( 4 );
         }
@@ -412,6 +418,7 @@ public class RepositoryExplorerDialog extends Dialog {
       lockColumn.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.Column.LockMessage" ) );
       lockColumn.setWidth( 120 );
       lockColumn.addListener( SWT.Selection, new Listener() {
+        @Override
         public void handleEvent( Event e ) {
           setSort( 5 );
         }
@@ -437,18 +444,21 @@ public class RepositoryExplorerDialog extends Dialog {
 
       // Add listeners
       wOK.addListener( SWT.Selection, new Listener() {
+        @Override
         public void handleEvent( Event e ) {
           close();
         }
       } );
 
       wTree.addMenuDetectListener( new MenuDetectListener() {
+        @Override
         public void menuDetected( MenuDetectEvent e ) {
           setTreeMenu();
         }
       } );
 
       wTree.addMouseListener( new MouseAdapter() {
+        @Override
         public void mouseDoubleClick( MouseEvent e ) {
           if ( e.button == 1 ) { // left double click!
 
@@ -458,6 +468,7 @@ public class RepositoryExplorerDialog extends Dialog {
       } );
 
       wTree.addKeyListener( new KeyAdapter() {
+        @Override
         public void keyPressed( KeyEvent e ) {
           // F2 --> rename...
           if ( e.keyCode == SWT.F2 ) {
@@ -473,30 +484,35 @@ public class RepositoryExplorerDialog extends Dialog {
       } );
 
       expandAll.addSelectionListener( new SelectionAdapter() {
+        @Override
         public void widgetSelected( SelectionEvent event ) {
           expandAllItems( wTree.getItems(), true );
         }
       } );
 
       collapseAll.addSelectionListener( new SelectionAdapter() {
+        @Override
         public void widgetSelected( SelectionEvent event ) {
           expandAllItems( wTree.getItems(), false );
         }
       } );
 
       importFromXML.addSelectionListener( new SelectionAdapter() {
+        @Override
         public void widgetSelected( SelectionEvent event ) {
           importAll();
         }
       } );
 
       exportToXML.addSelectionListener( new SelectionAdapter() {
+        @Override
         public void widgetSelected( SelectionEvent event ) {
           exportAll( null );
         }
       } );
 
       showHideDeleted.addSelectionListener( new SelectionAdapter() {
+        @Override
         public void widgetSelected( SelectionEvent event ) {
           includeDeleted = !includeDeleted;
           if ( includeDeleted ) {
@@ -521,11 +537,13 @@ public class RepositoryExplorerDialog extends Dialog {
 
       ddSource.setTransfer( ttypes );
       ddSource.addDragListener( new DragSourceListener() {
+        @Override
         public void dragStart( DragSourceEvent event ) {
           debug = "drag start";
           event.doit = true;
         }
 
+        @Override
         public void dragSetData( DragSourceEvent event ) {
           debug = "drag set data";
 
@@ -581,6 +599,7 @@ public class RepositoryExplorerDialog extends Dialog {
           }
         }
 
+        @Override
         public void dragFinished( DragSourceEvent event ) {
         }
       } );
@@ -588,26 +607,31 @@ public class RepositoryExplorerDialog extends Dialog {
       DropTarget ddTarget = new DropTarget( wTree, DND.DROP_MOVE );
       ddTarget.setTransfer( ttypes );
       ddTarget.addDropListener( new DropTargetListener() {
+        @Override
         public void dragEnter( DropTargetEvent event ) {
         }
 
+        @Override
         public void dragLeave( DropTargetEvent event ) {
           debug = "drag leave";
         }
 
+        @Override
         public void dragOperationChanged( DropTargetEvent event ) {
         }
 
+        @Override
         public void dragOver( DropTargetEvent event ) {
           debug = "drag over";
         }
 
+        @Override
         public void drop( DropTargetEvent event ) {
           try {
             debug = "Drop item in tree";
 
-            if ( event.data == null ) // no data to copy, indicate failure in event.detail
-            {
+            if ( event.data == null ) { // no data to copy, indicate failure in event.detail
+
               event.detail = DND.DROP_NONE;
               return;
             }
@@ -674,6 +698,7 @@ public class RepositoryExplorerDialog extends Dialog {
           }
         }
 
+        @Override
         public void dropAccept( DropTargetEvent event ) {
           debug = "drop accept";
         }
@@ -681,6 +706,7 @@ public class RepositoryExplorerDialog extends Dialog {
 
       // Detect X or ALT-F4 or something that kills this window...
       shell.addShellListener( new ShellAdapter() {
+        @Override
         public void shellClosed( ShellEvent e ) {
           close();
         }
@@ -868,6 +894,7 @@ public class RepositoryExplorerDialog extends Dialog {
           MenuItem miExp = new MenuItem( mTree, SWT.PUSH );
           miExp.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Objects.ExportAll" ) );
           SelectionAdapter lsExp = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               exportAll( directoryTree );
             }
@@ -878,6 +905,7 @@ public class RepositoryExplorerDialog extends Dialog {
           MenuItem miImp = new MenuItem( mTree, SWT.PUSH );
           miImp.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Objects.ImportAll" ) );
           SelectionAdapter lsImp = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               importAll();
             }
@@ -890,6 +918,7 @@ public class RepositoryExplorerDialog extends Dialog {
           miTrans
             .setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Objects.ExportTrans" ) );
           SelectionAdapter lsTrans = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               exportTransformations( directoryTree );
             }
@@ -900,6 +929,7 @@ public class RepositoryExplorerDialog extends Dialog {
           MenuItem miJobs = new MenuItem( mTree, SWT.PUSH );
           miJobs.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Objects.ExportJob" ) );
           SelectionAdapter lsJobs = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               exportJobs( directoryTree );
             }
@@ -912,6 +942,7 @@ public class RepositoryExplorerDialog extends Dialog {
           MenuItem miNew = new MenuItem( mTree, SWT.PUSH );
           miNew.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.ConnectionsRoot.New" ) );
           SelectionAdapter lsNew = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               newDatabase();
             }
@@ -925,6 +956,7 @@ public class RepositoryExplorerDialog extends Dialog {
           miNew = new MenuItem( mTree, SWT.PUSH );
           miNew.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Connections.New" ) );
           lsNew = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               newDatabase();
             }
@@ -935,6 +967,7 @@ public class RepositoryExplorerDialog extends Dialog {
           MenuItem miEdit = new MenuItem( mTree, SWT.PUSH );
           miEdit.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Connections.Edit" ) );
           SelectionAdapter lsEdit = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               editDatabase( item );
             }
@@ -945,6 +978,7 @@ public class RepositoryExplorerDialog extends Dialog {
           MenuItem miDel = new MenuItem( mTree, SWT.PUSH );
           miDel.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Connections.Delete" ) );
           SelectionAdapter lsDel = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               delDatabase( item );
             }
@@ -958,6 +992,7 @@ public class RepositoryExplorerDialog extends Dialog {
           miNew = new MenuItem( mTree, SWT.PUSH );
           miNew.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Slave.New" ) );
           lsNew = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               newSlaveServer();
             }
@@ -971,6 +1006,7 @@ public class RepositoryExplorerDialog extends Dialog {
           miNew = new MenuItem( mTree, SWT.PUSH );
           miNew.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Slave.New" ) );
           lsNew = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               newSlaveServer();
             }
@@ -981,6 +1017,7 @@ public class RepositoryExplorerDialog extends Dialog {
           miEdit = new MenuItem( mTree, SWT.PUSH );
           miEdit.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Slave.Edit" ) );
           lsEdit = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               editSlaveServer( item );
             }
@@ -991,6 +1028,7 @@ public class RepositoryExplorerDialog extends Dialog {
           miDel = new MenuItem( mTree, SWT.PUSH );
           miDel.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Slave.Delete" ) );
           lsDel = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               delSlaveServer( item );
             }
@@ -1004,6 +1042,7 @@ public class RepositoryExplorerDialog extends Dialog {
           miNew = new MenuItem( mTree, SWT.PUSH );
           miNew.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.PartitionSchema.New" ) );
           lsNew = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               newPartitionSchema();
             }
@@ -1017,6 +1056,7 @@ public class RepositoryExplorerDialog extends Dialog {
           miNew = new MenuItem( mTree, SWT.PUSH );
           miNew.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.PartitionSchema.New" ) );
           lsNew = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               newPartitionSchema();
             }
@@ -1028,6 +1068,7 @@ public class RepositoryExplorerDialog extends Dialog {
           miEdit
             .setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.PartitionSchema.Edit" ) );
           lsEdit = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               editPartitionSchema( item );
             }
@@ -1039,6 +1080,7 @@ public class RepositoryExplorerDialog extends Dialog {
           miDel
             .setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.PartitionSchema.Delete" ) );
           lsDel = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               delPartitionSchema( item );
             }
@@ -1052,6 +1094,7 @@ public class RepositoryExplorerDialog extends Dialog {
           miNew = new MenuItem( mTree, SWT.PUSH );
           miNew.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Cluster.New" ) );
           lsNew = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               newCluster();
             }
@@ -1065,6 +1108,7 @@ public class RepositoryExplorerDialog extends Dialog {
           miNew = new MenuItem( mTree, SWT.PUSH );
           miNew.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Cluster.New" ) );
           lsNew = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               newCluster();
             }
@@ -1075,6 +1119,7 @@ public class RepositoryExplorerDialog extends Dialog {
           miEdit = new MenuItem( mTree, SWT.PUSH );
           miEdit.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Cluster.Edit" ) );
           lsEdit = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               editCluster( item );
             }
@@ -1085,6 +1130,7 @@ public class RepositoryExplorerDialog extends Dialog {
           miDel = new MenuItem( mTree, SWT.PUSH );
           miDel.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Cluster.Delete" ) );
           lsDel = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               delCluster( item );
             }
@@ -1107,6 +1153,7 @@ public class RepositoryExplorerDialog extends Dialog {
                 miOpen.setText( BaseMessages.getString(
                   PKG, "RepositoryExplorerDialog.PopupMenu.Transformations.Open" ) );
                 miOpen.addSelectionListener( new SelectionAdapter() {
+                  @Override
                   public void widgetSelected( SelectionEvent e ) {
                     openTransformation( item, repdir );
                   }
@@ -1116,6 +1163,7 @@ public class RepositoryExplorerDialog extends Dialog {
                 miRen.setText( BaseMessages.getString(
                   PKG, "RepositoryExplorerDialog.PopupMenu.Transformations.Rename" ) );
                 miRen.addSelectionListener( new SelectionAdapter() {
+                  @Override
                   public void widgetSelected( SelectionEvent e ) {
                     renameTransformation( item, repdir );
                   }
@@ -1131,6 +1179,7 @@ public class RepositoryExplorerDialog extends Dialog {
                 miRestore.setText( BaseMessages.getString(
                   PKG, "RepositoryExplorerDialog.PopupMenu.Transformations.Restore" ) );
                 miRestore.addSelectionListener( new SelectionAdapter() {
+                  @Override
                   public void widgetSelected( SelectionEvent e ) {
                     restoreSelectedObjects();
                   }
@@ -1142,6 +1191,7 @@ public class RepositoryExplorerDialog extends Dialog {
               miDel.setText( BaseMessages.getString(
                 PKG, "RepositoryExplorerDialog.PopupMenu.Transformations.Delete" ) );
               miDel.addSelectionListener( new SelectionAdapter() {
+                @Override
                 public void widgetSelected( SelectionEvent e ) {
                   delSelectedObjects();
                 }
@@ -1167,6 +1217,7 @@ public class RepositoryExplorerDialog extends Dialog {
             miExp = new MenuItem( mTree, SWT.PUSH );
             miExp.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Objects.ExportAll" ) );
             lsExp = new SelectionAdapter() {
+              @Override
               public void widgetSelected( SelectionEvent e ) {
                 exportAll( repdir );
               }
@@ -1180,6 +1231,7 @@ public class RepositoryExplorerDialog extends Dialog {
               miTrans.setText( BaseMessages.getString(
                 PKG, "RepositoryExplorerDialog.PopupMenu.Objects.ExportTrans" ) );
               lsTrans = new SelectionAdapter() {
+                @Override
                 public void widgetSelected( SelectionEvent e ) {
                   exportTransformations( repdir );
                 }
@@ -1193,6 +1245,7 @@ public class RepositoryExplorerDialog extends Dialog {
               miJobs
                 .setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Objects.ExportJob" ) );
               lsJobs = new SelectionAdapter() {
+                @Override
                 public void widgetSelected( SelectionEvent e ) {
                   exportJobs( repdir );
                 }
@@ -1205,6 +1258,7 @@ public class RepositoryExplorerDialog extends Dialog {
             miCreate.setText( BaseMessages.getString(
               PKG, "RepositoryExplorerDialog.PopupMenu.TransDirectory.Create" ) );
             miCreate.addSelectionListener( new SelectionAdapter() {
+              @Override
               public void widgetSelected( SelectionEvent e ) {
                 createDirectory( ti, repdir );
               }
@@ -1217,6 +1271,7 @@ public class RepositoryExplorerDialog extends Dialog {
               miRename.setText( BaseMessages.getString(
                 PKG, "RepositoryExplorerDialog.PopupMenu.TransDirectory.Rename" ) );
               miRename.addSelectionListener( new SelectionAdapter() {
+                @Override
                 public void widgetSelected( SelectionEvent e ) {
                   renameDirectory( ti, repdir );
                 }
@@ -1226,6 +1281,7 @@ public class RepositoryExplorerDialog extends Dialog {
               miDelete.setText( BaseMessages.getString(
                 PKG, "RepositoryExplorerDialog.PopupMenu.TransDirectory.Delete" ) );
               miDelete.addSelectionListener( new SelectionAdapter() {
+                @Override
                 public void widgetSelected( SelectionEvent e ) {
                   delDirectory( ti, repdir );
                 }
@@ -1246,6 +1302,7 @@ public class RepositoryExplorerDialog extends Dialog {
                 MenuItem miOpen = new MenuItem( mTree, SWT.PUSH );
                 miOpen.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Jobs.Open" ) );
                 miOpen.addSelectionListener( new SelectionAdapter() {
+                  @Override
                   public void widgetSelected( SelectionEvent e ) {
                     openJob( item, repdir );
                   }
@@ -1254,6 +1311,7 @@ public class RepositoryExplorerDialog extends Dialog {
                 MenuItem miRen = new MenuItem( mTree, SWT.PUSH );
                 miRen.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Jobs.Rename" ) );
                 miRen.addSelectionListener( new SelectionAdapter() {
+                  @Override
                   public void widgetSelected( SelectionEvent e ) {
                     renameJob( ti, item, repdir );
                   }
@@ -1268,6 +1326,7 @@ public class RepositoryExplorerDialog extends Dialog {
                 miRestore
                   .setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Jobs.Restore" ) );
                 miRestore.addSelectionListener( new SelectionAdapter() {
+                  @Override
                   public void widgetSelected( SelectionEvent e ) {
                     restoreSelectedObjects();
                   }
@@ -1278,6 +1337,7 @@ public class RepositoryExplorerDialog extends Dialog {
               miDel = new MenuItem( mTree, SWT.PUSH );
               miDel.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Jobs.Delete" ) );
               miDel.addSelectionListener( new SelectionAdapter() {
+                @Override
                 public void widgetSelected( SelectionEvent e ) {
                   delSelectedObjects();
                 }
@@ -1293,6 +1353,7 @@ public class RepositoryExplorerDialog extends Dialog {
           miNew = new MenuItem( mTree, SWT.PUSH );
           miNew.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.UsersRoot.New" ) );
           lsNew = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               newUser();
             }
@@ -1306,6 +1367,7 @@ public class RepositoryExplorerDialog extends Dialog {
           miNew = new MenuItem( mTree, SWT.PUSH );
           miNew.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Users.New" ) );
           lsNew = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               newUser();
             }
@@ -1316,6 +1378,7 @@ public class RepositoryExplorerDialog extends Dialog {
           miEdit = new MenuItem( mTree, SWT.PUSH );
           miEdit.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Users.Edit" ) );
           lsEdit = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               editUser( item );
             }
@@ -1326,6 +1389,7 @@ public class RepositoryExplorerDialog extends Dialog {
           MenuItem miRen = new MenuItem( mTree, SWT.PUSH );
           miRen.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Users.Rename" ) );
           SelectionAdapter lsRen = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               renameUser();
             }
@@ -1336,6 +1400,7 @@ public class RepositoryExplorerDialog extends Dialog {
           miDel = new MenuItem( mTree, SWT.PUSH );
           miDel.setText( BaseMessages.getString( PKG, "RepositoryExplorerDialog.PopupMenu.Users.Delete" ) );
           lsDel = new SelectionAdapter() {
+            @Override
             public void widgetSelected( SelectionEvent e ) {
               delUser( item );
             }
@@ -1437,6 +1502,7 @@ public class RepositoryExplorerDialog extends Dialog {
 
       if ( !!readonly ) {
         TreeItemAccelerator.addDoubleClick( tiParent, new DoubleClickInterface() {
+          @Override
           public void action( TreeItem treeItem ) {
             newDatabase();
           }
@@ -1450,6 +1516,7 @@ public class RepositoryExplorerDialog extends Dialog {
         newDB.setText( Const.NVL( names[i], "" ) );
         if ( !readonly ) {
           TreeItemAccelerator.addDoubleClick( newDB, new DoubleClickInterface() {
+            @Override
             public void action( TreeItem treeItem ) {
               editDatabase( treeItem.getText() );
             }
@@ -1463,6 +1530,7 @@ public class RepositoryExplorerDialog extends Dialog {
       tiParent.setText( STRING_PARTITIONS );
       if ( !readonly ) {
         TreeItemAccelerator.addDoubleClick( tiParent, new DoubleClickInterface() {
+          @Override
           public void action( TreeItem treeItem ) {
             newPartitionSchema();
           }
@@ -1476,6 +1544,7 @@ public class RepositoryExplorerDialog extends Dialog {
         newItem.setText( Const.NVL( names[i], "" ) );
         if ( !readonly ) {
           TreeItemAccelerator.addDoubleClick( newItem, new DoubleClickInterface() {
+            @Override
             public void action( TreeItem treeItem ) {
               editPartitionSchema( treeItem.getText() );
             }
@@ -1489,6 +1558,7 @@ public class RepositoryExplorerDialog extends Dialog {
       tiParent.setText( STRING_SLAVES );
       if ( !readonly ) {
         TreeItemAccelerator.addDoubleClick( tiParent, new DoubleClickInterface() {
+          @Override
           public void action( TreeItem treeItem ) {
             newSlaveServer();
           }
@@ -1502,6 +1572,7 @@ public class RepositoryExplorerDialog extends Dialog {
         newItem.setText( Const.NVL( names[i], "" ) );
         if ( !readonly ) {
           TreeItemAccelerator.addDoubleClick( newItem, new DoubleClickInterface() {
+            @Override
             public void action( TreeItem treeItem ) {
               editSlaveServer( treeItem.getText() );
             }
@@ -1515,6 +1586,7 @@ public class RepositoryExplorerDialog extends Dialog {
       tiParent.setText( STRING_CLUSTERS );
       if ( !readonly ) {
         TreeItemAccelerator.addDoubleClick( tiParent, new DoubleClickInterface() {
+          @Override
           public void action( TreeItem treeItem ) {
             newCluster();
           }
@@ -1528,6 +1600,7 @@ public class RepositoryExplorerDialog extends Dialog {
         newItem.setText( Const.NVL( names[i], "" ) );
         if ( !readonly ) {
           TreeItemAccelerator.addDoubleClick( newItem, new DoubleClickInterface() {
+            @Override
             public void action( TreeItem treeItem ) {
               editCluster( treeItem.getText() );
             }
@@ -1565,6 +1638,7 @@ public class RepositoryExplorerDialog extends Dialog {
         tiUser.setText( STRING_USERS );
         if ( !readonly ) {
           TreeItemAccelerator.addDoubleClick( tiUser, new DoubleClickInterface() {
+            @Override
             public void action( TreeItem treeItem ) {
               newUser();
             }
@@ -1581,6 +1655,7 @@ public class RepositoryExplorerDialog extends Dialog {
             newUser.setText( users[i] );
             if ( !readonly ) {
               TreeItemAccelerator.addDoubleClick( newUser, new DoubleClickInterface() {
+                @Override
                 public void action( TreeItem treeItem ) {
                   editUser( treeItem.getText() );
                 }
@@ -1711,6 +1786,7 @@ public class RepositoryExplorerDialog extends Dialog {
       props.setLook( text );
       text.setText( name );
       text.addFocusListener( new FocusAdapter() {
+        @Override
         public void focusLost( FocusEvent arg0 ) {
           // Focus is lost: apply changes.
           String newname = text.getText();
@@ -1721,6 +1797,7 @@ public class RepositoryExplorerDialog extends Dialog {
         }
       } );
       text.addKeyListener( new KeyAdapter() {
+        @Override
         public void keyPressed( KeyEvent e ) {
           // ESC --> Don't change tree item...
           if ( e.keyCode == SWT.ESC ) {
@@ -1755,7 +1832,7 @@ public class RepositoryExplorerDialog extends Dialog {
     boolean retval = false;
 
     try {
-      if ( Const.isEmpty( newname ) ) {
+      if ( Utils.isEmpty( newname ) ) {
         throw new KettleException( BaseMessages.getString(
           PKG, "RepositoryExplorerDialog.Exception.NameCanNotBeEmpty" ) );
       }
@@ -1901,6 +1978,7 @@ public class RepositoryExplorerDialog extends Dialog {
       props.setLook( text );
       text.setText( name );
       text.addFocusListener( new FocusAdapter() {
+        @Override
         public void focusLost( FocusEvent arg0 ) {
           // Focus is lost: apply changes
           String newname = text.getText();
@@ -1911,6 +1989,7 @@ public class RepositoryExplorerDialog extends Dialog {
         }
       } );
       text.addKeyListener( new KeyAdapter() {
+        @Override
         public void keyPressed( KeyEvent e ) {
           // ESC --> Don't change tree item...
           if ( e.keyCode == SWT.ESC ) {
@@ -1945,7 +2024,7 @@ public class RepositoryExplorerDialog extends Dialog {
     boolean retval = false;
 
     try {
-      if ( Const.isEmpty( newname ) ) {
+      if ( Utils.isEmpty( newname ) ) {
         throw new KettleException( BaseMessages.getString(
           PKG, "RepositoryExplorerDialog.Exception.NameCanNotBeEmpty" ) );
       }
@@ -1988,6 +2067,7 @@ public class RepositoryExplorerDialog extends Dialog {
     props.setLook( text );
     text.setText( name );
     text.addFocusListener( new FocusAdapter() {
+      @Override
       public void focusLost( FocusEvent arg0 ) {
         // Focus is lost: apply changes
         String newname = text.getText();
@@ -1998,6 +2078,7 @@ public class RepositoryExplorerDialog extends Dialog {
       }
     } );
     text.addKeyListener( new KeyAdapter() {
+      @Override
       public void keyPressed( KeyEvent e ) {
         // ESC --> Don't change tree item...
         if ( e.keyCode == SWT.ESC ) {
@@ -2030,7 +2111,7 @@ public class RepositoryExplorerDialog extends Dialog {
     boolean retval = false;
 
     try {
-      if ( Const.isEmpty( newname ) ) {
+      if ( Utils.isEmpty( newname ) ) {
         throw new KettleException( BaseMessages.getString(
           PKG, "RepositoryExplorerDialog.Exception.NameCanNotBeEmpty" ) );
       }
@@ -2133,6 +2214,7 @@ public class RepositoryExplorerDialog extends Dialog {
       props.setLook( text );
       text.setText( name );
       text.addFocusListener( new FocusAdapter() {
+        @Override
         public void focusLost( FocusEvent arg0 ) {
           // Focus is lost: apply changes
           String newname = text.getText();
@@ -2143,6 +2225,7 @@ public class RepositoryExplorerDialog extends Dialog {
         }
       } );
       text.addKeyListener( new KeyAdapter() {
+        @Override
         public void keyPressed( KeyEvent e ) {
           // ESC --> Don't change tree item...
           if ( e.keyCode == SWT.ESC ) {
@@ -2177,7 +2260,7 @@ public class RepositoryExplorerDialog extends Dialog {
     boolean retval = false;
 
     try {
-      if ( Const.isEmpty( newname ) ) {
+      if ( Utils.isEmpty( newname ) ) {
         throw new KettleException( BaseMessages.getString(
           PKG, "RepositoryExplorerDialog.Exception.NameCanNotBeEmpty" ) );
       }
@@ -2297,6 +2380,7 @@ public class RepositoryExplorerDialog extends Dialog {
       props.setLook( text );
       text.setText( name );
       text.addFocusListener( new FocusAdapter() {
+        @Override
         public void focusLost( FocusEvent arg0 ) {
           // Focus is lost: apply changes
           String newname = text.getText();
@@ -2307,6 +2391,7 @@ public class RepositoryExplorerDialog extends Dialog {
         }
       } );
       text.addKeyListener( new KeyAdapter() {
+        @Override
         public void keyPressed( KeyEvent e ) {
           // ESC --> Don't change tree item...
           if ( e.keyCode == SWT.ESC ) {
@@ -2314,8 +2399,7 @@ public class RepositoryExplorerDialog extends Dialog {
           }
           // ENTER --> Save changes...
           if ( e.character == SWT.CR ) {
-            if ( ti.getText().equals( name ) ) // Only if the name wasn't changed already.
-            {
+            if ( ti.getText().equals( name ) ) { // Only if the name wasn't changed already.
               String newname = text.getText();
               if ( renameDatabase( name, newname ) ) {
                 ti.setText( newname );
@@ -2344,7 +2428,7 @@ public class RepositoryExplorerDialog extends Dialog {
     boolean retval = false;
 
     try {
-      if ( Const.isEmpty( newname ) ) {
+      if ( Utils.isEmpty( newname ) ) {
         throw new KettleException( BaseMessages.getString(
           PKG, "RepositoryExplorerDialog.Exception.NameCanNotBeEmpty" ) );
       }
@@ -2390,6 +2474,7 @@ public class RepositoryExplorerDialog extends Dialog {
     props.setLook( text );
     text.setText( name );
     text.addFocusListener( new FocusAdapter() {
+      @Override
       public void focusLost( FocusEvent arg0 ) {
         // Focus is lost: apply changes
         String newname = text.getText();
@@ -2400,6 +2485,7 @@ public class RepositoryExplorerDialog extends Dialog {
       }
     } );
     text.addKeyListener( new KeyAdapter() {
+      @Override
       public void keyPressed( KeyEvent e ) {
         // ESC --> Don't change tree item...
         if ( e.keyCode == SWT.ESC ) {
@@ -2432,7 +2518,7 @@ public class RepositoryExplorerDialog extends Dialog {
     boolean retval = false;
 
     try {
-      if ( Const.isEmpty( newname ) ) {
+      if ( Utils.isEmpty( newname ) ) {
         throw new KettleException( BaseMessages.getString(
           PKG, "RepositoryExplorerDialog.Exception.NameCanNotBeEmpty" ) );
       }
@@ -2645,7 +2731,7 @@ public class RepositoryExplorerDialog extends Dialog {
       //
       SelectDirectoryDialog sdd = new SelectDirectoryDialog( shell, SWT.NONE, rep );
       RepositoryDirectoryInterface baseDirectory = sdd.open();
-      
+
       if ( baseDirectory != null ) {
         // Finally before importing, ask for a version comment (if applicable)
         //
@@ -2661,7 +2747,7 @@ public class RepositoryExplorerDialog extends Dialog {
             && rep.getSecurityProvider() != null && versionComment == null ) {
             return;
           }
-          if ( Const.isEmpty( versionComment ) && rep.getSecurityProvider().isVersionCommentMandatory() ) {
+          if ( Utils.isEmpty( versionComment ) && rep.getSecurityProvider().isVersionCommentMandatory() ) {
             if ( !RepositorySecurityUI.showVersionCommentMandatoryDialog( shell ) ) {
               versionOk = true;
             }
@@ -2754,7 +2840,7 @@ public class RepositoryExplorerDialog extends Dialog {
   public void newSlaveServer() {
     try {
       SlaveServer slaveServer = new SlaveServer();
-      SlaveServerDialog dd = new SlaveServerDialog( shell, slaveServer );
+      SlaveServerDialog dd = new SlaveServerDialog( shell, slaveServer, rep.getSlaveServers() );
       if ( dd.open() ) {
         // See if this slave server already exists...
         ObjectId idSlave = rep.getSlaveID( slaveServer.getName() );

@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -24,7 +24,9 @@ package org.pentaho.di.trans.steps.transexecutor;
 
 import java.util.ArrayList;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.ResultFile;
 import org.pentaho.di.core.RowMetaAndData;
@@ -47,7 +49,13 @@ import org.pentaho.di.trans.step.StepMetaInterface;
 import org.pentaho.di.trans.steps.TransStepUtil;
 
 /**
- * Execute a transformation for every input row, set parameters
+ * Execute a transformation for every input row, set parameters.
+ * <p>
+ *     <b>Note:</b><br/>
+ *     Be aware, logic of the classes methods is very similar to corresponding methods of
+ *     {@link org.pentaho.di.trans.steps.jobexecutor.JobExecutor JobExecutor}.
+ *     If you change something in this class, consider copying your changes to JobExecutor as well.
+ * </p>
  *
  * @author Matt
  * @since 18-mar-2013
@@ -91,41 +99,41 @@ public class TransExecutor extends BaseStep implements StepInterface {
           transExecutorData.getExecutorStepOutputRowSet() );
       }
 
-      boolean newGroup = false;
-      if ( transExecutorData.groupSize >= 0 ) {
-        // Pass the input rows in blocks to the transformation result rows...
-        if ( transExecutorData.groupSize != 0 ) {
-          if ( transExecutorData.groupBuffer.size() >= transExecutorData.groupSize ) {
-            newGroup = true;
+      // Grouping by field and execution time works ONLY if grouping by size is disabled.
+      if ( transExecutorData.groupSize < 0 ) {
+        if ( transExecutorData.groupFieldIndex >= 0 ) { // grouping by field
+          Object groupFieldData = row[ transExecutorData.groupFieldIndex ];
+          if ( transExecutorData.prevGroupFieldData != null ) {
+            if ( transExecutorData.groupFieldMeta.compare( transExecutorData.prevGroupFieldData, groupFieldData ) != 0 ) {
+              executeTransformation();
+            }
           }
-        }
-      } else if ( transExecutorData.groupFieldIndex >= 0 ) {
-        Object groupFieldData = row[ transExecutorData.groupFieldIndex ];
-        if ( transExecutorData.prevGroupFieldData != null ) {
-          if ( transExecutorData.groupFieldMeta.compare( transExecutorData.prevGroupFieldData, groupFieldData ) != 0 ) {
-            newGroup = true;
+          transExecutorData.prevGroupFieldData = groupFieldData;
+        } else if ( transExecutorData.groupTime > 0 ) { // grouping by execution time
+          long now = System.currentTimeMillis();
+          if ( now - transExecutorData.groupTimeStart >= transExecutorData.groupTime ) {
+            executeTransformation();
           }
-        }
-        transExecutorData.prevGroupFieldData = groupFieldData;
-      } else if ( transExecutorData.groupTime > 0 ) {
-        long now = System.currentTimeMillis();
-        if ( now - transExecutorData.groupTimeStart >= transExecutorData.groupTime ) {
-          newGroup = true;
         }
       }
 
-      if ( newGroup ) {
-        executeTransformation();
-      }
-
+      // Add next value AFTER transformation execution, in case we are grouping by field (see PDI-14958),
+      // and BEFORE checking size of a group, in case we are grouping by size (see PDI-14121).
       transExecutorData.groupBuffer.add( new RowMetaAndData( getInputRowMeta(), row ) ); // should we clone for safety?
+
+      // Grouping by size.
+      // If group buffer size exceeds specified limit, then execute transformation and flush group buffer.
+      if ( transExecutorData.groupSize > 0 ) {
+        if ( transExecutorData.groupBuffer.size() >= transExecutorData.groupSize ) {
+          executeTransformation();
+        }
+      }
 
       return true;
     } catch ( Exception e ) {
       throw new KettleException( BaseMessages.getString( PKG, "TransExecutor.UnexpectedError" ), e );
     }
   }
-
 
   private void initOnFirstProcessingIteration() throws KettleException {
     TransExecutorData transExecutorData = getData();
@@ -162,7 +170,7 @@ public class TransExecutor extends BaseStep implements StepInterface {
 
     // Remember which column to group on, if any...
     transExecutorData.groupFieldIndex = -1;
-    if ( !Const.isEmpty( transExecutorData.groupField ) ) {
+    if ( !Utils.isEmpty( transExecutorData.groupField ) ) {
       transExecutorData.groupFieldIndex = getInputRowMeta().indexOfValue( transExecutorData.groupField );
       if ( transExecutorData.groupFieldIndex < 0 ) {
         throw new KettleException( BaseMessages.getString(
@@ -172,7 +180,6 @@ public class TransExecutor extends BaseStep implements StepInterface {
     }
   }
 
-
   private void executeTransformation() throws KettleException {
     TransExecutorData transExecutorData = getData();
     // If we got 0 rows on input we don't really want to execute the transformation
@@ -181,22 +188,16 @@ public class TransExecutor extends BaseStep implements StepInterface {
     }
     transExecutorData.groupTimeStart = System.currentTimeMillis();
 
-    // Keep the strain on the logging back-end conservative.
-    // TODO: make this optional/user-defined later
-    Trans executorTrans = transExecutorData.getExecutorTrans();
-    if ( executorTrans != null ) {
-      KettleLogStore.discardLines( executorTrans.getLogChannelId(), false );
-      LoggingRegistry.getInstance().removeIncludingChildren( executorTrans.getLogChannelId() );
-    }
+    discardLogLines( transExecutorData );
 
-    executorTrans = createInternalTrans();
+    Trans executorTrans = createInternalTrans();
     transExecutorData.setExecutorTrans( executorTrans );
 
     // Pass parameter values
     passParametersToTrans();
 
     // keep track for drill down in Spoon...
-    getTrans().getActiveSubtransformations().put( getStepname(), executorTrans );
+    getTrans().addActiveSubTransformation( getStepname(), executorTrans );
 
     Result result = new Result();
     result.setRows( transExecutorData.groupBuffer );
@@ -232,11 +233,23 @@ public class TransExecutor extends BaseStep implements StepInterface {
     transExecutorData.groupBuffer.clear();
   }
 
-  // package-local visibility for testing purposes
+  @VisibleForTesting
+  void discardLogLines( TransExecutorData transExecutorData ) {
+    // Keep the strain on the logging back-end conservative.
+    // TODO: make this optional/user-defined later
+    Trans executorTrans = transExecutorData.getExecutorTrans();
+    if ( executorTrans != null ) {
+      KettleLogStore.discardLines( executorTrans.getLogChannelId(), false );
+      LoggingRegistry.getInstance().removeIncludingChildren( executorTrans.getLogChannelId() );
+    }
+  }
+
+  @VisibleForTesting
   Trans createInternalTrans() throws KettleException {
     Trans executorTrans = new Trans( getData().getExecutorTransMeta(), this );
 
     executorTrans.setParentTrans( getTrans() );
+    executorTrans.setRepository( getTrans().getRepository() );
     executorTrans.setLogLevel( getLogLevel() );
     executorTrans.setArguments( getTrans().getArguments() );
 
@@ -269,7 +282,7 @@ public class TransExecutor extends BaseStep implements StepInterface {
 
       String value;
       // Take the value from an input row or from a static value?
-      if ( !Const.isEmpty( fieldName ) ) {
+      if ( !Utils.isEmpty( fieldName ) ) {
         int idx = getInputRowMeta().indexOfValue( fieldName );
         if ( idx < 0 ) {
           throw new KettleException( BaseMessages.getString(
@@ -306,48 +319,48 @@ public class TransExecutor extends BaseStep implements StepInterface {
       Object[] outputRow = RowDataUtil.allocateRowData( getData().getExecutionResultsOutputRowMeta().size() );
       int idx = 0;
 
-      if ( !Const.isEmpty( meta.getExecutionTimeField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionTimeField() ) ) {
         outputRow[ idx++ ] = Long.valueOf( System.currentTimeMillis() - getData().groupTimeStart );
       }
-      if ( !Const.isEmpty( meta.getExecutionResultField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionResultField() ) ) {
         outputRow[ idx++ ] = Boolean.valueOf( result.getResult() );
       }
-      if ( !Const.isEmpty( meta.getExecutionNrErrorsField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionNrErrorsField() ) ) {
         outputRow[ idx++ ] = Long.valueOf( result.getNrErrors() );
       }
-      if ( !Const.isEmpty( meta.getExecutionLinesReadField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionLinesReadField() ) ) {
         outputRow[ idx++ ] = Long.valueOf( result.getNrLinesRead() );
       }
-      if ( !Const.isEmpty( meta.getExecutionLinesWrittenField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionLinesWrittenField() ) ) {
         outputRow[ idx++ ] = Long.valueOf( result.getNrLinesWritten() );
       }
-      if ( !Const.isEmpty( meta.getExecutionLinesInputField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionLinesInputField() ) ) {
         outputRow[ idx++ ] = Long.valueOf( result.getNrLinesInput() );
       }
-      if ( !Const.isEmpty( meta.getExecutionLinesOutputField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionLinesOutputField() ) ) {
         outputRow[ idx++ ] = Long.valueOf( result.getNrLinesOutput() );
       }
-      if ( !Const.isEmpty( meta.getExecutionLinesRejectedField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionLinesRejectedField() ) ) {
         outputRow[ idx++ ] = Long.valueOf( result.getNrLinesRejected() );
       }
-      if ( !Const.isEmpty( meta.getExecutionLinesUpdatedField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionLinesUpdatedField() ) ) {
         outputRow[ idx++ ] = Long.valueOf( result.getNrLinesUpdated() );
       }
-      if ( !Const.isEmpty( meta.getExecutionLinesDeletedField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionLinesDeletedField() ) ) {
         outputRow[ idx++ ] = Long.valueOf( result.getNrLinesDeleted() );
       }
-      if ( !Const.isEmpty( meta.getExecutionFilesRetrievedField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionFilesRetrievedField() ) ) {
         outputRow[ idx++ ] = Long.valueOf( result.getNrFilesRetrieved() );
       }
-      if ( !Const.isEmpty( meta.getExecutionExitStatusField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionExitStatusField() ) ) {
         outputRow[ idx++ ] = Long.valueOf( result.getExitStatus() );
       }
-      if ( !Const.isEmpty( meta.getExecutionLogTextField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionLogTextField() ) ) {
         String channelId = getData().getExecutorTrans().getLogChannelId();
         String logText = KettleLogStore.getAppender().getBuffer( channelId, false ).toString();
         outputRow[ idx++ ] = logText;
       }
-      if ( !Const.isEmpty( meta.getExecutionLogChannelIdField() ) ) {
+      if ( !Utils.isEmpty( meta.getExecutionLogChannelIdField() ) ) {
         outputRow[ idx++ ] = getData().getExecutorTrans().getLogChannelId();
       }
 
@@ -387,13 +400,13 @@ public class TransExecutor extends BaseStep implements StepInterface {
           transExecutorData.groupBuffer = new ArrayList<RowMetaAndData>();
 
           // How many rows do we group together for the transformation?
-          if ( !Const.isEmpty( meta.getGroupSize() ) ) {
+          if ( !Utils.isEmpty( meta.getGroupSize() ) ) {
             transExecutorData.groupSize = Const.toInt( environmentSubstitute( meta.getGroupSize() ), -1 );
           } else {
             transExecutorData.groupSize = -1;
           }
           // Is there a grouping time set?
-          if ( !Const.isEmpty( meta.getGroupTime() ) ) {
+          if ( !Utils.isEmpty( meta.getGroupTime() ) ) {
             transExecutorData.groupTime = Const.toInt( environmentSubstitute( meta.getGroupTime() ), -1 );
           } else {
             transExecutorData.groupTime = -1;
@@ -401,7 +414,7 @@ public class TransExecutor extends BaseStep implements StepInterface {
           transExecutorData.groupTimeStart = System.currentTimeMillis();
 
           // Is there a grouping field set?
-          if ( !Const.isEmpty( meta.getGroupField() ) ) {
+          if ( !Utils.isEmpty( meta.getGroupField() ) ) {
             transExecutorData.groupField = environmentSubstitute( meta.getGroupField() );
           }
           // That's all for now...
@@ -418,7 +431,7 @@ public class TransExecutor extends BaseStep implements StepInterface {
     return false;
   }
 
-  // package-local visibility for testing purposes
+  @VisibleForTesting
   TransMeta loadExecutorTransMeta() throws KettleException {
     return TransExecutorMeta.loadTransMeta( meta, meta.getRepository(), meta.getMetaStore(), this );
   }
@@ -450,7 +463,7 @@ public class TransExecutor extends BaseStep implements StepInterface {
     return getData().getExecutorTrans();
   }
 
-  // Method is defined as package-protected in order to be accessible by unit tests
+  @VisibleForTesting
   TransExecutorData getData() {
     return data;
   }

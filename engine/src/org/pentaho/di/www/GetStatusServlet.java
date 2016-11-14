@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -23,8 +23,7 @@
 package org.pentaho.di.www;
 
 import java.io.IOException;
-import java.io.PrintStream;
-import java.io.PrintWriter; 
+import java.io.PrintWriter;
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.RuntimeMXBean;
 import java.lang.management.ThreadMXBean;
@@ -62,14 +61,14 @@ public class GetStatusServlet extends BaseHttpServlet implements CartePluginInte
       <h1>/kettle/status</h1>
       <a name="GET"></a>
       <h2>GET</h2>
-      <p>Retrieve server status. The status contains information about the server itself (OS, memory, etc) 
+      <p>Retrieve server status. The status contains information about the server itself (OS, memory, etc)
       and information about jobs and transformations present on the server.</p>
-      
+
       <p><b>Example Request:</b><br />
       <pre function="syntax.xml">
       GET /kettle/status/?xml=Y
       </pre>
-      
+
       </p>
       <h3>Parameters</h3>
       <table class="pentaho-table">
@@ -81,13 +80,13 @@ public class GetStatusServlet extends BaseHttpServlet implements CartePluginInte
       </tr>
       <tr>
       <td>xml</td>
-      <td>Boolean flag which defines output format <code>Y</code> forces XML output to be generated. 
+      <td>Boolean flag which defines output format <code>Y</code> forces XML output to be generated.
     HTML is returned otherwise.</td>
       <td>boolean, optional</td>
       </tr>
       </tbody>
       </table>
-    
+
     <h3>Response Body</h3>
 
     <table class="pentaho-table">
@@ -103,9 +102,9 @@ public class GetStatusServlet extends BaseHttpServlet implements CartePluginInte
       </tbody>
     </table>
       <p>Response XML or HTML response containing details about the transformation specified.
-    If an error occurs during method invocation <code>result</code> field of the response 
+    If an error occurs during method invocation <code>result</code> field of the response
     will contain <code>ERROR</code> status.</p>
-      
+
       <p><b>Example Response:</b></p>
       <pre function="syntax.xml">
       <?xml version="1.0" encoding="UTF-8"?>
@@ -160,7 +159,7 @@ public class GetStatusServlet extends BaseHttpServlet implements CartePluginInte
         </jobstatuslist>
       </serverstatus>
       </pre>
-      
+
       <h3>Status Codes</h3>
       <table class="pentaho-table">
     <tbody>
@@ -213,23 +212,21 @@ public class GetStatusServlet extends BaseHttpServlet implements CartePluginInte
       getSystemInfo( serverStatus );
 
       for ( CarteObjectEntry entry : transEntries ) {
-        String name = entry.getName();
-        String id = entry.getId();
         Trans trans = getTransformationMap().getTransformation( entry );
         String status = trans.getStatus();
 
-        SlaveServerTransStatus sstatus = new SlaveServerTransStatus( name, id, status );
+        SlaveServerTransStatus sstatus = new SlaveServerTransStatus( entry.getName(), entry.getId(), status );
+        sstatus.setLogDate( trans.getLogDate() );
         sstatus.setPaused( trans.isPaused() );
         serverStatus.getTransStatusList().add( sstatus );
       }
 
       for ( CarteObjectEntry entry : jobEntries ) {
-        String name = entry.getName();
-        String id = entry.getId();
         Job job = getJobMap().getJob( entry );
         String status = job.getStatus();
-
-        serverStatus.getJobStatusList().add( new SlaveServerJobStatus( name, id, status ) );
+        SlaveServerJobStatus jobStatus = new SlaveServerJobStatus( entry.getName(), entry.getId(), status );
+        jobStatus.setLogDate( job.getLogDate() );
+        serverStatus.getJobStatusList().add( jobStatus );
       }
 
       try {
@@ -343,9 +340,11 @@ public class GetStatusServlet extends BaseHttpServlet implements CartePluginInte
       //
       SlaveServerConfig serverConfig = getTransformationMap().getSlaveServerConfig();
       if ( serverConfig != null ) {
-        String maxLines = serverConfig.getMaxLogLines() + BaseMessages.getString( PKG, "GetStatusServlet.Lines" );
+        String maxLines = "";
         if ( serverConfig.getMaxLogLines() == 0 ) {
-          maxLines += BaseMessages.getString( PKG, "GetStatusServlet.NoLimit" );
+          maxLines = BaseMessages.getString( PKG, "GetStatusServlet.NoLimit" );
+        } else {
+          maxLines = serverConfig.getMaxLogLines() + BaseMessages.getString( PKG, "GetStatusServlet.Lines" );
         }
         out.print( "<tr> <td>"
           + BaseMessages.getString( PKG, "GetStatusServlet.Parameter.MaxLogLines" ) + "</td> <td>" + maxLines
@@ -353,10 +352,11 @@ public class GetStatusServlet extends BaseHttpServlet implements CartePluginInte
 
         // The max age of log lines
         //
-        String maxAge =
-          serverConfig.getMaxLogTimeoutMinutes() + BaseMessages.getString( PKG, "GetStatusServlet.Minutes" );
+        String maxAge = "";
         if ( serverConfig.getMaxLogTimeoutMinutes() == 0 ) {
-          maxAge += BaseMessages.getString( PKG, "GetStatusServlet.NoLimit" );
+          maxAge = BaseMessages.getString( PKG, "GetStatusServlet.NoLimit" );
+        } else {
+          maxAge = serverConfig.getMaxLogTimeoutMinutes() + BaseMessages.getString( PKG, "GetStatusServlet.Minutes" );
         }
         out.print( "<tr> <td>"
           + BaseMessages.getString( PKG, "GetStatusServlet.Parameter.MaxLogLinesAge" ) + "</td> <td>" + maxAge
@@ -364,10 +364,11 @@ public class GetStatusServlet extends BaseHttpServlet implements CartePluginInte
 
         // The max age of stale objects
         //
-        String maxObjAge =
-          serverConfig.getObjectTimeoutMinutes() + BaseMessages.getString( PKG, "GetStatusServlet.Minutes" );
+        String maxObjAge = "";
         if ( serverConfig.getObjectTimeoutMinutes() == 0 ) {
-          maxObjAge += BaseMessages.getString( PKG, "GetStatusServlet.NoLimit" );
+          maxObjAge = BaseMessages.getString( PKG, "GetStatusServlet.NoLimit" );
+        } else {
+          maxObjAge = serverConfig.getObjectTimeoutMinutes() + BaseMessages.getString( PKG, "GetStatusServlet.Minutes" );
         }
         out.print( "<tr> <td>"
           + BaseMessages.getString( PKG, "GetStatusServlet.Parameter.MaxObjectsAge" ) + "</td> <td>" + maxObjAge

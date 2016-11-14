@@ -22,14 +22,14 @@
     <dependency org="${ivy.artifact.group}" name="kettle-engine"        rev="${project.revision}" changing="true" force="true"/>
     <dependency org="${ivy.artifact.group}" name="kettle-dbdialog"      rev="${project.revision}" changing="true" force="true"/>
     <dependency org="${ivy.artifact.group}" name="kettle-ui-swt"        rev="${project.revision}" changing="true" force="true">
-      <exclude name="swt-linux-x86_64"/>
+      <exclude name="org.eclipse.swt.gtk.linux.x86_64"/>
     </dependency>
     
     <dependency org="pentaho" name="pdi-osgi-bridge-core" rev="${dependency.pdi-osgi-bridge.revision}" changing="true" />
 
     <!-- Data Service JDBC Driver -->
-    <dependency org="pentaho" name="pdi-dataservice-client-plugin-assembly" rev="${project.revision}" changing="true" conf="dataservice-jdbc->default" transitive="false">
-      <artifact name="pdi-dataservice-client-plugin-assembly" type="zip"/>
+    <dependency org="pentaho" name="pdi-dataservice-driver-bundle" rev="${project.revision}" changing="true" conf="dataservice-jdbc->default" transitive="false">
+      <artifact name="pdi-dataservice-driver-bundle" type="zip"/>
     </dependency>
 
     <!-- Kettle plugin dependencies-->
@@ -81,21 +81,26 @@
     <dependency org="${ivy.artifact.group}" name="elasticsearch-bulk-insert-plugin" rev="${project.revision}" changing="true" conf="plugins->default">
         <artifact name="elasticsearch-bulk-insert-plugin" type="zip"/>
     </dependency>
+    <dependency org="${ivy.artifact.group}" name="kettle-xml-plugin" rev="${project.revision}" changing="true" conf="plugins->default">
+        <artifact name="kettle-xml-plugin" type="zip"/>
+    </dependency>
+    <dependency org="${ivy.artifact.group}" name="kettle-json-plugin" rev="${project.revision}" changing="true" conf="plugins->default">
+        <artifact name="kettle-json-plugin" type="zip"/>
+    </dependency>
+    <dependency org="${ivy.artifact.group}" name="kettle-sap-plugin" rev="${project.revision}" changing="true" conf="plugins->default">
+        <artifact name="kettle-sap-plugin" type="zip"/>
+    </dependency>    
     <dependency org="pentaho" name="pentaho-karaf-assembly" rev="${project.revision}" changing="true" conf="pentaho-system->default" m:classifier="client">
       <artifact name="pentaho-karaf-assembly" type="zip" m:classifier="client"/>
     </dependency>
     
     <!-- Pentaho dependencies (non-Kettle), launcher, shim, etc. -->
     <dependency org="pentaho"               name="pentaho-application-launcher"  rev="${dependency.launcher.revision}" conf="launcher->default"/>
-    <dependency org="pentaho"               name="pentaho-hadoop-hive-jdbc-shim" rev="${dependency.pentaho-hadoop-hive-jdbc-shim.revision}"/>
     <dependency org="pentaho" name="pentaho-big-data-plugin" rev="${dependency.pentaho-big-data-plugin.revision}" changing="true" transitive="false" conf="plugins->default">
       <artifact name="pentaho-big-data-plugin" type="zip"/>
     </dependency>
     <dependency org="pentaho" name="pentaho-cassandra-plugin" rev="${dependency.pentaho-cassandra-plugin.revision}" changing="true" transitive="false" conf="plugins->default">
       <artifact name="pentaho-cassandra-plugin" type="zip"/>
-    </dependency>
-    <dependency org="pentaho" name="pdi-spark-plugin" rev="${dependency.pdi-spark-plugin.revision}" changing="true" transitive="false" conf="plugins->default">
-      <artifact name="pdi-spark-plugin" type="zip"/>
     </dependency>
     <dependency org="pentaho" name="pdi-teradata-tpt-plugin-package" rev="${dependency.pdi-teradata-tpt-plugin.revision}" changing="true" transitive="false" conf="plugins->default">
       <artifact name="pdi-teradata-tpt-plugin-package" type="zip"/>
@@ -106,7 +111,12 @@
     <dependency org="pentaho" name="VerticaBulkLoader" rev="${dependency.vertica-bulkloader-plugin.revision}" conf="plugins->default" changing="true" transitive="false">
       <artifact name="VerticaBulkLoader" type="zip" ext="zip" />
     </dependency>
+    <dependency org="pentaho-kettle" name="pdi-pur-plugin" rev="${dependency.pdi-pur-plugin.revision}" changing="true" transitive="false" conf="plugins->default">
+      <artifact name="pdi-pur-plugin" type="zip"/>
+    </dependency>
 
+
+    <dependency org="pentaho" name="pentaho-platform-repository"  rev="${dependency.pentaho-platform.revision}" transitive="false"/>
     <dependency org="pentaho" name="pentaho-platform-extensions"  rev="${dependency.pentaho-platform.revision}" transitive="false"/>
     <dependency org="org.slf4j" name="slf4j-api" rev="1.7.5"/>
     <dependency org="org.slf4j" name="slf4j-log4j12" rev="1.7.5"/>
@@ -114,6 +124,8 @@
     <dependency org="org.springframework" name="spring-beans"   rev="${dependency.spring.framework.revision}" />
     <dependency org="org.springframework" name="spring-context" rev="${dependency.spring.framework.revision}" />
     <dependency org="org.springframework.security" name="spring-security-core" rev="${dependency.spring.security.revision}" />
+    <dependency org="org.glassfish.metro" name="webservices-api" rev="2.1" transitive="false"/>
+    <dependency org="org.glassfish.metro" name="webservices-rt" rev="2.1" transitive="false"/>
 
     <!-- pentaho-metaverse -->
     <dependency org="pentaho" name="pentaho-metaverse-api" rev="${project.revision}" changing="true" transitive="false"/>
@@ -143,10 +155,12 @@
       <artifact name="oss-licenses" type="zip" />
     </dependency>
      
-    <!-- The OS-specific libraries are bundled together, unzip them all for assembly -->
-    <dependency org="org.eclipse"          name="swtlibs"               rev="4.3.2" conf="swtlibs->default" transitive="false">
-      <artifact name="swtlibs" type="zip"/>
-    </dependency>
+    <!-- The SWT OS-specific libraries -->
+    <dependency org="org.eclipse.swt" name="org.eclipse.swt.gtk.linux.x86"       rev="${dependency.swt-linux.revision}" conf="swtlibs->default" transitive="false"/>
+    <dependency org="org.eclipse.swt" name="org.eclipse.swt.gtk.linux.x86_64"    rev="${dependency.swt-linux.revision}" conf="swtlibs->default" transitive="false"/>
+    <dependency org="org.eclipse.swt" name="org.eclipse.swt.win32.win32.x86"     rev="${dependency.swt-win.revision}"   conf="swtlibs->default" transitive="false"/>
+    <dependency org="org.eclipse.swt" name="org.eclipse.swt.win32.win32.x86_64"  rev="${dependency.swt-win.revision}"   conf="swtlibs->default" transitive="false"/>
+    <dependency org="org.eclipse.swt" name="org.eclipse.swt.cocoa.macosx.x86_64" rev="${dependency.swt-osx.revision}"   conf="swtlibs->default" transitive="false"/>
       
 	    <!-- Karaf Dependencies -->
     <dependency org="org.apache.karaf" name="org.apache.karaf.main" rev="3.0.3"  transitive="false"/>
@@ -163,14 +177,13 @@
     <dependency org="infobright"           name="infobright-core"       rev="3.4"           transitive="false"/>
     <dependency org="org.firebirdsql.jdbc" name="jaybird"               rev="2.1.6"         transitive="false"/>
     <dependency org="net.sf.jt400"         name="jt400"                 rev="6.1"           transitive="false"/>  
-    <dependency org="jtds"                 name="jtds"                  rev="1.2.5"         transitive="false"/>
     <dependency org="luciddb"              name="LucidDbClient-minimal" rev="0.9.4"         transitive="false"/>
     <dependency org="monetdb"              name="monetdb-jdbc"          rev="2.1"           transitive="false"/>
     <dependency org="org.postgresql"       name="postgresql"            rev="9.3-1102-jdbc4" transitive="false"/>
     <dependency org="com.sap"              name="sapdbc"                rev="7.4.4"         transitive="false"/>
     <dependency org="org.xerial"           name="sqlite-jdbc"           rev="3.7.2"         transitive="false"/>
     <dependency org="jaxen"                name="jaxen"                 rev="1.1.1"         transitive="false"/>
-    <dependency org="javax.servlet"        name="javax.servlet-api"    rev="3.0.1"           transitive="false"/>
+    <dependency org="org.apache.geronimo.specs" name="geronimo-servlet_3.0_spec" rev="1.0" changing="false" transitive="false"/>
     <!-- Other third-party dependencies -->
     <dependency org="asm"                  name="asm"                   rev="3.2"           transitive="false"/>
     <dependency org="net.sf.saxon"         name="saxon-dom"             rev="9.1.0.8"       transitive="false"/>
@@ -183,7 +196,12 @@
     <!-- To support Enunciate Annotations in Resource classes -->
     <dependency org="org.codehaus.enunciate" name="enunciate-jersey-rt" rev="1.27"          transitive="false" />
     <dependency org="org.codehaus.enunciate" name="enunciate-core-annotations" rev="1.27"   transitive="false" />
-    
-    <exclude org="javax.servlet"   module="servlet-api"/>
+
+    <dependency org="org.codehaus.jackson" name="jackson-xc" rev="1.9.3" transitive="false"/>
+    <dependency org="com.sun.jersey.contribs" name="jersey-multipart" rev="1.19.1" transitive="false"/>
+    <dependency org="org.jvnet.mimepull"  name="mimepull" rev="1.9.3" transitive="false"/>
+    <dependency org="javax.ws.rs" name="jsr311-api" rev="1.1.1" transitive="false"/>
+
+    <exclude org="javax.servlet"/>
   </dependencies>
 </ivy-module>

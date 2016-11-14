@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -48,6 +48,7 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.ToolBar;
 import org.eclipse.swt.widgets.ToolItem;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Props;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.i18n.BaseMessages;
@@ -58,6 +59,7 @@ import org.pentaho.di.ui.core.gui.WindowProperty;
 import org.pentaho.di.ui.spoon.Spoon;
 import org.pentaho.di.ui.spoon.delegates.SpoonDBDelegate;
 import org.pentaho.di.ui.trans.step.BaseStepDialog;
+import org.pentaho.di.ui.util.HelpUtils;
 
 /**
  * Allows the user to make a selection from a list of values.
@@ -359,6 +361,155 @@ public class EnterSelectionDialog extends Dialog {
     return selection;
   }
 
+  public String openRepoDialog() {
+    Shell parent = getParent();
+    Display display = parent.getDisplay();
+
+    shell =
+        new Shell( parent, SWT.DIALOG_TRIM | ( modal ? SWT.APPLICATION_MODAL | SWT.SHEET : SWT.NONE ) | SWT.MIN
+            | SWT.MAX );
+    props.setLook( shell );
+
+    FormLayout formLayout = new FormLayout();
+    formLayout.marginWidth = Const.FORM_MARGIN;
+    formLayout.marginHeight = Const.FORM_MARGIN;
+
+    shell.setLayout( formLayout );
+    shell.setText( shellText );
+    shell.setImage( GUIResource.getInstance().getImageSpoon() );
+
+    wlSelection = new Label( shell, SWT.NONE );
+    wlSelection.setText( lineText );
+    props.setLook( wlSelection );
+    fdlSelection = new FormData();
+    fdlSelection.left = new FormAttachment( 0, 10 );
+    fdlSelection.top = new FormAttachment( 0, 10 );
+    wlSelection.setLayoutData( fdlSelection );
+
+    int options = SWT.LEFT | SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL;
+
+    wSelection = new List( shell, options );
+    String pentRepo = "";
+    boolean found = false;
+    for ( int i = 0; i < choices.length; i++ ) {
+      if ( choices[i] != null && choices[i].startsWith( BaseMessages.getString( PKG,
+          "EnterSelectionDialog.PentahoRepo" ) ) ) {
+        pentRepo = choices[i];
+        found = true;
+      } else {
+        wSelection.add( choices[i] );
+      }
+    }
+
+    if ( found ) {
+      wSelection.add( pentRepo, 0 );
+      wSelection.select( 0 );
+    }
+
+    int width = ( Const.isOSX() ? 75 : 70 );
+
+    Label separator = new Label( shell, SWT.SEPARATOR | SWT.HORIZONTAL );
+    FormData fd_separator = new FormData();
+    fd_separator.top = new FormAttachment( wSelection, 35 );
+    fd_separator.right = new FormAttachment( 100, -10 );
+    fd_separator.left = new FormAttachment( 0, 10 );
+    separator.setLayoutData( fd_separator );
+
+    Button btnHelp = new Button( shell, SWT.PUSH );
+    btnHelp.setImage( GUIResource.getInstance().getImageHelpWeb() );
+    FormData fd_btnHelp = new FormData();
+    fd_btnHelp.top = new FormAttachment( separator, 12 );
+    fd_btnHelp.left = new FormAttachment( 0, 10 );
+    fd_btnHelp.bottom = new FormAttachment( 100, -10 );
+    fd_btnHelp.width = ( Const.isOSX() ? 85 : 75 );
+    btnHelp.setLayoutData( fd_btnHelp );
+    btnHelp.setText( BaseMessages.getString( PKG, "System.Button.Help" ) );
+    btnHelp.addSelectionListener( new SelectionAdapter() {
+      @Override
+      public void widgetSelected( SelectionEvent arg0 ) {
+        HelpUtils.openHelpDialog( shell,
+                                  BaseMessages.getString( PKG, "EnterSelectionDialog.Help.Title" ),
+                                  Const.getDocUrl( BaseMessages.getString( PKG, "EnterSelectionDialog.Help" ) ),
+                                  BaseMessages.getString( PKG, "EnterSelectionDialog.Help.Header" ) );
+      }
+    } );
+
+    wCancel = new Button( shell, SWT.PUSH );
+    FormData fd_wCancel = new FormData();
+    fd_wCancel.top = new FormAttachment( separator, 12 );
+    fd_wCancel.right = new FormAttachment( 100, -10 );
+    fd_wCancel.bottom = new FormAttachment( 100, -10 );
+    fd_wCancel.width = width;
+    wCancel.setLayoutData( fd_wCancel );
+    wCancel.setText( BaseMessages.getString( PKG, "System.Button.Cancel" ).trim() );
+
+    lsCancel = new Listener() {
+      public void handleEvent( Event e ) {
+        cancel();
+      }
+    };
+    wCancel.addListener( SWT.Selection, lsCancel );
+
+    wOK = new Button( shell, SWT.PUSH );
+    wOK.setText( BaseMessages.getString( PKG, "System.Button.OK" ) );
+    FormData fd_wOK = new FormData();
+    fd_wOK.top = new FormAttachment( separator, 12 );
+    fd_wOK.right = new FormAttachment( wCancel, -5 );
+    fd_wOK.bottom = new FormAttachment( 100, -10 );
+    fd_wOK.width = width;
+    wOK.setLayoutData( fd_wOK );
+
+    lsOK = new Listener() {
+      public void handleEvent( Event e ) {
+        ok();
+      }
+    };
+    wOK.addListener( SWT.Selection, lsOK );
+
+    fdSelection = new FormData();
+    fdSelection.left = new FormAttachment( 0, 10 );
+    fdSelection.right = new FormAttachment( 100, -10 );
+    fdSelection.top = new FormAttachment( wlSelection, 10 );
+    fdSelection.bottom = new FormAttachment( separator, -12 );
+    wSelection.setLayoutData( fdSelection );
+
+    lsDef = new SelectionAdapter() {
+      public void widgetDefaultSelected( SelectionEvent e ) {
+        ok();
+      }
+    };
+    wSelection.addSelectionListener( lsDef );
+    wSelection.addKeyListener( new KeyAdapter() {
+      public void keyPressed( KeyEvent e ) {
+        if ( e.character == SWT.CR ) {
+          ok();
+        }
+      }
+    } );
+
+    // Detect [X] or ALT-F4 or something that kills this window...
+    shell.addShellListener( new ShellAdapter() {
+      public void shellClosed( ShellEvent e ) {
+        cancel();
+      }
+    } );
+
+    getData();
+
+    BaseStepDialog.setSize( shell );
+
+    wOK.setFocus();
+    shell.pack();
+    shell.open();
+
+    while ( !shell.isDisposed() ) {
+      if ( !display.readAndDispatch() ) {
+        display.sleep();
+      }
+    }
+    return selection;
+  }
+
   public void dispose() {
     props.setScreen( new WindowProperty( shell ) );
     shell.dispose();
@@ -467,7 +618,7 @@ public class EnterSelectionDialog extends Dialog {
   protected void updateFilter() {
     pattern = null;
     filterString = null;
-    if ( searchText != null && !searchText.isDisposed() && !Const.isEmpty( searchText.getText() ) ) {
+    if ( searchText != null && !searchText.isDisposed() && !Utils.isEmpty( searchText.getText() ) ) {
       if ( wbRegex.getSelection() ) {
         pattern = Pattern.compile( searchText.getText() );
       } else {

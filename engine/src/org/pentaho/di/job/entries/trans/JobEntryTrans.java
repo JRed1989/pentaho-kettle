@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,11 +22,6 @@
 
 package org.pentaho.di.job.entries.trans;
 
-import static org.pentaho.di.job.entry.validator.AndValidator.putValidators;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.andValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notBlankValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notNullValidator;
-
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -36,6 +31,7 @@ import java.util.Map;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.ObjectLocationSpecificationMethod;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.ResultFile;
@@ -60,6 +56,8 @@ import org.pentaho.di.job.Job;
 import org.pentaho.di.job.JobMeta;
 import org.pentaho.di.job.entry.JobEntryBase;
 import org.pentaho.di.job.entry.JobEntryInterface;
+import org.pentaho.di.job.entry.validator.AndValidator;
+import org.pentaho.di.job.entry.validator.JobEntryValidatorUtils;
 import org.pentaho.di.repository.ObjectId;
 import org.pentaho.di.repository.Repository;
 import org.pentaho.di.repository.RepositoryDirectory;
@@ -156,8 +154,31 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
     clear();
   }
 
+  private void allocateArgs( int nrArgs ) {
+    arguments = new String[nrArgs];
+  }
+
+  private void allocateParams( int nrParameters ) {
+    parameters = new String[nrParameters];
+    parameterFieldNames = new String[nrParameters];
+    parameterValues = new String[nrParameters];
+  }
+
+  @Override
   public Object clone() {
     JobEntryTrans je = (JobEntryTrans) super.clone();
+    if ( arguments != null ) {
+      int nrArgs = arguments.length;
+      je.allocateArgs( nrArgs );
+      System.arraycopy( arguments, 0, je.arguments, 0, nrArgs );
+    }
+    if ( parameters != null ) {
+      int nrParameters = parameters.length;
+      je.allocateParams( nrParameters );
+      System.arraycopy( parameters, 0, je.parameters, 0, nrParameters );
+      System.arraycopy( parameterFieldNames, 0, je.parameterFieldNames, 0, nrParameters );
+      System.arraycopy( parameterValues, 0, je.parameterValues, 0, nrParameters );
+    }
     return je;
   }
 
@@ -174,10 +195,12 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
     return filename;
   }
 
+  @Override
   public String getFilename() {
     return filename;
   }
 
+  @Override
   public String getRealFilename() {
     return environmentSubstitute( getFilename() );
   }
@@ -218,8 +241,9 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
     return retval;
   }
 
+  @Override
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 300 );
+    StringBuilder retval = new StringBuilder( 300 );
 
     retval.append( super.getXML() );
 
@@ -285,21 +309,21 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
     }
 
     if ( parameters != null ) {
-      retval.append( "      " ).append( XMLHandler.openTag( "parameters" ) );
+      retval.append( "      " ).append( XMLHandler.openTag( "parameters" ) ).append( Const.CR );
 
       retval.append( "        " ).append( XMLHandler.addTagValue( "pass_all_parameters", passingAllParameters ) );
 
       for ( int i = 0; i < parameters.length; i++ ) {
         // This is a better way of making the XML file than the arguments.
-        retval.append( "            " ).append( XMLHandler.openTag( "parameter" ) );
+        retval.append( "        " ).append( XMLHandler.openTag( "parameter" ) ).append( Const.CR );
 
-        retval.append( "            " ).append( XMLHandler.addTagValue( "name", parameters[ i ] ) );
-        retval.append( "            " ).append( XMLHandler.addTagValue( "stream_name", parameterFieldNames[ i ] ) );
-        retval.append( "            " ).append( XMLHandler.addTagValue( "value", parameterValues[ i ] ) );
+        retval.append( "          " ).append( XMLHandler.addTagValue( "name", parameters[ i ] ) );
+        retval.append( "          " ).append( XMLHandler.addTagValue( "stream_name", parameterFieldNames[ i ] ) );
+        retval.append( "          " ).append( XMLHandler.addTagValue( "value", parameterValues[ i ] ) );
 
-        retval.append( "            " ).append( XMLHandler.closeTag( "parameter" ) );
+        retval.append( "        " ).append( XMLHandler.closeTag( "parameter" ) ).append( Const.CR );
       }
-      retval.append( "      " ).append( XMLHandler.closeTag( "parameters" ) );
+      retval.append( "      " ).append( XMLHandler.closeTag( "parameters" ) ).append( Const.CR );
     }
 
     return retval.toString();
@@ -313,16 +337,17 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
       //
       specificationMethod = ObjectLocationSpecificationMethod.FILENAME;
 
-      if ( !Const.isEmpty( filename ) ) {
+      if ( !Utils.isEmpty( filename ) ) {
         specificationMethod = ObjectLocationSpecificationMethod.FILENAME;
       } else if ( transObjectId != null ) {
         specificationMethod = ObjectLocationSpecificationMethod.REPOSITORY_BY_REFERENCE;
-      } else if ( !Const.isEmpty( transname ) ) {
+      } else if ( !Utils.isEmpty( transname ) ) {
         specificationMethod = ObjectLocationSpecificationMethod.REPOSITORY_BY_NAME;
       }
     }
   }
 
+  @Override
   public void loadXML( Node entrynode, List<DatabaseMeta> databases, List<SlaveServer> slaveServers,
                        Repository rep, IMetaStore metaStore ) throws KettleXMLException {
     try {
@@ -332,12 +357,12 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
       specificationMethod = ObjectLocationSpecificationMethod.getSpecificationMethodByCode( method );
 
       String transId = XMLHandler.getTagValue( entrynode, "trans_object_id" );
-      transObjectId = Const.isEmpty( transId ) ? null : new StringObjectId( transId );
+      transObjectId = Utils.isEmpty( transId ) ? null : new StringObjectId( transId );
       filename = XMLHandler.getTagValue( entrynode, "filename" );
       transname = XMLHandler.getTagValue( entrynode, "transname" );
       directory = XMLHandler.getTagValue( entrynode, "directory" );
 
-      if ( rep != null && rep.isConnected() && !Const.isEmpty( transname ) ) {
+      if ( rep != null && rep.isConnected() && !Utils.isEmpty( transname ) ) {
         specificationMethod = ObjectLocationSpecificationMethod.REPOSITORY_BY_NAME;
       }
 
@@ -364,7 +389,7 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
 
       setAppendLogfile = "Y".equalsIgnoreCase( XMLHandler.getTagValue( entrynode, "set_append_logfile" ) );
       String wait = XMLHandler.getTagValue( entrynode, "wait_until_finished" );
-      if ( Const.isEmpty( wait ) ) {
+      if ( Utils.isEmpty( wait ) ) {
         waitingToFinish = true;
       } else {
         waitingToFinish = "Y".equalsIgnoreCase( wait );
@@ -377,7 +402,7 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
       while ( XMLHandler.getTagValue( entrynode, "argument" + argnr ) != null ) {
         argnr++;
       }
-      arguments = new String[ argnr ];
+      allocateArgs( argnr );
 
       // Read them all...
       for ( int a = 0; a < argnr; a++ ) {
@@ -387,13 +412,10 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
       Node parametersNode = XMLHandler.getSubNode( entrynode, "parameters" );
 
       String passAll = XMLHandler.getTagValue( parametersNode, "pass_all_parameters" );
-      passingAllParameters = Const.isEmpty( passAll ) || "Y".equalsIgnoreCase( passAll );
+      passingAllParameters = Utils.isEmpty( passAll ) || "Y".equalsIgnoreCase( passAll );
 
       int nrParameters = XMLHandler.countNodes( parametersNode, "parameter" );
-
-      parameters = new String[ nrParameters ];
-      parameterFieldNames = new String[ nrParameters ];
-      parameterValues = new String[ nrParameters ];
+      allocateParams( nrParameters );
 
       for ( int i = 0; i < nrParameters; i++ ) {
         Node knode = XMLHandler.getSubNodeByNr( parametersNode, "parameter", i );
@@ -409,13 +431,14 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
 
   // Load the jobentry from repository
   //
+  @Override
   public void loadRep( Repository rep, IMetaStore metaStore, ObjectId id_jobentry, List<DatabaseMeta> databases,
                        List<SlaveServer> slaveServers ) throws KettleException {
     try {
       String method = rep.getJobEntryAttributeString( id_jobentry, "specification_method" );
       specificationMethod = ObjectLocationSpecificationMethod.getSpecificationMethodByCode( method );
       String transId = rep.getJobEntryAttributeString( id_jobentry, "trans_object_id" );
-      transObjectId = Const.isEmpty( transId ) ? null : new StringObjectId( transId );
+      transObjectId = Utils.isEmpty( transId ) ? null : new StringObjectId( transId );
       transname = rep.getJobEntryAttributeString( id_jobentry, "name" );
       directory = rep.getJobEntryAttributeString( id_jobentry, "dir_path" );
       filename = rep.getJobEntryAttributeString( id_jobentry, "file_name" );
@@ -446,7 +469,7 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
 
       // How many arguments?
       int argnr = rep.countNrJobEntryAttributes( id_jobentry, "argument" );
-      arguments = new String[ argnr ];
+      allocateArgs( argnr );
 
       // Read all arguments...
       for ( int a = 0; a < argnr; a++ ) {
@@ -455,9 +478,7 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
 
       // How many arguments?
       int parameternr = rep.countNrJobEntryAttributes( id_jobentry, "parameter_name" );
-      parameters = new String[ parameternr ];
-      parameterFieldNames = new String[ parameternr ];
-      parameterValues = new String[ parameternr ];
+      allocateParams( parameternr );
 
       // Read all parameters ...
       for ( int a = 0; a < parameternr; a++ ) {
@@ -476,6 +497,7 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
 
   // Save the attributes of this job entry
   //
+  @Override
   public void saveRep( Repository rep, IMetaStore metaStore, ObjectId id_job ) throws KettleException {
     try {
       rep.saveJobEntryAttribute( id_job, getObjectId(), "specification_method", specificationMethod == null
@@ -531,6 +553,7 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
     }
   }
 
+  @Override
   public void clear() {
     super.clear();
 
@@ -564,6 +587,7 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
    * @param nr     the job entry number
    * @return The Result of the execution.
    */
+  @Override
   public Result execute( Result result, int nr ) throws KettleException {
     result.setEntryNr( nr );
 
@@ -579,7 +603,7 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
 
       // We need to check here the log filename
       // if we do not have one, we must fail
-      if ( Const.isEmpty( realLogFilename ) ) {
+      if ( Utils.isEmpty( realLogFilename ) ) {
         logError( BaseMessages.getString( PKG, "JobTrans.Exception.LogFilenameMissing" ) );
         result.setNrErrors( 1 );
         result.setResult( false );
@@ -609,7 +633,7 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
     // Figure out the remote slave server...
     //
     SlaveServer remoteSlaveServer = null;
-    if ( !Const.isEmpty( remoteSlaveServerName ) ) {
+    if ( !Utils.isEmpty( remoteSlaveServerName ) ) {
       String realRemoteSlaveServerName = environmentSubstitute( remoteSlaveServerName );
       remoteSlaveServer = parentJob.getJobMeta().findSlaveServer( realRemoteSlaveServerName );
       if ( remoteSlaveServer == null ) {
@@ -620,7 +644,7 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
 
     // Open the transformation...
     //
-    switch( specificationMethod ) {
+    switch ( specificationMethod ) {
       case FILENAME:
         if ( isDetailed() ) {
           logDetailed( BaseMessages.getString(
@@ -648,12 +672,19 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
     // the repository is down.
     // Log the stack trace and return an error condition from this
     //
-    TransMeta transMeta = getTransMeta( rep, metaStore, this );
+    TransMeta transMeta = null;
+    try {
+      transMeta = getTransMeta( rep, metaStore, this );
+    } catch ( KettleException e ) {
+      logError( Const.getStackTracker( e ) );
+      result.setNrErrors( 1 );
+      result.setResult( false );
+      return result;
+    }
 
     int iteration = 0;
     String[] args1 = arguments;
-    if ( args1 == null || args1.length == 0 ) // No arguments set, look at the parent job.
-    {
+    if ( args1 == null || args1.length == 0 ) { // No arguments set, look at the parent job.
       args1 = parentJob.getArguments();
     }
     // initializeVariablesFrom(parentJob);
@@ -693,11 +724,11 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
       NamedParams namedParam = new NamedParamsDefault();
       if ( parameters != null ) {
         for ( int idx = 0; idx < parameters.length; idx++ ) {
-          if ( !Const.isEmpty( parameters[ idx ] ) ) {
+          if ( !Utils.isEmpty( parameters[ idx ] ) ) {
             // We have a parameter
             //
             namedParam.addParameterDefinition( parameters[ idx ], "", "Job entry runtime" );
-            if ( Const.isEmpty( Const.trim( parameterFieldNames[ idx ] ) ) ) {
+            if ( Utils.isEmpty( Const.trim( parameterFieldNames[ idx ] ) ) ) {
               // There is no field name specified.
               //
               String value = Const.NVL( environmentSubstitute( parameterValues[ idx ] ), "" );
@@ -767,9 +798,9 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
 
             if ( parameters != null ) {
               for ( int idx = 0; idx < parameters.length; idx++ ) {
-                if ( !Const.isEmpty( parameters[ idx ] ) ) {
+                if ( !Utils.isEmpty( parameters[ idx ] ) ) {
                   // We have a parameter
-                  if ( Const.isEmpty( Const.trim( parameterFieldNames[ idx ] ) ) ) {
+                  if ( Utils.isEmpty( Const.trim( parameterFieldNames[ idx ] ) ) ) {
                     namedParam.setParameterValue( parameters[ idx ], Const.NVL(
                       environmentSubstitute( parameterValues[ idx ] ), "" ) );
                   } else {
@@ -801,9 +832,9 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
             // Copy the input the parameters
             if ( parameters != null ) {
               for ( int idx = 0; idx < parameters.length; idx++ ) {
-                if ( !Const.isEmpty( parameters[ idx ] ) ) {
+                if ( !Utils.isEmpty( parameters[ idx ] ) ) {
                   // We have a parameter
-                  if ( Const.isEmpty( Const.trim( parameterFieldNames[ idx ] ) ) ) {
+                  if ( Utils.isEmpty( Const.trim( parameterFieldNames[ idx ] ) ) ) {
                     namedParam.setParameterValue( parameters[ idx ], Const.NVL(
                       environmentSubstitute( parameterValues[ idx ] ), "" ) );
                   } else {
@@ -829,7 +860,7 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
           // Grab the parameter value set in the Trans job entry
           //
           String thisValue = namedParam.getParameterValue( parameterNames[ idx ] );
-          if ( !Const.isEmpty( thisValue ) ) {
+          if ( !Utils.isEmpty( thisValue ) ) {
             // Set the value as specified by the user in the job entry
             //
             transMeta.setParameterValue( parameterNames[ idx ], thisValue );
@@ -839,7 +870,7 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
             //
             if ( isPassingAllParameters() ) {
               String parentValue = parentJob.getParameterValue( parameterNames[ idx ] );
-              if ( !Const.isEmpty( parentValue ) ) {
+              if ( !Utils.isEmpty( parentValue ) ) {
                 transMeta.setParameterValue( parameterNames[ idx ], parentValue );
               }
             }
@@ -867,6 +898,10 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
           // Also set the arguments...
           //
           executionConfiguration.setArgumentStrings( args );
+
+          if ( parentJob.getJobMeta().isBatchIdPassed() ) {
+            executionConfiguration.setPassedBatchId( parentJob.getPassedBatchId() );
+          }
 
           TransSplitter transSplitter = null;
           long errors = 0;
@@ -943,6 +978,10 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
               Const.NVL( transMeta.getParameterValue( param ), Const.NVL(
                 transMeta.getParameterDefault( param ), transMeta.getVariable( param ) ) );
             params.put( param, value );
+          }
+
+          if ( parentJob.getJobMeta().isBatchIdPassed() ) {
+            transExecutionConfiguration.setPassedBatchId( parentJob.getPassedBatchId() );
           }
 
           // Send the XML over to the slave server
@@ -1069,11 +1108,16 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
 
             // Wait until we're done with it...
             //TODO is it possible to implement Observer pattern to avoid Thread.sleep here?
-            while ( !trans.isFinished() && !parentJob.isStopped() && trans.getErrors() == 0 ) {
-              try {
-                Thread.sleep( 0, 500 );
-              } catch ( InterruptedException e ) {
-                // Ignore errors
+            while ( !trans.isFinished() && trans.getErrors() == 0 ) {
+              if ( parentJob.isStopped() ) {
+                trans.stopAll();
+                break;
+              } else {
+                try {
+                  Thread.sleep( 0, 500 );
+                } catch ( InterruptedException e ) {
+                  // Ignore errors
+                }
               }
             }
             trans.waitUntilFinished();
@@ -1088,7 +1132,7 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
             result.add( newResult );
 
             // Set the result rows too, if any ...
-            if ( !Const.isEmpty( newResult.getRows() ) ) {
+            if ( !Utils.isEmpty( newResult.getRows() ) ) {
               result.setRows( newResult.getRows() );
             }
 
@@ -1145,6 +1189,13 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
     return result;
   }
 
+  /**
+   * @deprecated use {@link #getTransMeta(Repository, IMetaStore, VariableSpace)}
+   * @param rep
+   * @param space
+   * @return
+   * @throws KettleException
+   */
   @Deprecated
   public TransMeta getTransMeta( Repository rep, VariableSpace space ) throws KettleException {
     return getTransMeta( rep, null, space );
@@ -1154,15 +1205,13 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
     try {
       TransMeta transMeta = null;
       CurrentDirectoryResolver r = new CurrentDirectoryResolver();
-      VariableSpace tmpSpace = r.resolveCurrentDirectory( 
+      VariableSpace tmpSpace = r.resolveCurrentDirectory(
           specificationMethod, space, rep, parentJob, getFilename() );
-      switch( specificationMethod ) {
+      switch ( specificationMethod ) {
         case FILENAME:
           String realFilename = tmpSpace.environmentSubstitute( getFilename() );
           if ( rep != null ) {
-            while ( realFilename.contains( "//" ) ) {
-              realFilename = realFilename.replace( "//", "/" );
-            }
+            realFilename = r.normalizeSlashes( realFilename );
             // need to try to load from the repository
             try {
               String dirStr = realFilename.substring( 0, realFilename.lastIndexOf( "/" ) );
@@ -1173,7 +1222,7 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
               // try without extension
               if ( realFilename.endsWith( Const.STRING_TRANS_DEFAULT_EXT ) ) {
                 try {
-                  String tmpFilename = realFilename.substring( realFilename.lastIndexOf( "/" ) + 1, 
+                  String tmpFilename = realFilename.substring( realFilename.lastIndexOf( "/" ) + 1,
                       realFilename.indexOf( "." + Const.STRING_TRANS_DEFAULT_EXT ) );
                   String dirStr = realFilename.substring( 0, realFilename.lastIndexOf( "/" ) );
                   RepositoryDirectoryInterface dir = rep.findDirectory( dirStr );
@@ -1202,10 +1251,8 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
             //
             // It reads last the last revision from the repository.
             //
-            while ( realDirectory.contains( "//" ) ) {
-              realDirectory = realDirectory.replace( "//", "/" );
-            }
-            
+            realDirectory = r.normalizeSlashes( realDirectory );
+
             RepositoryDirectoryInterface repositoryDirectory = rep.findDirectory( realDirectory );
             transMeta = rep.loadTransformation( transname, repositoryDirectory, null, true, null );
           } else {
@@ -1215,7 +1262,7 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
             } catch ( KettleException ke ) {
               try {
                 // add .ktr extension and try again
-                transMeta = new TransMeta( realDirectory + "/" + transname + "." + Const.STRING_TRANS_DEFAULT_EXT, 
+                transMeta = new TransMeta( realDirectory + "/" + transname + "." + Const.STRING_TRANS_DEFAULT_EXT,
                     metaStore, null, true, this, null );
               } catch ( KettleException ke2 ) {
                 throw new KettleException( BaseMessages.getString( PKG, "JobTrans.Exception.NoRepDefined" ), ke2 );
@@ -1257,14 +1304,17 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
     }
   }
 
+  @Override
   public boolean evaluates() {
     return true;
   }
 
+  @Override
   public boolean isUnconditional() {
     return true;
   }
 
+  @Override
   public List<SQLStatement> getSQLStatements( Repository repository, IMetaStore metaStore, VariableSpace space ) throws KettleException {
     this.copyVariablesFrom( space );
     TransMeta transMeta = getTransMeta( repository, metaStore, this );
@@ -1300,22 +1350,28 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
     this.clustering = clustering;
   }
 
+  @Override
   public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
                      Repository repository, IMetaStore metaStore ) {
     if ( setLogfile ) {
-      andValidator().validate( this, "logfile", remarks, putValidators( notBlankValidator() ) );
+      JobEntryValidatorUtils.andValidator().validate( this, "logfile", remarks,
+          AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
     }
-    if ( !Const.isEmpty( filename ) ) {
-      andValidator().validate( this, "filename", remarks, putValidators( notBlankValidator() ) );
+    if ( !Utils.isEmpty( filename ) ) {
+      JobEntryValidatorUtils.andValidator().validate( this, "filename", remarks,
+          AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
     } else {
-      andValidator().validate( this, "transname", remarks, putValidators( notBlankValidator() ) );
-      andValidator().validate( this, "directory", remarks, putValidators( notNullValidator() ) );
+      JobEntryValidatorUtils.andValidator().validate( this, "transname", remarks,
+          AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
+      JobEntryValidatorUtils.andValidator().validate( this, "directory", remarks,
+          AndValidator.putValidators( JobEntryValidatorUtils.notNullValidator() ) );
     }
   }
 
+  @Override
   public List<ResourceReference> getResourceDependencies( JobMeta jobMeta ) {
     List<ResourceReference> references = super.getResourceDependencies( jobMeta );
-    if ( !Const.isEmpty( filename ) ) {
+    if ( !Utils.isEmpty( filename ) ) {
       // During this phase, the variable space hasn't been initialized yet - it seems
       // to happen during the execute. As such, we need to use the job meta's resolution
       // of the variables.
@@ -1343,6 +1399,7 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
    * @return The filename for this object. (also contained in the definitions map)
    * @throws KettleException in case something goes wrong during the export
    */
+  @Override
   public String exportResources( VariableSpace space, Map<String, ResourceDefinition> definitions,
                                  ResourceNamingInterface namingInterface, Repository repository, IMetaStore metaStore ) throws KettleException {
     // Try to load the transformation from repository or file.
@@ -1483,6 +1540,7 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
     this.specificationMethod = specificationMethod;
   }
 
+  @Override
   public boolean hasRepositoryReferences() {
     return specificationMethod == ObjectLocationSpecificationMethod.REPOSITORY_BY_REFERENCE;
   }
@@ -1492,6 +1550,7 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
    *
    * @param repository the repository to reference.
    */
+  @Override
   public void lookupRepositoryReferences( Repository repository ) throws KettleException {
     // The correct reference is stored in the trans name and directory attributes...
     //
@@ -1503,15 +1562,17 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
   /**
    * @return The objects referenced in the step, like a a transformation, a job, a mapper, a reducer, a combiner, ...
    */
+  @Override
   public String[] getReferencedObjectDescriptions() {
     return new String[] { BaseMessages.getString( PKG, "JobEntryTrans.ReferencedObject.Description" ), };
   }
 
   private boolean isTransformationDefined() {
-    return !Const.isEmpty( filename )
-      || transObjectId != null || ( !Const.isEmpty( this.directory ) && !Const.isEmpty( transname ) );
+    return !Utils.isEmpty( filename )
+      || transObjectId != null || ( !Utils.isEmpty( this.directory ) && !Utils.isEmpty( transname ) );
   }
 
+  @Override
   public boolean[] isReferencedObjectEnabled() {
     return new boolean[] { isTransformationDefined(), };
   }
@@ -1526,6 +1587,7 @@ public class JobEntryTrans extends JobEntryBase implements Cloneable, JobEntryIn
    * @return the referenced object once loaded
    * @throws KettleException
    */
+  @Override
   public Object loadReferencedObject( int index, Repository rep, IMetaStore metaStore, VariableSpace space ) throws KettleException {
     return getTransMeta( rep, metaStore, space );
   }

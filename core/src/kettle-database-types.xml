@@ -105,6 +105,11 @@
     <classname>org.pentaho.di.core.database.LucidDBDatabaseMeta</classname>
   </database-type>                                                         
 
+  <database-type id="MARIADB">
+    <description>MariaDB</description>
+    <classname>org.pentaho.di.core.database.MariaDBDatabaseMeta</classname>
+  </database-type>
+
   <database-type id="MONETDB">
     <description>MonetDB</description>
     <classname>org.pentaho.di.core.database.MonetDBDatabaseMeta</classname>
@@ -173,11 +178,6 @@
   <database-type id="SAPDB">
     <description>MaxDB (SAP DB)</description>
     <classname>org.pentaho.di.core.database.SAPDBDatabaseMeta</classname>
-  </database-type>                                                       
-
-  <database-type id="SAPR3">
-    <description>SAP ERP System</description>
-    <classname>org.pentaho.di.core.database.SAPR3DatabaseMeta</classname>
   </database-type>                                                       
 
   <database-type id="SQLITE">

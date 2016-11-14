@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -29,6 +29,7 @@ import javax.script.ScriptException;
 
 import org.pentaho.di.compatibility.Value;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
 import org.pentaho.di.core.exception.KettleValueException;
@@ -151,7 +152,7 @@ public class Script extends BaseStep implements StepInterface {
         if ( meta.getReplace()[ i ] ) {
           data.replaceIndex[ i ] = rowMeta.indexOfValue( meta.getFieldname()[ i ] );
           if ( data.replaceIndex[ i ] < 0 ) {
-            if ( Const.isEmpty( meta.getFieldname()[ i ] ) ) {
+            if ( Utils.isEmpty( meta.getFieldname()[ i ] ) ) {
               throw new KettleStepException( BaseMessages.getString(
                 PKG, "ScriptValuesMetaMod.Exception.FieldToReplaceNotFound", meta.getFieldname()[ i ] ) );
             }
@@ -359,7 +360,7 @@ public class Script extends BaseStep implements StepInterface {
 
         putRow( data.outputRowMeta, outputRow );
       } else {
-        switch( iTranStat ) {
+        switch ( iTranStat ) {
           case SKIP_TRANSFORMATION:
             // eat this row.
             bRC = true;
@@ -396,7 +397,7 @@ public class Script extends BaseStep implements StepInterface {
 
   public Object getValueFromJScript( Object result, int i ) throws KettleValueException {
     String fieldName = meta.getFieldname()[ i ];
-    if ( !Const.isEmpty( fieldName ) ) {
+    if ( !Utils.isEmpty( fieldName ) ) {
       // res.setName(meta.getRename()[i]);
       // res.setType(meta.getType()[i]);
 
@@ -489,7 +490,7 @@ public class Script extends BaseStep implements StepInterface {
       // Get the actual Scripts from our MetaData
       jsScripts = meta.getJSScripts();
       for ( int j = 0; j < jsScripts.length; j++ ) {
-        switch( jsScripts[ j ].getScriptType() ) {
+        switch ( jsScripts[ j ].getScriptType() ) {
           case ScriptValuesScript.TRANSFORM_SCRIPT:
             strTransformScript = jsScripts[ j ].getScript();
             break;

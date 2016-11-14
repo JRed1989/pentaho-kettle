@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2015 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,13 +22,13 @@
 
 package org.pentaho.di.trans.steps.splitfieldtorows;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.Test;
-import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.KettleEnvironment;
 import org.pentaho.di.core.RowMetaAndData;
 import org.pentaho.di.core.exception.KettleException;
@@ -37,8 +37,8 @@ import org.pentaho.di.core.plugins.PluginRegistry;
 import org.pentaho.di.core.plugins.StepPluginType;
 import org.pentaho.di.core.row.RowMeta;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaString;
 import org.pentaho.di.trans.RowProducer;
 import org.pentaho.di.trans.RowStepCollector;
 import org.pentaho.di.trans.Trans;
@@ -68,7 +68,7 @@ public class SplitFieldToRowsTest {
    */
   private RowMetaInterface createRowMetaInterface() {
     RowMetaInterface rowMeta = new RowMeta();
-    ValueMetaInterface[] valuesMeta = { new ValueMeta( FIELD_TO_SPLIT_NAME, ValueMeta.TYPE_STRING ) };
+    ValueMetaInterface[] valuesMeta = { new ValueMetaString( FIELD_TO_SPLIT_NAME ) };
     for ( int i = 0; i < valuesMeta.length; i++ ) {
       rowMeta.addValueMeta( valuesMeta[i] );
     }
@@ -168,7 +168,7 @@ public class SplitFieldToRowsTest {
       TransHopMeta hop_SplitFieldToRows_Dummy = new TransHopMeta( splitFieldToRows, dummyStep );
       transMeta.addTransHop( hop_SplitFieldToRows_Dummy );
 
-      if ( !Const.isEmpty( delimiterVariableValue ) ) {
+      if ( !Utils.isEmpty( delimiterVariableValue ) ) {
         String delimiterVariableName = delimiter.replace( "${", "" );
         delimiterVariableName = delimiterVariableName.replace( "}", "" );
         transMeta.setVariable( delimiterVariableName, delimiterVariableValue );

@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,12 +22,8 @@
 
 package org.pentaho.di.job.entries.ftpsget;
 
-import static org.pentaho.di.job.entry.validator.AndValidator.putValidators;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.andValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.fileExistsValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.integerValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notBlankValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notNullValidator;
+import org.pentaho.di.job.entry.validator.AndValidator;
+import org.pentaho.di.job.entry.validator.JobEntryValidatorUtils;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
@@ -41,6 +37,7 @@ import org.ftp4che.util.ftpfile.FTPFile;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.ResultFile;
 import org.pentaho.di.core.database.DatabaseMeta;
@@ -108,17 +105,13 @@ public class JobEntryFTPSGet extends JobEntryBase implements Cloneable, JobEntry
 
   private int connectionType;
 
-  public int ifFileExistsSkip = 0;
-  public String SifFileExistsSkip = "ifFileExistsSkip";
+  public static final String[] FILE_EXISTS_ACTIONS =
+    new String[] { "ifFileExistsSkip", "ifFileExistsCreateUniq", "ifFileExistsFail" };
+  public static final int ifFileExistsSkip = 0;
+  public static final int ifFileExistsCreateUniq = 1;
+  public static final int ifFileExistsFail = 2;
 
-  public int ifFileExistsCreateUniq = 1;
-  public String SifFileExistsCreateUniq = "ifFileExistsCreateUniq";
-
-  public int ifFileExistsFail = 2;
-  public String SifFileExistsFail = "ifFileExistsFail";
-
-  public int ifFileExists;
-  public String SifFileExists;
+  private int ifFileExists;
 
   public String SUCCESS_IF_AT_LEAST_X_FILES_DOWNLOADED = "success_when_at_least";
   public String SUCCESS_IF_ERRORS_LESS = "success_if_errors_less";
@@ -142,8 +135,7 @@ public class JobEntryFTPSGet extends JobEntryBase implements Cloneable, JobEntry
     nr_limit = "10";
     port = "21";
     success_condition = SUCCESS_IF_NO_ERRORS;
-    ifFileExists = ifFileExistsSkip;
-    SifFileExists = SifFileExistsSkip;
+    ifFileExists = 0;
 
     serverName = null;
     movefiles = false;
@@ -167,7 +159,7 @@ public class JobEntryFTPSGet extends JobEntryBase implements Cloneable, JobEntry
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 128 );
+    StringBuilder retval = new StringBuilder( 550 ); // 490 chars in spaces and tag names alone
 
     retval.append( super.getXML() );
     retval.append( "      " ).append( XMLHandler.addTagValue( "port", port ) );
@@ -200,7 +192,7 @@ public class JobEntryFTPSGet extends JobEntryBase implements Cloneable, JobEntry
     retval.append( "      " ).append(
       XMLHandler.addTagValue( "proxy_password", Encr.encryptPasswordIfNotUsingVariables( proxyPassword ) ) );
 
-    retval.append( "      " ).append( XMLHandler.addTagValue( "ifFileExists", SifFileExists ) );
+    retval.append( "      " ).append( XMLHandler.addTagValue( "ifFileExists", getFileExistsAction( ifFileExists ) ) );
 
     retval.append( "      " ).append( XMLHandler.addTagValue( "nr_limit", nr_limit ) );
     retval.append( "      " ).append( XMLHandler.addTagValue( "success_condition", success_condition ) );
@@ -239,7 +231,7 @@ public class JobEntryFTPSGet extends JobEntryBase implements Cloneable, JobEntry
 
       String addresult = XMLHandler.getTagValue( entrynode, "isaddresult" );
 
-      if ( Const.isEmpty( addresult ) ) {
+      if ( Utils.isEmpty( addresult ) ) {
         isaddresult = true;
       } else {
         isaddresult = "Y".equalsIgnoreCase( addresult );
@@ -253,18 +245,7 @@ public class JobEntryFTPSGet extends JobEntryBase implements Cloneable, JobEntry
       proxyPassword =
         Encr.decryptPasswordOptionallyEncrypted( XMLHandler.getTagValue( entrynode, "proxy_password" ) );
 
-      SifFileExists = XMLHandler.getTagValue( entrynode, "ifFileExists" );
-      if ( Const.isEmpty( SifFileExists ) ) {
-        ifFileExists = ifFileExistsSkip;
-      } else {
-        if ( SifFileExists.equals( SifFileExistsCreateUniq ) ) {
-          ifFileExists = ifFileExistsCreateUniq;
-        } else if ( SifFileExists.equals( SifFileExistsFail ) ) {
-          ifFileExists = ifFileExistsFail;
-        } else {
-          ifFileExists = ifFileExistsSkip;
-        }
-      }
+      ifFileExists = getFileExistsIndex( XMLHandler.getTagValue( entrynode, "ifFileExists" ) );
       nr_limit = XMLHandler.getTagValue( entrynode, "nr_limit" );
       success_condition =
         Const.NVL( XMLHandler.getTagValue( entrynode, "success_condition" ), SUCCESS_IF_NO_ERRORS );
@@ -302,11 +283,11 @@ public class JobEntryFTPSGet extends JobEntryBase implements Cloneable, JobEntry
       date_time_format = rep.getJobEntryAttributeString( id_jobentry, "date_time_format" );
       AddDateBeforeExtension = rep.getJobEntryAttributeBoolean( id_jobentry, "AddDateBeforeExtension" );
 
-      String addToResult = rep.getStepAttributeString( id_jobentry, "add_to_result_filenames" );
-      if ( Const.isEmpty( addToResult ) ) {
+      String addToResult = rep.getJobEntryAttributeString( id_jobentry, "isaddresult" );
+      if ( Utils.isEmpty( addToResult ) ) {
         isaddresult = true;
       } else {
-        isaddresult = rep.getStepAttributeBoolean( id_jobentry, "add_to_result_filenames" );
+        isaddresult = rep.getJobEntryAttributeBoolean( id_jobentry, "isaddresult" );
       }
 
       createmovefolder = rep.getJobEntryAttributeBoolean( id_jobentry, "createmovefolder" );
@@ -318,18 +299,7 @@ public class JobEntryFTPSGet extends JobEntryBase implements Cloneable, JobEntry
         Encr
           .decryptPasswordOptionallyEncrypted( rep.getJobEntryAttributeString( id_jobentry, "proxy_password" ) );
 
-      SifFileExists = rep.getJobEntryAttributeString( id_jobentry, "ifFileExists" );
-      if ( Const.isEmpty( SifFileExists ) ) {
-        ifFileExists = ifFileExistsSkip;
-      } else {
-        if ( SifFileExists.equals( SifFileExistsCreateUniq ) ) {
-          ifFileExists = ifFileExistsCreateUniq;
-        } else if ( SifFileExists.equals( SifFileExistsFail ) ) {
-          ifFileExists = ifFileExistsFail;
-        } else {
-          ifFileExists = ifFileExistsSkip;
-        }
-      }
+      ifFileExists = getFileExistsIndex( rep.getJobEntryAttributeString( id_jobentry, "ifFileExists" ) );
       nr_limit = rep.getJobEntryAttributeString( id_jobentry, "nr_limit" );
       success_condition =
         Const.NVL( rep.getJobEntryAttributeString( id_jobentry, "success_condition" ), SUCCESS_IF_NO_ERRORS );
@@ -375,7 +345,7 @@ public class JobEntryFTPSGet extends JobEntryBase implements Cloneable, JobEntry
       rep.saveJobEntryAttribute( id_job, getObjectId(), "proxy_username", proxyUsername );
       rep.saveJobEntryAttribute( id_job, getObjectId(), "proxy_password", Encr
         .encryptPasswordIfNotUsingVariables( proxyPassword ) );
-      rep.saveJobEntryAttribute( id_job, getObjectId(), "ifFileExists", SifFileExists );
+      rep.saveJobEntryAttribute( id_job, getObjectId(), "ifFileExists", getFileExistsAction( ifFileExists ) );
 
       rep.saveJobEntryAttribute( id_job, getObjectId(), "nr_limit", nr_limit );
       rep.saveJobEntryAttribute( id_job, getObjectId(), "success_condition", success_condition );
@@ -715,6 +685,34 @@ public class JobEntryFTPSGet extends JobEntryBase implements Cloneable, JobEntry
     this.proxyUsername = proxyUsername;
   }
 
+  public int getIfFileExists() {
+    return ifFileExists;
+  }
+
+  public void setIfFileExists( int ifFileExists ) {
+    this.ifFileExists = ifFileExists;
+  }
+
+  public static String getFileExistsAction( int actionId ) {
+    if ( actionId < 0 || actionId >= FILE_EXISTS_ACTIONS.length ) {
+      return FILE_EXISTS_ACTIONS[0];
+    }
+    return FILE_EXISTS_ACTIONS[actionId];
+  }
+
+  public static int getFileExistsIndex( String desc ) {
+    int result = 0;
+    if ( Utils.isEmpty( desc ) ) {
+      return result;
+    }
+    for ( int i = 0; i < FILE_EXISTS_ACTIONS.length; i++ ) {
+      if ( desc.equalsIgnoreCase( FILE_EXISTS_ACTIONS[i] ) ) {
+        result = i;
+        break;
+      }
+    }
+    return result;
+  }
   public Result execute( Result previousResult, int nr ) throws KettleException {
     // LogWriter log = LogWriter.getInstance();
     logBasic( BaseMessages.getString( PKG, "JobEntryFTPS.Started", serverName ) );
@@ -730,7 +728,7 @@ public class JobEntryFTPSGet extends JobEntryBase implements Cloneable, JobEntry
 
     // Here let's put some controls before stating the job
     if ( movefiles ) {
-      if ( Const.isEmpty( movetodirectory ) ) {
+      if ( Utils.isEmpty( movetodirectory ) ) {
         logError( BaseMessages.getString( PKG, "JobEntryFTPS.MoveToFolderEmpty" ) );
         return result;
       }
@@ -757,7 +755,7 @@ public class JobEntryFTPSGet extends JobEntryBase implements Cloneable, JobEntry
       this.buildFTPSConnection( connection );
 
       // Create move to folder if necessary
-      if ( movefiles && !Const.isEmpty( movetodirectory ) ) {
+      if ( movefiles && !Utils.isEmpty( movetodirectory ) ) {
         realMoveToFolder = normalizePath( environmentSubstitute( movetodirectory ) );
         // Folder exists?
         boolean folderExist = connection.isDirectoryExists( realMoveToFolder );
@@ -780,7 +778,7 @@ public class JobEntryFTPSGet extends JobEntryBase implements Cloneable, JobEntry
       }
       if ( !exitjobentry ) {
         Pattern pattern = null;
-        if ( !Const.isEmpty( wildcard ) ) {
+        if ( !Utils.isEmpty( wildcard ) ) {
           String realWildcard = environmentSubstitute( wildcard );
           pattern = Pattern.compile( realWildcard );
         }
@@ -1030,7 +1028,7 @@ public class JobEntryFTPSGet extends JobEntryBase implements Cloneable, JobEntry
     SimpleDateFormat daf = new SimpleDateFormat();
     Date now = new Date();
 
-    if ( SpecifyFormat && !Const.isEmpty( date_time_format ) ) {
+    if ( SpecifyFormat && !Utils.isEmpty( date_time_format ) ) {
       daf.applyPattern( date_time_format );
       String dt = daf.format( now );
       retval += dt;
@@ -1145,7 +1143,7 @@ public class JobEntryFTPSGet extends JobEntryBase implements Cloneable, JobEntry
 
   public List<ResourceReference> getResourceDependencies( JobMeta jobMeta ) {
     List<ResourceReference> references = super.getResourceDependencies( jobMeta );
-    if ( !Const.isEmpty( serverName ) ) {
+    if ( !Utils.isEmpty( serverName ) ) {
       String realServerName = jobMeta.environmentSubstitute( serverName );
       ResourceReference reference = new ResourceReference( this );
       reference.getEntries().add( new ResourceEntry( realServerName, ResourceType.SERVER ) );
@@ -1157,26 +1155,31 @@ public class JobEntryFTPSGet extends JobEntryBase implements Cloneable, JobEntry
   @Override
   public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
-    andValidator().validate( this, "serverName", remarks, putValidators( notBlankValidator() ) );
-    andValidator().validate(
-      this, "localDirectory", remarks, putValidators( notBlankValidator(), fileExistsValidator() ) );
-    andValidator().validate( this, "userName", remarks, putValidators( notBlankValidator() ) );
-    andValidator().validate( this, "password", remarks, putValidators( notNullValidator() ) );
-    andValidator().validate( this, "serverPort", remarks, putValidators( integerValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "serverName", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate(
+      this, "localDirectory", remarks, AndValidator.putValidators(
+          JobEntryValidatorUtils.notBlankValidator(), JobEntryValidatorUtils.fileExistsValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "userName", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "password", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notNullValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "serverPort", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.integerValidator() ) );
   }
 
   void buildFTPSConnection( FTPSConnection connection ) throws Exception {
-    if ( !Const.isEmpty( proxyHost ) ) {
+    if ( !Utils.isEmpty( proxyHost ) ) {
       String realProxy_host = environmentSubstitute( proxyHost );
       String realProxy_username = environmentSubstitute( proxyUsername );
       String realProxy_password =
         Encr.decryptPasswordOptionallyEncrypted( environmentSubstitute( proxyPassword ) );
 
       connection.setProxyHost( realProxy_host );
-      if ( !Const.isEmpty( realProxy_username ) ) {
+      if ( !Utils.isEmpty( realProxy_username ) ) {
         connection.setProxyUser( realProxy_username );
       }
-      if ( !Const.isEmpty( realProxy_password ) ) {
+      if ( !Utils.isEmpty( realProxy_password ) ) {
         connection.setProxyPassword( realProxy_password );
       }
       if ( isDetailed() ) {
@@ -1230,7 +1233,7 @@ public class JobEntryFTPSGet extends JobEntryBase implements Cloneable, JobEntry
     }
 
     // move to spool dir ...
-    if ( !Const.isEmpty( FTPSDirectory ) ) {
+    if ( !Utils.isEmpty( FTPSDirectory ) ) {
       String realFTPSDirectory = environmentSubstitute( FTPSDirectory );
       realFTPSDirectory = normalizePath( realFTPSDirectory );
       connection.changeDirectory( realFTPSDirectory );

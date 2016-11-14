@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,8 +22,16 @@
 
 package org.pentaho.di.job;
 
-import static org.mockito.Mockito.*;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -34,12 +42,17 @@ import org.pentaho.di.core.plugins.ClassLoadingPluginInterface;
 import org.pentaho.di.core.plugins.PluginInterface;
 import org.pentaho.di.core.plugins.PluginRegistry;
 import org.pentaho.di.core.plugins.RepositoryPluginType;
+import org.pentaho.di.core.xml.XMLHandler;
+import org.pentaho.di.job.entries.trans.JobEntryTrans;
+import org.pentaho.di.job.entry.JobEntryCopy;
+import org.pentaho.di.job.entry.JobEntryInterface;
 import org.pentaho.di.repository.RepositoriesMeta;
 import org.pentaho.di.repository.Repository;
 import org.pentaho.di.repository.RepositoryMeta;
-
-import java.util.HashMap;
-import java.util.Map;
+import org.pentaho.di.trans.TransMeta;
+import org.pentaho.metastore.api.IMetaStore;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
 
 public class JobExecutionConfigurationTest {
 
@@ -107,4 +120,124 @@ public class JobExecutionConfigurationTest {
     assertTrue( "Repository not connected", connectionSuccess[0] );
   }
   private interface MockRepositoryPlugin extends PluginInterface, ClassLoadingPluginInterface { }
+
+  @Test
+  public void testDefaultPassedBatchId() {
+    JobExecutionConfiguration jec = new JobExecutionConfiguration();
+    assertEquals( "default passedBatchId value must be null", null, jec.getPassedBatchId() );
+  }
+
+  @Test
+  public void testCopy() {
+    JobExecutionConfiguration jec = new JobExecutionConfiguration();
+    final Long passedBatchId0 = null;
+    final long passedBatchId1 = 0L;
+    final long passedBatchId2 = 5L;
+
+    jec.setPassedBatchId( passedBatchId0 );
+    {
+      JobExecutionConfiguration jecCopy = (JobExecutionConfiguration) jec.clone();
+      assertEquals( "clone-copy", jec.getPassedBatchId(), jecCopy.getPassedBatchId() );
+    }
+    jec.setPassedBatchId( passedBatchId1 );
+    {
+      JobExecutionConfiguration jecCopy = (JobExecutionConfiguration) jec.clone();
+      assertEquals( "clone-copy", jec.getPassedBatchId(), jecCopy.getPassedBatchId() );
+    }
+    jec.setPassedBatchId( passedBatchId2 );
+    {
+      JobExecutionConfiguration jecCopy = (JobExecutionConfiguration) jec.clone();
+      assertEquals( "clone-copy", jec.getPassedBatchId(), jecCopy.getPassedBatchId() );
+    }
+  }
+
+  @Test
+  public void testCopyXml() throws Exception {
+    JobExecutionConfiguration jec = new JobExecutionConfiguration();
+    final Long passedBatchId0 = null;
+    final long passedBatchId1 = 0L;
+    final long passedBatchId2 = 5L;
+
+    jec.setPassedBatchId( passedBatchId0 );
+    {
+      String xml = jec.getXML();
+      Document doc = XMLHandler.loadXMLString( xml );
+      Node node = XMLHandler.getSubNode( doc, JobExecutionConfiguration.XML_TAG );
+      JobExecutionConfiguration jecCopy = new JobExecutionConfiguration( node );
+      assertEquals( "xml-copy", jec.getPassedBatchId(), jecCopy.getPassedBatchId() );
+    }
+    jec.setPassedBatchId( passedBatchId1 );
+    {
+      String xml = jec.getXML();
+      Document doc = XMLHandler.loadXMLString( xml );
+      Node node = XMLHandler.getSubNode( doc, JobExecutionConfiguration.XML_TAG );
+      JobExecutionConfiguration jecCopy = new JobExecutionConfiguration( node );
+      assertEquals( "xml-copy", jec.getPassedBatchId(), jecCopy.getPassedBatchId() );
+    }
+    jec.setPassedBatchId( passedBatchId2 );
+    {
+      String xml = jec.getXML();
+      Document doc = XMLHandler.loadXMLString( xml );
+      Node node = XMLHandler.getSubNode( doc, JobExecutionConfiguration.XML_TAG );
+      JobExecutionConfiguration jecCopy = new JobExecutionConfiguration( node );
+      assertEquals( "xml-copy", jec.getPassedBatchId(), jecCopy.getPassedBatchId() );
+    }
+  }
+
+  @Test
+  public void testGetUsedArguments() throws KettleException {
+    JobExecutionConfiguration executionConfiguration = new JobExecutionConfiguration();
+    JobMeta jobMeta = new JobMeta(  );
+    jobMeta.jobcopies = new ArrayList<>(  );
+    String[] commandLineArguments = new String[ 0 ];
+    IMetaStore metaStore = mock( IMetaStore.class );
+
+    JobEntryCopy jobEntryCopy0 = new JobEntryCopy(  );
+
+    TransMeta transMeta0 = mock( TransMeta.class );
+    Map<String, String> map0 = new HashMap<>(  );
+    map0.put( "arg0", "argument0" );
+    when( transMeta0.getUsedArguments( commandLineArguments ) ).thenReturn( map0 );
+
+    JobEntryInterface jobEntryInterface0 = mock( JobEntryInterface.class );
+    when( jobEntryInterface0.isTransformation() ).thenReturn( false );
+
+    jobEntryCopy0.setEntry( jobEntryInterface0 );
+    jobMeta.jobcopies.add( jobEntryCopy0 );
+
+
+    JobEntryCopy jobEntryCopy1 = new JobEntryCopy(  );
+
+    TransMeta transMeta1 = mock( TransMeta.class );
+    Map<String, String> map1 = new HashMap<>(  );
+    map1.put( "arg1", "argument1" );
+    when( transMeta1.getUsedArguments( commandLineArguments ) ).thenReturn( map1 );
+
+    JobEntryTrans jobEntryTrans1 = mock( JobEntryTrans.class );
+    when( jobEntryTrans1.isTransformation() ).thenReturn( true );
+    when( jobEntryTrans1.getTransMeta( executionConfiguration.getRepository(), metaStore, jobMeta ) ).thenReturn( transMeta1 );
+
+    jobEntryCopy1.setEntry( jobEntryTrans1 );
+    jobMeta.jobcopies.add( jobEntryCopy1 );
+
+
+    JobEntryCopy jobEntryCopy2 = new JobEntryCopy(  );
+
+    TransMeta transMeta2 = mock( TransMeta.class );
+    Map<String, String> map2 = new HashMap<>(  );
+    map2.put( "arg1", "argument1" );
+    map2.put( "arg2", "argument2" );
+    when( transMeta2.getUsedArguments( commandLineArguments ) ).thenReturn( map2 );
+
+    JobEntryTrans jobEntryTrans2 = mock( JobEntryTrans.class );
+    when( jobEntryTrans2.isTransformation() ).thenReturn( true );
+    when( jobEntryTrans2.getTransMeta( executionConfiguration.getRepository(), metaStore, jobMeta ) ).thenReturn( transMeta2 );
+
+    jobEntryCopy2.setEntry( jobEntryTrans2 );
+    jobMeta.jobcopies.add( jobEntryCopy2 );
+
+
+    executionConfiguration.getUsedArguments( jobMeta, commandLineArguments, metaStore );
+    assertEquals( 2, executionConfiguration.getArguments().size() );
+  }
 }

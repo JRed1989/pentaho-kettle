@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -25,11 +25,8 @@ package org.pentaho.di.trans.steps.monetdbbulkloader;
 import java.util.Date;
 import java.util.List;
 
-import nl.cwi.monetdb.mcl.io.BufferedMCLReader;
-import nl.cwi.monetdb.mcl.io.BufferedMCLWriter;
-import nl.cwi.monetdb.mcl.net.MapiSocket;
-
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.SQLStatement;
 import org.pentaho.di.core.database.Database;
 import org.pentaho.di.core.database.DatabaseMeta;
@@ -37,8 +34,9 @@ import org.pentaho.di.core.database.MonetDBDatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.logging.LogChannelInterface;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaDate;
+import org.pentaho.di.core.row.value.ValueMetaNumber;
 import org.pentaho.di.core.util.StreamLogger;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.Trans;
@@ -50,6 +48,10 @@ import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaInterface;
 import org.pentaho.di.trans.steps.monetdbagilemart.MonetDBRowLimitException;
 import org.pentaho.di.trans.steps.tableagilemart.AgileMartUtil;
+
+import nl.cwi.monetdb.mcl.io.BufferedMCLReader;
+import nl.cwi.monetdb.mcl.io.BufferedMCLWriter;
+import nl.cwi.monetdb.mcl.net.MapiSocket;
 
 /**
  * Performs a bulk load to a MonetDB table.
@@ -90,7 +92,7 @@ public class MonetDBBulkLoader extends BaseStep implements StepInterface {
 
   protected String escapeOsPath( String path, boolean isWindows ) {
 
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
 
     // should be done with a regex
     for ( int i = 0; i < path.length(); i++ ) {
@@ -118,7 +120,7 @@ public class MonetDBBulkLoader extends BaseStep implements StepInterface {
       DatabaseMeta dm = meta.getDatabaseMeta();
 
       String user = environmentSubstitute( Const.NVL( dm.getUsername(), "" ) );
-      String password = environmentSubstitute( Const.NVL( dm.getPassword(), "" ) );
+      String password = Utils.resolvePassword( variables, Const.NVL( dm.getPassword(), "" ) );
 
       MapiSocket mserver = getMonetDBConnection();
       data.mserver = mserver;
@@ -165,6 +167,7 @@ public class MonetDBBulkLoader extends BaseStep implements StepInterface {
     return true;
   }
 
+  @Override
   public boolean processRow( StepMetaInterface smi, StepDataInterface sdi ) throws KettleException {
     meta = (MonetDBBulkLoaderMeta) smi;
     data = (MonetDBBulkLoaderData) sdi;
@@ -174,15 +177,17 @@ public class MonetDBBulkLoader extends BaseStep implements StepInterface {
       if ( r == null ) { // no more input to be expected...
 
         setOutputDone();
-        try {
-          writeBufferToMonetDB();
-          data.out.flush();
-        } catch ( KettleException ke ) {
-          throw ke;
-        } finally {
-          data.mserver.close();
+        if ( !first ) {
+          try {
+            writeBufferToMonetDB();
+            data.out.flush();
+          } catch ( KettleException ke ) {
+            throw ke;
+          } finally {
+            data.mserver.close();
+          }
+          util.updateMetadata( meta, rowsWritten );
         }
-        util.updateMetadata( meta, rowsWritten );
         return false;
       }
 
@@ -458,7 +463,7 @@ public class MonetDBBulkLoader extends BaseStep implements StepInterface {
     }
 
     try {
-      StringBuffer cmdBuff = new StringBuffer();
+      StringBuilder cmdBuff = new StringBuilder();
 
       // first write the COPY INTO command...
       //
@@ -527,6 +532,7 @@ public class MonetDBBulkLoader extends BaseStep implements StepInterface {
     }
   }
 
+  @Override
   public boolean init( StepMetaInterface smi, StepDataInterface sdi ) {
     meta = (MonetDBBulkLoaderMeta) smi;
     data = (MonetDBBulkLoaderData) sdi;
@@ -545,19 +551,19 @@ public class MonetDBBulkLoader extends BaseStep implements StepInterface {
 
       String encoding = environmentSubstitute( meta.getEncoding() );
 
-      data.monetDateMeta = new ValueMeta( "dateMeta", ValueMetaInterface.TYPE_DATE );
+      data.monetDateMeta = new ValueMetaDate( "dateMeta" );
       data.monetDateMeta.setConversionMask( "yyyy/MM/dd" );
       data.monetDateMeta.setStringEncoding( encoding );
 
-      data.monetTimestampMeta = new ValueMeta( "timestampMeta", ValueMetaInterface.TYPE_DATE );
+      data.monetTimestampMeta = new ValueMetaDate( "timestampMeta" );
       data.monetTimestampMeta.setConversionMask( "yyyy/MM/dd HH:mm:ss" );
       data.monetTimestampMeta.setStringEncoding( encoding );
 
-      data.monetTimeMeta = new ValueMeta( "timeMeta", ValueMetaInterface.TYPE_DATE );
+      data.monetTimeMeta = new ValueMetaDate( "timeMeta" );
       data.monetTimeMeta.setConversionMask( "HH:mm:ss" );
       data.monetTimeMeta.setStringEncoding( encoding );
 
-      data.monetNumberMeta = new ValueMeta( "numberMeta", ValueMetaInterface.TYPE_NUMBER );
+      data.monetNumberMeta = new ValueMetaNumber( "numberMeta" );
       data.monetNumberMeta.setConversionMask( "#.#" );
       data.monetNumberMeta.setGroupingSymbol( "," );
       data.monetNumberMeta.setDecimalSymbol( "." );
@@ -576,7 +582,7 @@ public class MonetDBBulkLoader extends BaseStep implements StepInterface {
 
       // Support parameterized database connection names
       String connectionName = meta.getDbConnectionName();
-      if ( !Const.isEmpty( connectionName ) && connectionName.startsWith( "${" ) && connectionName.endsWith( "}" ) ) {
+      if ( !Utils.isEmpty( connectionName ) && connectionName.startsWith( "${" ) && connectionName.endsWith( "}" ) ) {
         meta.setDatabaseMeta( localTransMeta.findDatabase( environmentSubstitute( connectionName ) ) );
       }
 
@@ -590,6 +596,7 @@ public class MonetDBBulkLoader extends BaseStep implements StepInterface {
     return false;
   }
 
+  @Override
   public void dispose( StepMetaInterface smi, StepDataInterface sdi ) {
     meta = (MonetDBBulkLoaderMeta) smi;
     data = (MonetDBBulkLoaderData) sdi;
@@ -609,7 +616,7 @@ public class MonetDBBulkLoader extends BaseStep implements StepInterface {
     String hostname = environmentSubstitute( Const.NVL( dm.getHostname(), "" ) );
     String portnum = environmentSubstitute( Const.NVL( dm.getDatabasePortNumberString(), "" ) );
     String user = environmentSubstitute( Const.NVL( dm.getUsername(), "" ) );
-    String password = environmentSubstitute( Const.NVL( dm.getPassword(), "" ) );
+    String password = Utils.resolvePassword( variables, Const.NVL( dm.getPassword(), "" ) );
     String db = environmentSubstitute( Const.NVL( dm.getDatabaseName(), "" ) );
 
     MapiSocket mserver = getMonetDBConnection( hostname, Integer.valueOf( portnum ), user, password, db, log );

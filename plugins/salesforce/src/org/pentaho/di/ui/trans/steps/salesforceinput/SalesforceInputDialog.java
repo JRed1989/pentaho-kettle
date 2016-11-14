@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -25,7 +25,6 @@ package org.pentaho.di.ui.trans.steps.salesforceinput;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.axis.message.MessageElement;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CCombo;
 import org.eclipse.swt.custom.CTabFolder;
@@ -57,24 +56,24 @@ import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
-import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Props;
 import org.pentaho.di.core.exception.KettleException;
-import org.pentaho.di.core.row.ValueMeta;
+import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaFactory;
 import org.pentaho.di.core.util.StringUtil;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.Trans;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.TransPreviewFactory;
-import org.pentaho.di.trans.step.BaseStepMeta;
-import org.pentaho.di.trans.step.StepDialogInterface;
-import org.pentaho.di.trans.steps.salesforceinput.SOQLValuesHighlight;
-import org.pentaho.di.trans.steps.salesforceinput.SalesforceConnection;
-import org.pentaho.di.trans.steps.salesforceinput.SalesforceConnectionUtils;
+import org.pentaho.di.trans.steps.salesforce.SOQLValuesHighlight;
+import org.pentaho.di.trans.steps.salesforce.SalesforceConnection;
+import org.pentaho.di.trans.steps.salesforce.SalesforceConnectionUtils;
+import org.pentaho.di.trans.steps.salesforce.SalesforceStepMeta;
 import org.pentaho.di.trans.steps.salesforceinput.SalesforceInputField;
 import org.pentaho.di.trans.steps.salesforceinput.SalesforceInputMeta;
 import org.pentaho.di.ui.core.dialog.EnterNumberDialog;
@@ -89,16 +88,17 @@ import org.pentaho.di.ui.core.widget.StyledTextComp;
 import org.pentaho.di.ui.core.widget.TableView;
 import org.pentaho.di.ui.core.widget.TextVar;
 import org.pentaho.di.ui.trans.dialog.TransPreviewProgressDialog;
-import org.pentaho.di.ui.trans.step.BaseStepDialog;
+import org.pentaho.di.ui.trans.steps.salesforce.SalesforceStepDialog;
 
 import com.sforce.soap.partner.Field;
 import com.sforce.soap.partner.sobject.SObject;
+import com.sforce.ws.bind.XmlObject;
 
-public class SalesforceInputDialog extends BaseStepDialog implements StepDialogInterface {
+public class SalesforceInputDialog extends SalesforceStepDialog {
 
   private static Class<?> PKG = SalesforceInputMeta.class; // for i18n purposes, needed by Translator2!!
 
-  private String DEFAULT_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss'.000'Z";
+  private String DEFAULT_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss'.000'XXX";
   private String DEFAULT_DATE_FORMAT = "yyyy-MM-dd";
 
   private CTabFolder wTabFolder;
@@ -198,10 +198,11 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
   private ColumnInfo[] colinf;
 
   public SalesforceInputDialog( Shell parent, Object in, TransMeta transMeta, String sname ) {
-    super( parent, (BaseStepMeta) in, transMeta, sname );
+    super( parent, in, transMeta, sname );
     input = (SalesforceInputMeta) in;
   }
 
+  @Override
   public String open() {
     Shell parent = getParent();
     Display display = parent.getDisplay();
@@ -211,6 +212,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
     setShellImage( shell, input );
 
     ModifyListener lsMod = new ModifyListener() {
+      @Override
       public void modifyText( ModifyEvent e ) {
         input.setChanged();
       }
@@ -357,6 +359,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
     fdspecifyQuery.top = new FormAttachment( wConnectionGroup, 2 * margin );
     wspecifyQuery.setLayoutData( fdspecifyQuery );
     wspecifyQuery.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         setEnableQuery();
       }
@@ -381,14 +384,16 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
     fdModule.right = new FormAttachment( 100, -margin );
     wModule.setLayoutData( fdModule );
     wModule.addFocusListener( new FocusListener() {
+      @Override
       public void focusLost( org.eclipse.swt.events.FocusEvent e ) {
         getModulesListError = false;
       }
 
+      @Override
       public void focusGained( org.eclipse.swt.events.FocusEvent e ) {
         // check if the URL and login credentials passed and not just had error
-        if ( Const.isEmpty( wURL.getText() )
-          || Const.isEmpty( wUserName.getText() ) || Const.isEmpty( wPassword.getText() )
+        if ( Utils.isEmpty( wURL.getText() )
+          || Utils.isEmpty( wUserName.getText() ) || Utils.isEmpty( wPassword.getText() )
           || ( getModulesListError ) ) {
           return;
         }
@@ -428,6 +433,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
     fdCondition.bottom = new FormAttachment( wlPosition, -margin );
     wCondition.setLayoutData( fdCondition );
     wCondition.addModifyListener( new ModifyListener() {
+      @Override
       public void modifyText( ModifyEvent arg0 ) {
         setQueryToolTip();
         setPosition();
@@ -435,32 +441,39 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
     } );
 
     wCondition.addKeyListener( new KeyAdapter() {
+      @Override
       public void keyPressed( KeyEvent e ) {
         setPosition();
       }
 
+      @Override
       public void keyReleased( KeyEvent e ) {
         setPosition();
       }
     } );
     wCondition.addFocusListener( new FocusAdapter() {
+      @Override
       public void focusGained( FocusEvent e ) {
         setPosition();
       }
 
+      @Override
       public void focusLost( FocusEvent e ) {
         setPosition();
       }
     } );
     wCondition.addMouseListener( new MouseAdapter() {
+      @Override
       public void mouseDoubleClick( MouseEvent e ) {
         setPosition();
       }
 
+      @Override
       public void mouseDown( MouseEvent e ) {
         setPosition();
       }
 
+      @Override
       public void mouseUp( MouseEvent e ) {
         setPosition();
       }
@@ -491,38 +504,46 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
     fdQuery.bottom = new FormAttachment( wlPosition, -margin );
     wQuery.setLayoutData( fdQuery );
     wQuery.addModifyListener( new ModifyListener() {
+      @Override
       public void modifyText( ModifyEvent arg0 ) {
         setQueryToolTip();
       }
     } );
 
     wQuery.addKeyListener( new KeyAdapter() {
+      @Override
       public void keyPressed( KeyEvent e ) {
         setPosition();
       }
 
+      @Override
       public void keyReleased( KeyEvent e ) {
         setPosition();
       }
     } );
     wQuery.addFocusListener( new FocusAdapter() {
+      @Override
       public void focusGained( FocusEvent e ) {
         setPosition();
       }
 
+      @Override
       public void focusLost( FocusEvent e ) {
         setPosition();
       }
     } );
     wQuery.addMouseListener( new MouseAdapter() {
+      @Override
       public void mouseDoubleClick( MouseEvent e ) {
         setPosition();
       }
 
+      @Override
       public void mouseDown( MouseEvent e ) {
         setPosition();
       }
 
+      @Override
       public void mouseUp( MouseEvent e ) {
         setPosition();
       }
@@ -602,6 +623,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
     wRecordsFilter.setLayoutData( fdRecordsFilter );
     wRecordsFilter.setItems( SalesforceConnectionUtils.recordsFilterDesc );
     wRecordsFilter.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         updateRecordsFilter();
       }
@@ -632,6 +654,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
     fdlButton.right = new FormAttachment( 100, 0 );
     open.setLayoutData( fdlButton );
     open.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         final Shell dialog = new Shell( shell, SWT.DIALOG_TRIM );
         dialog.setText( BaseMessages.getString( PKG, "SalesforceInputDialog.SelectDate" ) );
@@ -647,6 +670,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
         ok.setText( BaseMessages.getString( PKG, "System.Button.OK" ) );
         ok.setLayoutData( new GridData( SWT.FILL, SWT.CENTER, false, false ) );
         ok.addSelectionListener( new SelectionAdapter() {
+          @Override
           public void widgetSelected( SelectionEvent e ) {
             wReadFrom.setText( calendar.getYear()
               + "-"
@@ -692,6 +716,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
     fdlButtonto.right = new FormAttachment( 100, 0 );
     opento.setLayoutData( fdlButtonto );
     opento.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         final Shell dialogto = new Shell( shell, SWT.DIALOG_TRIM );
         dialogto.setText( BaseMessages.getString( PKG, "SalesforceInputDialog.SelectDate" ) );
@@ -706,6 +731,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
         okto.setText( BaseMessages.getString( PKG, "System.Button.OK" ) );
         okto.setLayoutData( new GridData( SWT.FILL, SWT.CENTER, false, false ) );
         okto.addSelectionListener( new SelectionAdapter() {
+          @Override
           public void widgetSelected( SelectionEvent e ) {
             wReadTo.setText( calendarto.getYear()
               + "-"
@@ -782,6 +808,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
     fdInclURL.top = new FormAttachment( wAdvancedGroup, margin );
     wInclURL.setLayoutData( fdInclURL );
     wInclURL.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         setEnableInclTargetURL();
       }
@@ -821,6 +848,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
     wInclModule.setLayoutData( fdModule );
 
     wInclModule.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         setEnableInclModule();
       }
@@ -859,6 +887,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
     fdInclSQL.top = new FormAttachment( wInclModuleField, margin );
     wInclSQL.setLayoutData( fdInclSQL );
     wInclSQL.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         setEnableInclSQL();
       }
@@ -897,6 +926,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
     fdInclTimestamp.top = new FormAttachment( wInclSQLField, margin );
     wInclTimestamp.setLayoutData( fdInclTimestamp );
     wInclTimestamp.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         setEnableInclTimestamp();
       }
@@ -936,6 +966,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
     wInclRownum.setLayoutData( fdRownum );
 
     wInclRownum.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         setEnableInclRownum();
       }
@@ -976,6 +1007,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
     wInclDeletionDate.setLayoutData( fdDeletionDate );
 
     wInclDeletionDate.addSelectionListener( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         setEnableInclDeletionDate();
       }
@@ -1112,7 +1144,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
             BaseMessages.getString( PKG, "System.Combo.No" ) }, true ),
         new ColumnInfo(
           BaseMessages.getString( PKG, "SalesforceInputDialog.FieldsTable.Type.Column" ),
-          ColumnInfo.COLUMN_TYPE_CCOMBO, ValueMeta.getTypes(), true ),
+          ColumnInfo.COLUMN_TYPE_CCOMBO, ValueMetaFactory.getValueMetaNames(), true ),
         new ColumnInfo(
           BaseMessages.getString( PKG, "SalesforceInputDialog.FieldsTable.Format.Column" ),
           ColumnInfo.COLUMN_TYPE_FORMAT, 3 ),
@@ -1188,16 +1220,19 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
 
     // Add listeners
     lsOK = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         ok();
       }
     };
     lsTest = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         test();
       }
     };
     lsGet = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         Cursor busy = new Cursor( shell.getDisplay(), SWT.CURSOR_WAIT );
         shell.setCursor( busy );
@@ -1207,11 +1242,13 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
       }
     };
     lsPreview = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         preview();
       }
     };
     lsCancel = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         cancel();
       }
@@ -1224,6 +1261,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
     wCancel.addListener( SWT.Selection, lsCancel );
 
     lsDef = new SelectionAdapter() {
+      @Override
       public void widgetDefaultSelected( SelectionEvent e ) {
         ok();
       }
@@ -1236,6 +1274,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
 
     // Detect X or ALT-F4 or something that kills this window...
     shell.addShellListener( new ShellAdapter() {
+      @Override
       public void shellClosed( ShellEvent e ) {
         cancel();
       }
@@ -1318,52 +1357,6 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
     wlInclDeletionDateField.setEnabled( wInclDeletionDate.getSelection() );
   }
 
-  private void test() {
-
-    boolean successConnection = true;
-    String msgError = null;
-    SalesforceConnection connection = null;
-    try {
-      SalesforceInputMeta meta = new SalesforceInputMeta();
-      getInfo( meta );
-
-      // get real values
-      String realURL = transMeta.environmentSubstitute( meta.getTargetURL() );
-      String realUsername = transMeta.environmentSubstitute( meta.getUserName() );
-      String realPassword = transMeta.environmentSubstitute( meta.getPassword() );
-      int realTimeOut = Const.toInt( transMeta.environmentSubstitute( meta.getTimeOut() ), 0 );
-
-      connection = new SalesforceConnection( log, realURL, realUsername, realPassword );
-      connection.setTimeOut( realTimeOut );
-      connection.connect();
-
-    } catch ( Exception e ) {
-      successConnection = false;
-      msgError = e.getMessage();
-    } finally {
-      if ( connection != null ) {
-        try {
-          connection.close();
-        } catch ( Exception e ) { /* Ignore */
-        }
-      }
-    }
-    if ( successConnection ) {
-
-      MessageBox mb = new MessageBox( shell, SWT.OK | SWT.ICON_INFORMATION );
-      mb.setMessage( BaseMessages.getString( PKG, "SalesforceInputDialog.Connected.OK", wUserName.getText() )
-        + Const.CR );
-      mb.setText( BaseMessages.getString( PKG, "SalesforceInputDialog.Connected.Title.Ok" ) );
-      mb.open();
-    } else {
-      new ErrorDialog(
-        shell,
-        BaseMessages.getString( PKG, "SalesforceInputDialog.Connected.Title.Error" ),
-        BaseMessages.getString( PKG, "SalesforceInputDialog.Connected.NOK", wUserName.getText() ),
-        new Exception( msgError ) );
-    }
-  }
-
   private void get() {
     SalesforceConnection connection = null;
     try {
@@ -1377,9 +1370,9 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
       // get real values
       String realModule = transMeta.environmentSubstitute( meta.getModule() );
       String realURL = transMeta.environmentSubstitute( meta.getTargetURL() );
-      String realUsername = transMeta.environmentSubstitute( meta.getUserName() );
-      String realPassword = transMeta.environmentSubstitute( meta.getPassword() );
-      int realTimeOut = Const.toInt( transMeta.environmentSubstitute( meta.getTimeOut() ), 0 );
+      String realUsername = transMeta.environmentSubstitute( meta.getUsername() );
+      String realPassword = Utils.resolvePassword( transMeta, meta.getPassword() );
+      int realTimeOut = Const.toInt( transMeta.environmentSubstitute( meta.getTimeout() ), 0 );
 
       connection = new SalesforceConnection( log, realURL, realUsername, realPassword );
       connection.setTimeOut( realTimeOut );
@@ -1390,7 +1383,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
         connection.setSQL( realQuery );
         connection.connect();
         // We are connected, so let's query
-        MessageElement[] fields = connection.getElements();
+        XmlObject[] fields = connection.getElements();
         int nrFields = fields.length;
         List<String> fieldNames = new ArrayList<String>();
         for ( int i = 0; i < nrFields; i++ ) {
@@ -1433,22 +1426,22 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
     }
   }
 
-  private void addFields( String prefix, List<String> fieldNames, MessageElement field ) {
+  private void addFields( String prefix, List<String> fieldNames, XmlObject field ) {
     String fieldname = prefix + field.getName();
 
-    Object value = field.getObjectValue();
+    Object value = field.getValue();
     if ( value != null && value instanceof SObject ) {
       SObject sobject = (SObject) value;
-      for ( MessageElement element : sobject.get_any() ) {
+      for ( XmlObject element : SalesforceConnection.getChildren( sobject ) ) {
         addFields( fieldname + ".", fieldNames, element );
       }
     } else {
-      addField( fieldname, fieldNames, field.getValue() );
+      addField( fieldname, fieldNames, (String) field.getValue() );
     }
   }
 
   private void addField( Field field ) {
-    String fieldType = field.getType().getValue();
+    String fieldType = field.getType().toString();
 
     String fieldLength = null;
     String fieldPrecision = null;
@@ -1458,7 +1451,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
     }
 
     addField(
-      field.getLabel(), field.getName(), field.isIdLookup(), field.getType().getValue(), fieldLength,
+      field.getLabel(), field.getName(), field.isIdLookup(), field.getType().toString(), fieldLength,
       fieldPrecision );
   }
 
@@ -1479,7 +1472,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
         fieldType = "date";
       } else if ( StringUtil.IsInteger( firstValue ) ) {
         fieldType = "int";
-        fieldLength = Integer.toString( ValueMeta.DEFAULT_INTEGER_LENGTH );
+        fieldLength = Integer.toString( ValueMetaInterface.DEFAULT_INTEGER_LENGTH );
       } else if ( StringUtil.IsNumber( firstValue ) ) {
         fieldType = "double";
       } else if ( firstValue.equals( "true" ) || firstValue.equals( "false" ) ) {
@@ -1559,7 +1552,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
    */
   public void getData( SalesforceInputMeta in ) {
     wURL.setText( Const.NVL( in.getTargetURL(), "" ) );
-    wUserName.setText( Const.NVL( in.getUserName(), "" ) );
+    wUserName.setText( Const.NVL( in.getUsername(), "" ) );
     wPassword.setText( Const.NVL( in.getPassword(), "" ) );
     wModule.setText( Const.NVL( in.getModule(), "Account" ) );
     wCondition.setText( Const.NVL( in.getCondition(), "" ) );
@@ -1584,8 +1577,8 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
     wInclRownumField.setText( Const.NVL( in.getRowNumberField(), "" ) );
     wInclRownum.setSelection( in.includeRowNumber() );
 
-    wTimeOut.setText( Const.NVL( in.getTimeOut(), SalesforceConnectionUtils.DEFAULT_TIMEOUT ) );
-    wUseCompression.setSelection( in.isUsingCompression() );
+    wTimeOut.setText( Const.NVL( in.getTimeout(), SalesforceConnectionUtils.DEFAULT_TIMEOUT ) );
+    wUseCompression.setSelection( in.isCompression() );
     wQueryAll.setSelection( in.isQueryAll() );
     wLimit.setText( "" + in.getRowLimit() );
 
@@ -1671,7 +1664,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
   }
 
   private void ok() {
-    if ( Const.isEmpty( wStepname.getText() ) ) {
+    if ( Utils.isEmpty( wStepname.getText() ) ) {
       return;
     }
 
@@ -1686,40 +1679,43 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
     dispose();
   }
 
-  private void getInfo( SalesforceInputMeta in ) throws KettleException {
+  @Override
+  protected void getInfo( SalesforceStepMeta in ) throws KettleException {
+    SalesforceInputMeta meta = (SalesforceInputMeta) in;
+
     stepname = wStepname.getText(); // return value
 
     // copy info to SalesforceInputMeta class (input)
-    in.setTargetURL( Const.NVL( wURL.getText(), SalesforceConnectionUtils.TARGET_DEFAULT_URL ) );
-    in.setUserName( Const.NVL( wUserName.getText(), "" ) );
-    in.setPassword( Const.NVL( wPassword.getText(), "" ) );
-    in.setModule( Const.NVL( wModule.getText(), "Account" ) );
-    in.setCondition( Const.NVL( wCondition.getText(), "" ) );
+    meta.setTargetURL( Const.NVL( wURL.getText(), SalesforceConnectionUtils.TARGET_DEFAULT_URL ) );
+    meta.setUsername( Const.NVL( wUserName.getText(), "" ) );
+    meta.setPassword( Const.NVL( wPassword.getText(), "" ) );
+    meta.setModule( Const.NVL( wModule.getText(), "Account" ) );
+    meta.setCondition( Const.NVL( wCondition.getText(), "" ) );
 
-    in.setSpecifyQuery( wspecifyQuery.getSelection() );
-    in.setQuery( Const.NVL( wQuery.getText(), "" ) );
-    in.setUseCompression( wUseCompression.getSelection() );
-    in.setQueryAll( wQueryAll.getSelection() );
-    in.setTimeOut( Const.NVL( wTimeOut.getText(), "0" ) );
-    in.setRowLimit( Const.NVL( wLimit.getText(), "0" ) );
-    in.setTargetURLField( Const.NVL( wInclURLField.getText(), "" ) );
-    in.setSQLField( Const.NVL( wInclSQLField.getText(), "" ) );
-    in.setTimestampField( Const.NVL( wInclTimestampField.getText(), "" ) );
-    in.setModuleField( Const.NVL( wInclModuleField.getText(), "" ) );
-    in.setRowNumberField( Const.NVL( wInclRownumField.getText(), "" ) );
-    in.setRecordsFilter( SalesforceConnectionUtils.getRecordsFilterByDesc( wRecordsFilter.getText() ) );
-    in.setIncludeTargetURL( wInclURL.getSelection() );
-    in.setIncludeSQL( wInclSQL.getSelection() );
-    in.setIncludeTimestamp( wInclTimestamp.getSelection() );
-    in.setIncludeModule( wInclModule.getSelection() );
-    in.setIncludeRowNumber( wInclRownum.getSelection() );
-    in.setReadFrom( wReadFrom.getText() );
-    in.setReadTo( wReadTo.getText() );
-    in.setDeletionDateField( Const.NVL( wInclDeletionDateField.getText(), "" ) );
-    in.setIncludeDeletionDate( wInclDeletionDate.getSelection() );
+    meta.setSpecifyQuery( wspecifyQuery.getSelection() );
+    meta.setQuery( Const.NVL( wQuery.getText(), "" ) );
+    meta.setCompression( wUseCompression.getSelection() );
+    meta.setQueryAll( wQueryAll.getSelection() );
+    meta.setTimeout( Const.NVL( wTimeOut.getText(), "0" ) );
+    meta.setRowLimit( Const.NVL( wLimit.getText(), "0" ) );
+    meta.setTargetURLField( Const.NVL( wInclURLField.getText(), "" ) );
+    meta.setSQLField( Const.NVL( wInclSQLField.getText(), "" ) );
+    meta.setTimestampField( Const.NVL( wInclTimestampField.getText(), "" ) );
+    meta.setModuleField( Const.NVL( wInclModuleField.getText(), "" ) );
+    meta.setRowNumberField( Const.NVL( wInclRownumField.getText(), "" ) );
+    meta.setRecordsFilter( SalesforceConnectionUtils.getRecordsFilterByDesc( wRecordsFilter.getText() ) );
+    meta.setIncludeTargetURL( wInclURL.getSelection() );
+    meta.setIncludeSQL( wInclSQL.getSelection() );
+    meta.setIncludeTimestamp( wInclTimestamp.getSelection() );
+    meta.setIncludeModule( wInclModule.getSelection() );
+    meta.setIncludeRowNumber( wInclRownum.getSelection() );
+    meta.setReadFrom( wReadFrom.getText() );
+    meta.setReadTo( wReadTo.getText() );
+    meta.setDeletionDateField( Const.NVL( wInclDeletionDateField.getText(), "" ) );
+    meta.setIncludeDeletionDate( wInclDeletionDate.getSelection() );
     int nrFields = wFields.nrNonEmpty();
 
-    in.allocate( nrFields );
+    meta.allocate( nrFields );
 
     for ( int i = 0; i < nrFields; i++ ) {
       SalesforceInputField field = new SalesforceInputField();
@@ -1729,7 +1725,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
       field.setName( item.getText( 1 ) );
       field.setField( item.getText( 2 ) );
       field.setIdLookup( BaseMessages.getString( PKG, "System.Combo.Yes" ).equalsIgnoreCase( item.getText( 3 ) ) );
-      field.setType( ValueMeta.getType( item.getText( 4 ) ) );
+      field.setType( ValueMetaFactory.getIdForValueMeta( item.getText( 4 ) ) );
       field.setFormat( item.getText( 5 ) );
       field.setLength( Const.toInt( item.getText( 6 ), -1 ) );
       field.setPrecision( Const.toInt( item.getText( 7 ), -1 ) );
@@ -1740,7 +1736,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
       field.setRepeated( BaseMessages.getString( PKG, "System.Combo.Yes" ).equalsIgnoreCase( item.getText( 12 ) ) );
 
       //CHECKSTYLE:Indentation:OFF
-      in.getInputFields()[i] = field;
+      meta.getInputFields()[i] = field;
     }
   }
 
@@ -1805,8 +1801,8 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
 
         // Define a new Salesforce connection
         connection =
-          new SalesforceConnection( log, url, transMeta.environmentSubstitute( meta.getUserName() ), transMeta
-            .environmentSubstitute( meta.getPassword() ) );
+          new SalesforceConnection( log, url, transMeta.environmentSubstitute( meta.getUsername() ),
+            Utils.resolvePassword( transMeta, meta.getPassword() ) );
         // connect to Salesforce
         connection.connect();
 
@@ -1825,7 +1821,7 @@ public class SalesforceInputDialog extends BaseStepDialog implements StepDialogI
           PKG, "SalesforceInputDialog.ErrorRetrieveData.ErrorRetrieveModules" ), e );
         getModulesListError = true;
       } finally {
-        if ( !Const.isEmpty( selectedField ) ) {
+        if ( !Utils.isEmpty( selectedField ) ) {
           wModule.setText( selectedField );
         }
         if ( connection != null ) {

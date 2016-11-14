@@ -67,7 +67,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ============================================================================-->
 
 
-<project name="subfloor" basedir="." default="default" xmlns:ivy="antlib:org.apache.ivy.ant">
+<project name="subfloor" basedir="." default="default" xmlns:ivy="antlib:org.apache.ivy.ant" xmlns:e="http://ant.apache.org/ivy/extra">
   <description>
     -------------------------------------------------------------------------------
     subfloor.xml provides tasks needed to perform a project build.
@@ -155,8 +155,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   <property name="javac.deprecation"
             value="true"
             description="Indicates whether source should be compiled with deprecation information"/>
-  <property name="javac.source" value="7" description="Provide source compatibility with specified release"/>
-  <property name="javac.target" value="7" description="Generate class files for specific VM version"/>
+  <property name="javac.source" value="8" description="Provide source compatibility with specified release"/>
+  <property name="javac.target" value="8" description="Generate class files for specific VM version"/>
   <property name="javac.maxmemory" value="256M" description="Max memory alloted to java compile"/>
   <property name="javac.xlint" value="-Xlint:all"/>
 
@@ -177,7 +177,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             value="true"
             description="Prefer SVNKit binding over the command line client for native svn support (defaults to true)"/>
   <property name="ivy.url"
-            value="http://nexus.pentaho.org/content/groups/omni/org/apache/ivy/ivy/2.3.0/ivy-2.3.0.jar"
+            value="http://nexus.pentaho.org/content/groups/omni/org/apache/ivy/ivy/2.4.0/ivy-2.4.0.jar"
             description="The URL to the current release of Apache IVY"/>
 
   <!-- Enunciate properties -->
@@ -228,7 +228,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
               value="${inttestbin.dir}/classes"
               description="Classes compiled from project test code are placed here"/>
     <property name="inttestreports.dir"
-              value="${bin.dir}/reports/integration-test"
+              value="${testreports.dir}"
               description="Base directory that holds all integration test report files"/>
     <property name="inttestreports.xml.dir"
               value="${inttestreports.dir}/xml"
@@ -242,10 +242,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             value="${testbin.dir}/instrumented-classes"
             description="Directory where instrumented project classes are placed for use by code coverage utility"/>
   <property name="jacoco.version"
-            value="0.7.4.201502262128"
+            value="0.7.6.201602180812"
             description="The version of jacoco to use for code coverage"/>
   <property name="cobertura.version"
-            value="2.0.3"
+            value="2.1.1"
             description="The version of cobertura to use for code coverage"/>
   <property name="cobertura.data.dir"
             value="${testbin.dir}/cobertura-bin"
@@ -326,9 +326,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
   <!-- Sonar properties -->
 
-  <property name="sonar-ant-task-version" value="2.2"/>
+  <property name="sonar-ant-task-version" value="2.4"/>
   <property name="sonar.classname" value="org.sonar.ant.SonarTask"/>
-  <property name="sonar.hostname" value="10.177.176.23"/>
+  <property name="sonar.hostname" value="sonar.pentaho.com"/>
   <property name="sonar.port" value="9000"/>
   <property name="sonar.host.url" value="http://${sonar.hostname}:${sonar.port}"/>
   <property name="sonar.jdbc.username" value="sonar"/>
@@ -346,6 +346,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   <property name="jacoco.it.execfile.path" location="${jacoco.integration.report.dir}/jacoco-it.exec"/>
   <property name="junit.test.pattern" value="**/*Test.java"/>
   <property name="junit.integration.test.pattern" value="**/*IT.java"/>
+  <property name="jacoco.ui.class.exclude.pattern" value=""/>
 
   <!-- Maven properties -->
   <property name="maven.options" value="-q"/>
@@ -362,8 +363,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
   <!-- Checkstyle Properties -->
   <property name="checkstyle.version"
-            value="5.7"
+            value="6.12"
             description="The version of CheckStyle to use for coding standards"/>
+  <property name="pentaho.coding.standards.version"
+			value="1.0.5"/>
   <property name="checkstyle.dir"
             value="${basedir}/checkstyle"/>
   <property name="checkstyle.lib.dir"
@@ -371,17 +374,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   <property name="checkstyle.reports.dir"
             value="${checkstyle.dir}/reports"/>
   <property name="checkstyle.config.url"
-            value="http://ci.pentaho.com/job/pentaho-coding-standards/lastSuccessfulBuild/artifact/pentaho_checkStyle.xml"/>
+            value="http://nexus.pentaho.org/content/groups/omni/com/pentaho/pentaho-coding-standards/pentaho-checkstyle/${pentaho.coding.standards.version}/pentaho-checkstyle-${pentaho.coding.standards.version}.xml"/>
   <property name="checkstyle.suppressions.url"
-            value="http://ci.pentaho.com/job/pentaho-coding-standards/lastSuccessfulBuild/artifact/suppressions.xml"/>
+            value="http://nexus.pentaho.org/content/groups/omni/com/pentaho/pentaho-coding-standards/pentaho-checkstyle-suppressions/${pentaho.coding.standards.version}/pentaho-checkstyle-suppressions-${pentaho.coding.standards.version}.xml"/>
   <property name="checkstyle.stylesheet.url"
-            value="http://ci.pentaho.com/job/pentaho-coding-standards/lastSuccessfulBuild/artifact/checkstyle-noframes-sorted.xsl"/>
+            value="http://nexus.pentaho.org/content/groups/omni/com/pentaho/pentaho-coding-standards/pentaho-checkstyle-stylesheet/${pentaho.coding.standards.version}/pentaho-checkstyle-stylesheet-${pentaho.coding.standards.version}.xsl"/>
   <property name="checkstyle.config.file"
-            value="${checkstyle.dir}/pentaho_checkStyle.xml"/>
+            value="${checkstyle.dir}/pentaho-checkstyle-${pentaho.coding.standards.version}.xml"/>
   <property name="checkstyle.suppressions.file"
             value="${checkstyle.dir}/suppressions.xml"/>
   <property name="checkstyle.stylesheet.file"
-            value="${checkstyle.dir}/checkstyle-noframes-sorted.xsl"/>
+            value="${checkstyle.dir}/pentaho-checkstyle-stylesheet-${pentaho.coding.standards.version}.xsl"/>
 
   <!-- Set the project revision number to the value in the manifest file (if it has not
        been specified in the properties file -->
@@ -502,15 +505,29 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
       Runs a typical build process to create the project locally
       ====================================================================-->
-  <target name="build" depends="clean-all,resolve,cobertura,dist-source,dist"/>
+  <target name="build" depends="clean-all,resolve,dist-source,dist,jacoco"/>
 
 
   <!--=======================================================================
-      build-sonar
+      build-sonar-unit-tests
 
-      Runs a typical build process (cobertura+sonar)
+      Runs a typical build process + junit + sonar
       ====================================================================-->
-  <target name="build-sonar" depends="clean-all,resolve,dist,dist-source,sonar"/>
+  <target name="build-sonar-unit-tests" depends="build,sonar"/>
+
+  <!--=======================================================================
+      build-sonar-it-tests
+
+      Runs a typical build process + integration tests + sonar
+      ====================================================================-->
+  <target name="build-sonar-it-tests" depends="build-testless,sonar-it-tests"/>
+
+  <!--=======================================================================
+      build-sonar-all-tests
+
+      Runs a typical build process + junit tests + integration tests + sonar
+      ====================================================================-->
+  <target name="build-sonar-all-tests" depends="build,sonar-it-tests"/>
 
 
   <!--=======================================================================
@@ -547,7 +564,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       Cobertura coverage was always pushed to Sonar by using the Jenkins
       Sonar plugin
       ====================================================================-->
-  <target name="continuous-sonar" depends="build-sonar, publish"/>
+  <target name="continuous-sonar" depends="build-sonar-unit-tests, publish"/>
 
 
   <!--=======================================================================
@@ -648,22 +665,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       Fetches ant-contrib from sourceforge
       ====================================================================-->
   <target name="antcontrib.download" unless="antcontrib.available">
-    <mkdir dir="${subfloor.tmp.dir}"/>
-    <get src="http://downloads.sourceforge.net/ant-contrib/ant-contrib-1.0b3-bin.zip"
-         dest="${subfloor.tmp.dir}/antcontrib.zip"
+    <mkdir dir="${antcontrib.build.cache.dir}"/>
+    <get src="http://nexus.pentaho.org/content/groups/omni/ant-contrib/ant-contrib/1.0b3/ant-contrib-1.0b3.jar"
+         dest="${antcontrib.build.cache.dir}"
          usetimestamp="true"/>
-    <unzip src="${subfloor.tmp.dir}/antcontrib.zip" dest="${subfloor.tmp.dir}">
-      <patternset>
-        <include name="**/*.jar"/>
-      </patternset>
-    </unzip>
-    <copy todir="${antcontrib.build.cache.dir}">
-      <fileset dir="${subfloor.tmp.dir}/ant-contrib">
-        <include name="**/*.jar"/>
-      </fileset>
-    </copy>
   </target>
-
 
   <!--=======================================================================
       init
@@ -831,13 +837,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         Fetches and installs CheckStyle resources for use by checkstyle targets
         ====================================================================-->
   <target name="install-checkstyle" depends="install-ivy">
-    <ivy:resolve inline="true"
-                 keep="true"
-                 organisation="com.puppycrawl.tools"
-                 module="checkstyle"
-                 revision="${checkstyle.version}"
+    <ivy:resolve keep="true"
                  conf="default"
-                 transitive="true"/>
+                 transitive="true">
+    	<dependency org="com.puppycrawl.tools" name="checkstyle" rev="${checkstyle.version}">
+    		<artifact name="checkstyle" type="all" e:classifier="all" ext="jar"/>
+    	</dependency>
+    </ivy:resolve>
 
     <ivy:retrieve conf="default" pattern="${checkstyle.lib.dir}/[module]-[revision](-[classifier]).[ext]"/>
     <ivy:cachepath pathid="checkstyle.classpath"/>
@@ -1738,6 +1744,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   <target name="init-tests" depends="clean-tests,junit.exists-check">
     <mkdir dir="${testclasses.dir}"/>
     <mkdir dir="${testsrc.dir}"/>
+    <mkdir dir="${inttestsrc.dir}"/>
+    <mkdir dir="${inttestclasses.dir}"/>
     <!-- Sonar will fail if no src or classes dir -->
     <mkdir dir="${src.dir}"/>
     <mkdir dir="${classes.dir}"/>
@@ -1827,18 +1835,24 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     init-test-reports
 
     Prepare directories for JUnit test reports
+
+    Do not chain the clean-test-reports target because running unit tests
+    followed by integration tests is resulting in missing unit test reports.
+    These directories will be cleaned by a top level "clean" call or a user
+    can call "clean-test-reports" directly if desired.
     ====================================================================-->
-  <target name="init-test-reports" depends="clean-test-reports">
+  <target name="init-test-reports" >
     <mkdir dir="${testreports.xml.dir}"/>
     <mkdir dir="${testreports.html.dir}"/>
   </target>
+
 
   <!--=======================================================================
         integration-test
 
         Compiles and runs all the integration tests for the project
         ====================================================================-->
-    <target name="integration-test" depends="compile,compile-tests, init-integration-test-reports" description="Compiles and runs unit tests">
+    <target name="integration-test" depends="compile,compile-tests, init-test-reports" description="Compiles and runs unit tests">
         <junit maxmemory="${junit.maxmemory}"
                dir="${junit.base.dir}"
                fork="yes"
@@ -1931,7 +1945,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   <target name="javadoc" depends="javadoc.init, compile">
     <javadoc destdir="${javadoc.dir}/docs/api"
              access="public"
-             source="7"
+             source="${javac.source}"
              use="true"
              notree="false"
              nonavbar="false"
@@ -2141,7 +2155,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           </executiondata>
           <structure name="${ivy.artifact.id}">
             <classfiles>
-              <fileset dir="${classes.dir}"/>
+              <fileset dir="${classes.dir}">
+                <exclude name="${jacoco.ui.class.exclude.pattern}"/>
+              </fileset>
             </classfiles>
             <sourcefiles encoding="UTF-8">
               <fileset dir="${src.dir}"/>
@@ -2168,7 +2184,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
       Compiles and runs all the tests for the project
       ====================================================================-->
-  <target name="jacoco-integration" depends="install-jacoco,compile,compile-tests,init-integration-test-reports"
+  <target name="jacoco-integration" depends="install-jacoco,compile,compile-tests,init-test-reports"
           description="Compiles and runs integration tests with Jacoco code coverage.">
 
     <mkdir dir = "${jacoco.integration.report.dir}" />
@@ -2657,6 +2673,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                       classname="${sonar.classname}"/>
   </target>
 
+
+
+
+  <target name="sonar-unit-tests" depends="jacoco">
+    <antcall target="sonar"/>
+  </target>
+
+  <target name="sonar-it-tests" depends="jacoco-integration">
+    <antcall target="sonar"/>
+  </target>
+
+  <target name="sonar-all-tests" depends="jacoco, jacoco-integration">
+    <antcall target="sonar"/>
+  </target>
+
   <!--=======================================================================
   sonar
 
@@ -2672,7 +2703,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
   Also, SCM_BRANCH is a required parameter.
   ====================================================================-->
-  <target name="sonar" depends="install-sonar,jacoco">
+  <target name="sonar" depends="install-sonar">
 
     <path id="sonar.classpath">
       <fileset dir="${subfloor.resources.dir}/sonar-ant-task-${sonar-ant-task-version}">
@@ -2732,7 +2763,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     <delete dir="${checkstyle.reports.dir}/xml"/>
     <mkdir dir="${checkstyle.dir}/lib"/>
 
-    <taskdef resource="checkstyletask.properties">
+    <taskdef resource="com/puppycrawl/tools/checkstyle/ant/checkstyle-ant-task.properties">
       <classpath refid="checkstyle.classpath"/>
     </taskdef>
 

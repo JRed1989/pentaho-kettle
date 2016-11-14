@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -23,8 +23,10 @@
 package org.pentaho.di.trans.steps.tableinput;
 
 import java.sql.ResultSet;
+import java.sql.SQLException;
 
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.RowMetaAndData;
 import org.pentaho.di.core.RowSet;
 import org.pentaho.di.core.database.Database;
@@ -142,7 +144,18 @@ public class TableInput extends BaseStep implements StepInterface {
     } else {
       if ( data.thisrow != null ) { // We can expect more rows
 
-        data.nextrow = data.db.getRow( data.rs, meta.isLazyConversionActive() );
+        try {
+          data.nextrow = data.db.getRow( data.rs, meta.isLazyConversionActive() );
+        } catch ( KettleDatabaseException e ) {
+          if ( e.getCause() instanceof SQLException && isStopped() ) {
+            //This exception indicates we tried reading a row after the statment for this step was cancelled
+            //this is expected and ok so do not pass the exception up
+            logDebug( e.getMessage() );
+            return false;
+          } else {
+            throw e;
+          }
+        }
         if ( data.nextrow != null ) {
           incrementLinesInput();
         }
@@ -152,8 +165,7 @@ public class TableInput extends BaseStep implements StepInterface {
     if ( data.thisrow == null ) { // Finished reading?
 
       boolean done = false;
-      if ( meta.isExecuteEachInputRow() ) // Try to get another row from the input stream
-      {
+      if ( meta.isExecuteEachInputRow() ) { // Try to get another row from the input stream
         Object[] nextRow = getRowFrom( data.rowSet );
         if ( nextRow == null ) { // Nothing more to get!
 
@@ -298,7 +310,7 @@ public class TableInput extends BaseStep implements StepInterface {
       // Verify some basic things first...
       //
       boolean passed = true;
-      if ( Const.isEmpty( meta.getSQL() ) ) {
+      if ( Utils.isEmpty( meta.getSQL() ) ) {
         logError( BaseMessages.getString( PKG, "TableInput.Exception.SQLIsNeeded" ) );
         passed = false;
       }

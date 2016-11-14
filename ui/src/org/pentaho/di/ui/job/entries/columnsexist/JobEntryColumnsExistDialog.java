@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -43,6 +43,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.database.Database;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.row.RowMetaInterface;
@@ -270,7 +271,8 @@ public class JobEntryColumnsExistDialog extends JobEntryDialog implements JobEnt
     fdlFields.top = new FormAttachment( wTablename, 3 * margin );
     wlFields.setLayoutData( fdlFields );
 
-    int rows = jobEntry.arguments == null ? 1 : ( jobEntry.arguments.length == 0 ? 0 : jobEntry.arguments.length );
+    int rows = jobEntry.getArguments() == null ? 1
+      : ( jobEntry.getArguments().length == 0 ? 0 : jobEntry.getArguments().length );
 
     final int FieldsRows = rows;
 
@@ -416,11 +418,11 @@ public class JobEntryColumnsExistDialog extends JobEntryDialog implements JobEnt
       wConnection.setText( jobEntry.getDatabase().getName() );
     }
 
-    if ( jobEntry.arguments != null ) {
-      for ( int i = 0; i < jobEntry.arguments.length; i++ ) {
+    if ( jobEntry.getArguments() != null ) {
+      for ( int i = 0; i < jobEntry.getArguments().length; i++ ) {
         TableItem ti = wFields.table.getItem( i );
-        if ( jobEntry.arguments[i] != null ) {
-          ti.setText( 1, jobEntry.arguments[i] );
+        if ( jobEntry.getArguments()[i] != null ) {
+          ti.setText( 1, jobEntry.getArguments()[i] );
         }
       }
       wFields.setRowNums();
@@ -438,7 +440,7 @@ public class JobEntryColumnsExistDialog extends JobEntryDialog implements JobEnt
   }
 
   private void ok() {
-    if ( Const.isEmpty( wName.getText() ) ) {
+    if ( Utils.isEmpty( wName.getText() ) ) {
       MessageBox mb = new MessageBox( shell, SWT.OK | SWT.ICON_ERROR );
       mb.setText( BaseMessages.getString( PKG, "System.StepJobEntryNameMissing.Title" ) );
       mb.setMessage( BaseMessages.getString( PKG, "System.JobEntryNameMissing.Msg" ) );
@@ -458,15 +460,16 @@ public class JobEntryColumnsExistDialog extends JobEntryDialog implements JobEnt
         nr++;
       }
     }
-    jobEntry.arguments = new String[nr];
+    String[] args = new String[nr];
     nr = 0;
     for ( int i = 0; i < nritems; i++ ) {
       String arg = wFields.getNonEmpty( i ).getText( 1 );
       if ( arg != null && arg.length() != 0 ) {
-        jobEntry.arguments[nr] = arg;
+        args[nr] = arg;
         nr++;
       }
     }
+    jobEntry.setArguments( args );
 
     dispose();
   }
@@ -475,7 +478,7 @@ public class JobEntryColumnsExistDialog extends JobEntryDialog implements JobEnt
    * Get a list of columns
    */
   private void getListColumns() {
-    if ( !Const.isEmpty( wTablename.getText() ) ) {
+    if ( !Utils.isEmpty( wTablename.getText() ) ) {
       DatabaseMeta databaseMeta = jobMeta.findDatabase( wConnection.getText() );
       if ( databaseMeta != null ) {
         Database database = new Database( loggingObject, databaseMeta );

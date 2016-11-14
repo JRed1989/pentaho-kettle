@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -29,6 +29,7 @@ import java.util.List;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleConversionException;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleValueException;
@@ -80,11 +81,12 @@ public class SelectValues extends BaseStep implements StepInterface {
       // We need to create a new meta-data row to drive the output
       // We also want to know the indexes of the selected fields in the source row.
       //
-      data.fieldnrs = new int[ meta.getSelectName().length ];
+      data.fieldnrs = new int[ meta.getSelectFields().length ];
       for ( int i = 0; i < data.fieldnrs.length; i++ ) {
-        data.fieldnrs[ i ] = rowMeta.indexOfValue( meta.getSelectName()[ i ] );
+        data.fieldnrs[ i ] = rowMeta.indexOfValue( meta.getSelectFields()[ i ].getName() );
         if ( data.fieldnrs[ i ] < 0 ) {
-          logError( BaseMessages.getString( PKG, "SelectValues.Log.CouldNotFindField", meta.getSelectName()[ i ] ) );
+          logError( BaseMessages.getString( PKG, "SelectValues.Log.CouldNotFindField", meta.getSelectFields()[i]
+              .getName() ) );
           setErrors( 1 );
           stopAll();
           return null;
@@ -93,12 +95,12 @@ public class SelectValues extends BaseStep implements StepInterface {
 
       // Check for doubles in the selected fields... AFTER renaming!!
       //
-      int[] cnt = new int[ meta.getSelectName().length ];
-      for ( int i = 0; i < meta.getSelectName().length; i++ ) {
+      int[] cnt = new int[ meta.getSelectFields().length ];
+      for ( int i = 0; i < meta.getSelectFields().length; i++ ) {
         cnt[ i ] = 0;
-        for ( int j = 0; j < meta.getSelectName().length; j++ ) {
-          String one = Const.NVL( meta.getSelectRename()[ i ], meta.getSelectName()[ i ] );
-          String two = Const.NVL( meta.getSelectRename()[ j ], meta.getSelectName()[ j ] );
+        for ( int j = 0; j < meta.getSelectFields().length; j++ ) {
+          String one = Const.NVL( meta.getSelectFields()[ i ].getRename(), meta.getSelectFields()[ i ].getName() );
+          String two = Const.NVL( meta.getSelectFields()[ j ].getRename(), meta.getSelectFields()[ j ].getName() );
           if ( one.equals( two ) ) {
             cnt[ i ]++;
           }
@@ -283,7 +285,7 @@ public class SelectValues extends BaseStep implements StepInterface {
       for ( int i = 0; i < data.metanrs.length; i++ ) {
         SelectMetadataChange change = meta.getMeta()[ i ];
         ValueMetaInterface valueMeta = rowMeta.getValueMeta( data.metanrs[ i ] );
-        if ( !Const.isEmpty( change.getConversionMask() ) ) {
+        if ( !Utils.isEmpty( change.getConversionMask() ) ) {
           valueMeta.setConversionMask( change.getConversionMask() );
         }
 
@@ -292,16 +294,16 @@ public class SelectValues extends BaseStep implements StepInterface {
         valueMeta.setDateFormatTimeZone( EnvUtil.createTimeZone( change.getDateFormatTimeZone() ) );
         valueMeta.setLenientStringToNumber( change.isLenientStringToNumber() );
 
-        if ( !Const.isEmpty( change.getEncoding() ) ) {
+        if ( !Utils.isEmpty( change.getEncoding() ) ) {
           valueMeta.setStringEncoding( change.getEncoding() );
         }
-        if ( !Const.isEmpty( change.getDecimalSymbol() ) ) {
+        if ( !Utils.isEmpty( change.getDecimalSymbol() ) ) {
           valueMeta.setDecimalSymbol( change.getDecimalSymbol() );
         }
-        if ( !Const.isEmpty( change.getGroupingSymbol() ) ) {
+        if ( !Utils.isEmpty( change.getGroupingSymbol() ) ) {
           valueMeta.setGroupingSymbol( change.getGroupingSymbol() );
         }
-        if ( !Const.isEmpty( change.getCurrencySymbol() ) ) {
+        if ( !Utils.isEmpty( change.getCurrencySymbol() ) ) {
           valueMeta.setCurrencySymbol( change.getCurrencySymbol() );
         }
       }
@@ -427,13 +429,13 @@ public class SelectValues extends BaseStep implements StepInterface {
       data.deselect = false;
       data.metadata = false;
 
-      if ( !Const.isEmpty( meta.getSelectName() ) ) {
+      if ( !Utils.isEmpty( meta.getSelectFields() ) ) {
         data.select = true;
       }
-      if ( !Const.isEmpty( meta.getDeleteName() ) ) {
+      if ( !Utils.isEmpty( meta.getDeleteName() ) ) {
         data.deselect = true;
       }
-      if ( !Const.isEmpty( meta.getMeta() ) ) {
+      if ( !Utils.isEmpty( meta.getMeta() ) ) {
         data.metadata = true;
       }
 

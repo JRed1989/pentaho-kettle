@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2015 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -64,6 +64,7 @@ import org.pentaho.di.job.entry.JobEntryCopy;
 public class JobEntryEvalTableContentTest {
   private static final Map<Class<?>, String> dbMap = new HashMap<Class<?>, String>();
   JobEntryEvalTableContent entry;
+  private static PluginInterface mockDbPlugin;
 
   public static class DBMockIface extends BaseDatabaseMeta {
 
@@ -74,7 +75,7 @@ public class JobEntryEvalTableContentTest {
 
     @Override
     public String getFieldDefinition( ValueMetaInterface v, String tk, String pk, boolean use_autoinc,
-      boolean add_fieldname, boolean add_cr ) {
+        boolean add_fieldname, boolean add_cr ) {
       // TODO Auto-generated method stub
       return null;
     }
@@ -91,14 +92,14 @@ public class JobEntryEvalTableContentTest {
 
     @Override
     public String getAddColumnStatement( String tablename, ValueMetaInterface v, String tk, boolean use_autoinc,
-      String pk, boolean semicolon ) {
+        String pk, boolean semicolon ) {
       // TODO Auto-generated method stub
       return null;
     }
 
     @Override
     public String getModifyColumnStatement( String tablename, ValueMetaInterface v, String tk,
-      boolean use_autoinc, String pk, boolean semicolon ) {
+        boolean use_autoinc, String pk, boolean semicolon ) {
       // TODO Auto-generated method stub
       return null;
     }
@@ -127,7 +128,7 @@ public class JobEntryEvalTableContentTest {
 
     PluginRegistry preg = PluginRegistry.getInstance();
 
-    PluginInterface mockDbPlugin = mock( PluginInterface.class );
+    mockDbPlugin = mock( PluginInterface.class );
     when( mockDbPlugin.matches( anyString() ) ).thenReturn( true );
     when( mockDbPlugin.isNativePlugin() ).thenReturn( true );
     when( mockDbPlugin.getMainType() ).thenAnswer( new Answer<Class<?>>() {
@@ -153,6 +154,7 @@ public class JobEntryEvalTableContentTest {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    PluginRegistry.getInstance().removePlugin( DatabasePluginType.class, mockDbPlugin );
   }
 
   @Before
@@ -179,22 +181,22 @@ public class JobEntryEvalTableContentTest {
 
   @Test
   public void testNrErrorsFailureNewBehavior() throws Exception {
-    entry.limit = "1";
-    entry.successCondition = JobEntryEvalTableContent.SUCCESS_CONDITION_ROWS_COUNT_EQUAL;
-    entry.tablename = "table";
+    entry.setLimit( "1" );
+    entry.setSuccessCondition( JobEntryEvalTableContent.SUCCESS_CONDITION_ROWS_COUNT_EQUAL );
+    entry.setTablename( "table" );
 
     Result res = entry.execute( new Result(), 0 );
 
     assertFalse( "Eval number of rows should fail", res.getResult() );
     assertEquals(
-      "No errors should be reported in result object accoding to the new behavior", res.getNrErrors(), 0 );
+        "No errors should be reported in result object accoding to the new behavior", res.getNrErrors(), 0 );
   }
 
   @Test
   public void testNrErrorsFailureOldBehavior() throws Exception {
-    entry.limit = "1";
-    entry.successCondition = JobEntryEvalTableContent.SUCCESS_CONDITION_ROWS_COUNT_EQUAL;
-    entry.tablename = "table";
+    entry.setLimit( "1" );
+    entry.setSuccessCondition( JobEntryEvalTableContent.SUCCESS_CONDITION_ROWS_COUNT_EQUAL );
+    entry.setTablename( "table" );
 
     entry.setVariable( Const.KETTLE_COMPATIBILITY_SET_ERROR_ON_SPECIFIC_JOB_ENTRIES, "Y" );
 
@@ -202,14 +204,14 @@ public class JobEntryEvalTableContentTest {
 
     assertFalse( "Eval number of rows should fail", res.getResult() );
     assertEquals(
-      "An error should be reported in result object accoding to the old behavior", res.getNrErrors(), 1 );
+        "An error should be reported in result object accoding to the old behavior", res.getNrErrors(), 1 );
   }
 
   @Test
   public void testNrErrorsSuccess() throws Exception {
-    entry.limit = "5";
-    entry.successCondition = JobEntryEvalTableContent.SUCCESS_CONDITION_ROWS_COUNT_EQUAL;
-    entry.tablename = "table";
+    entry.setLimit( "5" );
+    entry.setSuccessCondition( JobEntryEvalTableContent.SUCCESS_CONDITION_ROWS_COUNT_EQUAL );
+    entry.setTablename( "table" );
 
     Result res = entry.execute( new Result(), 0 );
 
@@ -227,10 +229,10 @@ public class JobEntryEvalTableContentTest {
 
   @Test
   public void testNrErrorsNoCustomSql() throws Exception {
-    entry.limit = "5";
-    entry.successCondition = JobEntryEvalTableContent.SUCCESS_CONDITION_ROWS_COUNT_EQUAL;
-    entry.iscustomSQL = true;
-    entry.customSQL = null;
+    entry.setLimit( "5" );
+    entry.setSuccessCondition( JobEntryEvalTableContent.SUCCESS_CONDITION_ROWS_COUNT_EQUAL );
+    entry.setUseCustomSQL( true );
+    entry.setCustomSQL( null );
 
     Result res = entry.execute( new Result(), 0 );
 

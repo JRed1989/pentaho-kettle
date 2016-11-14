@@ -3,7 +3,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -70,6 +70,7 @@ import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Props;
 import org.pentaho.di.core.compress.CompressionInputStream;
 import org.pentaho.di.core.compress.CompressionProvider;
@@ -78,6 +79,7 @@ import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.fileinput.FileInputList;
 import org.pentaho.di.core.gui.TextFileInputFieldInterface;
 import org.pentaho.di.core.row.ValueMeta;
+import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.core.util.EnvUtil;
 import org.pentaho.di.core.vfs.KettleVFS;
 import org.pentaho.di.i18n.BaseMessages;
@@ -90,7 +92,6 @@ import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.steps.fileinput.BaseFileInputField;
 import org.pentaho.di.trans.steps.fileinput.text.EncodingType;
 import org.pentaho.di.trans.steps.fileinput.text.TextFileFilter;
-import org.pentaho.di.trans.steps.fileinput.text.TextFileInputMeta;
 import org.pentaho.di.trans.steps.fileinput.text.TextFileInputMeta;
 import org.pentaho.di.trans.steps.fileinput.text.TextFileInputUtils;
 import org.pentaho.di.ui.core.dialog.EnterNumberDialog;
@@ -362,6 +363,9 @@ public class TextFileInputDialog extends BaseStepDialog implements StepDialogInt
 
   private TextFileInputMeta input;
 
+  private Button wMinWidth;
+  private Listener lsMinWidth;
+
   // Wizard info...
   private Vector<TextFileInputFieldInterface> fields;
 
@@ -535,6 +539,11 @@ public class TextFileInputDialog extends BaseStepDialog implements StepDialogInt
         preview();
       }
     };
+    lsMinWidth = new Listener() {
+      public void handleEvent( Event e ) {
+        setMinimalWidth();
+      }
+    };
     lsCancel = new Listener() {
       public void handleEvent( Event e ) {
         cancel();
@@ -545,6 +554,7 @@ public class TextFileInputDialog extends BaseStepDialog implements StepDialogInt
     wFirst.addListener( SWT.Selection, lsFirst );
     wFirstHeader.addListener( SWT.Selection, lsFirstHeader );
     wGet.addListener( SWT.Selection, lsGet );
+    wMinWidth.addListener( SWT.Selection, lsMinWidth );
     wPreview.addListener( SWT.Selection, lsPreview );
     wCancel.addListener( SWT.Selection, lsCancel );
 
@@ -649,8 +659,7 @@ public class TextFileInputDialog extends BaseStepDialog implements StepDialogInt
     // Listen to the Browse... button
     wbbFilename.addSelectionListener( new SelectionAdapter() {
       public void widgetSelected( SelectionEvent e ) {
-        if ( wFilemask.getText() != null && wFilemask.getText().length() > 0 ) // A mask: a directory!
-        {
+        if ( wFilemask.getText() != null && wFilemask.getText().length() > 0 ) { // A mask: a directory!
           DirectoryDialog dialog = new DirectoryDialog( shell, SWT.OPEN );
           if ( wFilename.getText() != null ) {
             String fpath = transMeta.environmentSubstitute( wFilename.getText() );
@@ -669,7 +678,7 @@ public class TextFileInputDialog extends BaseStepDialog implements StepDialogInt
           List<String> filterExtensions = new ArrayList<String>();
           List<String> filterNames = new ArrayList<String>();
 
-          if ( !Const.isEmpty( provider.getDefaultExtension() ) && !Const.isEmpty( provider.getName() ) ) {
+          if ( !Utils.isEmpty( provider.getDefaultExtension() ) && !Utils.isEmpty( provider.getName() ) ) {
             filterExtensions.add( "*." + provider.getDefaultExtension() );
             filterNames.add( provider.getName() + " files" );
           }
@@ -990,8 +999,7 @@ public class TextFileInputDialog extends BaseStepDialog implements StepDialogInt
                 "TextFileInputDialog.WildcardColumn.Column" ), ColumnInfo.COLUMN_TYPE_TEXT, false ), new ColumnInfo(
                     BaseMessages.getString( PKG, "TextFileInputDialog.Files.ExcludeWildcard.Column" ),
                     ColumnInfo.COLUMN_TYPE_TEXT, false ),
-
-        new ColumnInfo( BaseMessages.getString( PKG, "TextFileInputDialog.RequiredColumn.Column" ),
+          new ColumnInfo( BaseMessages.getString( PKG, "TextFileInputDialog.RequiredColumn.Column" ),
             ColumnInfo.COLUMN_TYPE_CCOMBO, YES_NO_COMBO ), new ColumnInfo( BaseMessages.getString( PKG,
                 "TextFileInputDialog.IncludeSubDirs.Column" ), ColumnInfo.COLUMN_TYPE_CCOMBO, YES_NO_COMBO ) };
 
@@ -2039,6 +2047,16 @@ public class TextFileInputDialog extends BaseStepDialog implements StepDialogInt
     fdGet.bottom = new FormAttachment( 100, 0 );
     wGet.setLayoutData( fdGet );
 
+    wMinWidth = new Button( wFieldsComp, SWT.PUSH );
+    wMinWidth.setText( BaseMessages.getString( PKG, "TextFileInputDialog.MinWidth.Button" ) );
+    wMinWidth.setToolTipText( BaseMessages.getString( PKG, "TextFileInputDialog.MinWidth.Tooltip" ) );
+    wMinWidth.addSelectionListener( new SelectionAdapter() {
+      public void widgetSelected( SelectionEvent e ) {
+        input.setChanged();
+      }
+    } );
+    setButtonPositions( new Button[] { wGet, wMinWidth }, margin, null );
+
     final int FieldsRows = input.inputFiles.inputFields.length;
 
     ColumnInfo[] colinf =
@@ -2445,7 +2463,7 @@ public class TextFileInputDialog extends BaseStepDialog implements StepDialogInt
   }
 
   private void ok() {
-    if ( Const.isEmpty( wStepname.getText() ) ) {
+    if ( Utils.isEmpty( wStepname.getText() ) ) {
       return;
     }
 
@@ -3085,6 +3103,53 @@ public class TextFileInputDialog extends BaseStepDialog implements StepDialogInt
     Collections.sort( fields );
 
     return fields;
+  }
+
+  /**
+   * Sets the input width to minimal width...
+   *
+   */
+  public void setMinimalWidth() {
+    int nrNonEmptyFields = wFields.nrNonEmpty();
+    for ( int i = 0; i < nrNonEmptyFields; i++ ) {
+      TableItem item = wFields.getNonEmpty( i );
+
+      item.setText( 5, "" );
+      item.setText( 6, "" );
+      item.setText( 12, ValueMeta.getTrimTypeDesc( ValueMetaInterface.TRIM_TYPE_BOTH ) );
+
+      int type = ValueMeta.getType( item.getText( 2 ) );
+      switch ( type ) {
+        case ValueMetaInterface.TYPE_STRING:
+          item.setText( 3, "" );
+          break;
+        case ValueMetaInterface.TYPE_INTEGER:
+          item.setText( 3, "0" );
+          break;
+        case ValueMetaInterface.TYPE_NUMBER:
+          item.setText( 3, "0.#####" );
+          break;
+        case ValueMetaInterface.TYPE_DATE:
+          break;
+        default:
+          break;
+      }
+    }
+
+    for ( int i = 0; i < input.inputFiles.inputFields.length; i++ ) {
+      input.inputFiles.inputFields[i].setTrimType( ValueMetaInterface.TRIM_TYPE_BOTH );
+    }
+
+    wFields.optWidth( true );
+  }
+
+  /**
+   * Overloading setMinimalWidth() in order to test trim functionality
+   * @param wFields mocked TableView to avoid wFields.nrNonEmpty() from throwing NullPointerException
+   */
+  public void setMinimalWidth( TableView wFields ) {
+    this.wFields = wFields;
+    this.setMinimalWidth();
   }
 
   private void addAdditionalFieldsTab() {

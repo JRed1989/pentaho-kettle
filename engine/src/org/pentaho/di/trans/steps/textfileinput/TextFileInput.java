@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -33,6 +33,7 @@ import java.util.Map;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.vfs2.FileObject;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.ResultFile;
 import org.pentaho.di.core.compress.CompressionProvider;
@@ -46,8 +47,8 @@ import org.pentaho.di.core.playlist.FilePlayListReplay;
 import org.pentaho.di.core.row.RowDataUtil;
 import org.pentaho.di.core.row.RowMeta;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaString;
 import org.pentaho.di.core.util.StringUtil;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.variables.Variables;
@@ -72,9 +73,10 @@ import org.pentaho.di.trans.step.errorhandling.FileErrorHandlerMissingFiles;
  *
  * @author Matt
  * @since 4-apr-2003
- * 
+ *
  * @deprecated replaced by implementation in the ...steps.fileinput.text package
  */
+@Deprecated
 public class TextFileInput extends BaseStep implements StepInterface {
   private static Class<?> PKG = TextFileInputMeta.class; // for i18n purposes, needed by Translator2!!
 
@@ -528,7 +530,7 @@ public class TextFileInput extends BaseStep implements StepInterface {
             }
           }
 
-          if ( dencl && Const.isEmpty( inf.getEscapeCharacter() ) ) {
+          if ( dencl && Utils.isEmpty( inf.getEscapeCharacter() ) ) {
             StringBuilder sbpol = new StringBuilder( pol );
             int idx = sbpol.indexOf( enclosure + enclosure );
             while ( idx >= 0 ) {
@@ -678,10 +680,9 @@ public class TextFileInput extends BaseStep implements StepInterface {
           String pol = strings[ fieldnr ];
           try {
             if ( valueMeta.isNull( pol ) ) {
-              value = null;
-            } else {
-              value = valueMeta.convertDataFromString( pol, convertMeta, nullif, ifnull, trim_type );
+              pol = null;
             }
+            value = valueMeta.convertDataFromString( pol, convertMeta, nullif, ifnull, trim_type );
           } catch ( Exception e ) {
             // OK, give some feedback!
             String message =
@@ -931,7 +932,9 @@ public class TextFileInput extends BaseStep implements StepInterface {
 
         // Read a number of lines...
         for ( int i = 0; i < repeats && !data.doneReading; i++ ) {
-          tryToReadLine( true );
+          if ( !tryToReadLine( true ) ) {
+            repeats++;
+          }
         }
       }
     }
@@ -940,8 +943,8 @@ public class TextFileInput extends BaseStep implements StepInterface {
      * If the buffer is empty: open the next file. (if nothing in there, open the next, etc.)
      */
     while ( data.lineBuffer.size() == 0 ) {
-      if ( !openNextFile() ) // Open fails: done processing unless set to skip bad files
-      {
+      if ( !openNextFile() ) {
+        // Open fails: done processing unless set to skip bad files
         if ( failAfterBadFile( null ) ) {
           closeLastFile();
           setOutputDone(); // signal end to receiver(s)
@@ -963,8 +966,8 @@ public class TextFileInput extends BaseStep implements StepInterface {
       /*
        * Different rules apply: on each page: a header a number of data lines a footer
        */
-      if ( !data.doneWithHeader && data.pageLinesRead == 0 ) // We are reading header lines
-      {
+      if ( !data.doneWithHeader && data.pageLinesRead == 0 ) {
+        // We are reading header lines
         if ( log.isRowLevel() ) {
           logRowlevel( "P-HEADER (" + data.headerLinesRead + ") : " + textLine.line );
         }
@@ -1218,7 +1221,7 @@ public class TextFileInput extends BaseStep implements StepInterface {
    * @return Index in row meta of value meta with <code>fieldName</code>
    */
   private int addValueMeta( RowMetaInterface rowMeta, String fieldName ) {
-    ValueMetaInterface valueMeta = new ValueMeta( fieldName, ValueMetaInterface.TYPE_STRING );
+    ValueMetaInterface valueMeta = new ValueMetaString( fieldName );
     valueMeta.setOrigin( getStepname() );
     // add if doesn't exist
     int index = -1;
@@ -1524,7 +1527,7 @@ public class TextFileInput extends BaseStep implements StepInterface {
       }
 
       String clusterSize = getVariable( Const.INTERNAL_VARIABLE_CLUSTER_SIZE );
-      if ( !Const.isEmpty( clusterSize ) && Integer.valueOf( clusterSize ) > 1 ) {
+      if ( !Utils.isEmpty( clusterSize ) && Integer.valueOf( clusterSize ) > 1 ) {
         // TODO: add metadata to configure this.
         String nr = getVariable( Const.INTERNAL_VARIABLE_SLAVE_SERVER_NUMBER );
         if ( log.isDetailed() ) {
@@ -1553,28 +1556,28 @@ public class TextFileInput extends BaseStep implements StepInterface {
       data.escapeCharacter = environmentSubstitute( meta.getEscapeCharacter() );
 
       // Add additional fields
-      if ( !Const.isEmpty( meta.getShortFileNameField() ) ) {
+      if ( !Utils.isEmpty( meta.getShortFileNameField() ) ) {
         data.addShortFilename = true;
       }
-      if ( !Const.isEmpty( meta.getPathField() ) ) {
+      if ( !Utils.isEmpty( meta.getPathField() ) ) {
         data.addPath = true;
       }
-      if ( !Const.isEmpty( meta.getExtensionField() ) ) {
+      if ( !Utils.isEmpty( meta.getExtensionField() ) ) {
         data.addExtension = true;
       }
-      if ( !Const.isEmpty( meta.getSizeField() ) ) {
+      if ( !Utils.isEmpty( meta.getSizeField() ) ) {
         data.addSize = true;
       }
-      if ( !Const.isEmpty( meta.isHiddenField() ) ) {
+      if ( !Utils.isEmpty( meta.isHiddenField() ) ) {
         data.addIsHidden = true;
       }
-      if ( !Const.isEmpty( meta.getLastModificationDateField() ) ) {
+      if ( !Utils.isEmpty( meta.getLastModificationDateField() ) ) {
         data.addLastModificationDate = true;
       }
-      if ( !Const.isEmpty( meta.getUriField() ) ) {
+      if ( !Utils.isEmpty( meta.getUriField() ) ) {
         data.addUri = true;
       }
-      if ( !Const.isEmpty( meta.getRootUriField() ) ) {
+      if ( !Utils.isEmpty( meta.getRootUriField() ) ) {
         data.addRootUri = true;
       }
       return true;

@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,11 +22,9 @@
 
 package org.pentaho.di.job.entries.checkfilelocked;
 
-import static org.pentaho.di.job.entry.validator.AbstractFileValidator.putVariableSpace;
-import static org.pentaho.di.job.entry.validator.AndValidator.putValidators;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.andValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.fileExistsValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notNullValidator;
+import org.pentaho.di.job.entry.validator.AbstractFileValidator;
+import org.pentaho.di.job.entry.validator.AndValidator;
+import org.pentaho.di.job.entry.validator.JobEntryValidatorUtils;
 
 import java.io.IOException;
 import java.util.List;
@@ -40,6 +38,7 @@ import org.apache.commons.vfs2.FileType;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.RowMetaAndData;
 import org.pentaho.di.core.database.DatabaseMeta;
@@ -93,7 +92,18 @@ public class JobEntryCheckFilesLocked extends JobEntryBase implements Cloneable,
 
   public Object clone() {
     JobEntryCheckFilesLocked je = (JobEntryCheckFilesLocked) super.clone();
+    if ( arguments != null ) {
+      int nrFields = arguments.length;
+      je.allocate( nrFields );
+      System.arraycopy( arguments, 0, je.arguments, 0, nrFields );
+      System.arraycopy( filemasks, 0, je.filemasks, 0, nrFields );
+    }
     return je;
+  }
+
+  public void allocate( int nrFields ) {
+    arguments = new String[nrFields];
+    filemasks = new String[nrFields];
   }
 
   public String getXML() {
@@ -128,8 +138,7 @@ public class JobEntryCheckFilesLocked extends JobEntryBase implements Cloneable,
 
       // How many field arguments?
       int nrFields = XMLHandler.countNodes( fields, "field" );
-      arguments = new String[nrFields];
-      filemasks = new String[nrFields];
+      allocate( nrFields );
 
       // Read them all...
       for ( int i = 0; i < nrFields; i++ ) {
@@ -317,11 +326,11 @@ public class JobEntryCheckFilesLocked extends JobEntryBase implements Cloneable,
 
     public TextFileSelector( String sourcefolderin, String filewildcard ) {
 
-      if ( !Const.isEmpty( sourcefolderin ) ) {
+      if ( !Utils.isEmpty( sourcefolderin ) ) {
         sourceFolder = sourcefolderin;
       }
 
-      if ( !Const.isEmpty( filewildcard ) ) {
+      if ( !Utils.isEmpty( filewildcard ) ) {
         fileWildcard = filewildcard;
       }
     }
@@ -397,7 +406,7 @@ public class JobEntryCheckFilesLocked extends JobEntryBase implements Cloneable,
     Pattern pattern = null;
     boolean getIt = true;
 
-    if ( !Const.isEmpty( wildcard ) ) {
+    if ( !Utils.isEmpty( wildcard ) ) {
       pattern = Pattern.compile( wildcard );
       // First see if the file matches the regular expression!
       if ( pattern != null ) {
@@ -439,18 +448,20 @@ public class JobEntryCheckFilesLocked extends JobEntryBase implements Cloneable,
 
   public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
-    boolean res = andValidator().validate( this, "arguments", remarks, putValidators( notNullValidator() ) );
+    boolean res = JobEntryValidatorUtils.andValidator().validate( this, "arguments", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notNullValidator() ) );
 
     if ( res == false ) {
       return;
     }
 
     ValidatorContext ctx = new ValidatorContext();
-    putVariableSpace( ctx, getVariables() );
-    putValidators( ctx, notNullValidator(), fileExistsValidator() );
+    AbstractFileValidator.putVariableSpace( ctx, getVariables() );
+    AndValidator.putValidators( ctx, JobEntryValidatorUtils.notNullValidator(),
+        JobEntryValidatorUtils.fileExistsValidator() );
 
     for ( int i = 0; i < arguments.length; i++ ) {
-      andValidator().validate( this, "arguments[" + i + "]", remarks, ctx );
+      JobEntryValidatorUtils.andValidator().validate( this, "arguments[" + i + "]", remarks, ctx );
     }
   }
 

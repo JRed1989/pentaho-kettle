@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -27,13 +27,15 @@ import java.util.List;
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
 import org.pentaho.di.core.exception.KettleXMLException;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaInteger;
+import org.pentaho.di.core.row.value.ValueMetaString;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.i18n.BaseMessages;
@@ -147,13 +149,13 @@ public class SplitFieldToRowsMeta extends BaseStepMeta implements StepMetaInterf
   public void getFields( RowMetaInterface row, String name, RowMetaInterface[] info, StepMeta nextStep,
     VariableSpace space, Repository repository, IMetaStore metaStore ) throws KettleStepException {
 
-    ValueMetaInterface v = new ValueMeta( newFieldname, ValueMetaInterface.TYPE_STRING );
+    ValueMetaInterface v = new ValueMetaString( newFieldname );
     v.setOrigin( name );
     row.addValueMeta( v );
 
     // include row number
     if ( includeRowNumber ) {
-      v = new ValueMeta( space.environmentSubstitute( rowNumberField ), ValueMeta.TYPE_INTEGER );
+      v = new ValueMetaInteger( space.environmentSubstitute( rowNumberField ) );
       v.setLength( ValueMetaInterface.DEFAULT_INTEGER_LENGTH, 0 );
       v.setOrigin( name );
       row.addValueMeta( v );
@@ -161,7 +163,7 @@ public class SplitFieldToRowsMeta extends BaseStepMeta implements StepMetaInterf
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer();
+    StringBuilder retval = new StringBuilder();
 
     retval.append( "   " + XMLHandler.addTagValue( "splitfield", splitField ) );
     retval.append( "   " + XMLHandler.addTagValue( "delimiter", delimiter ) );
@@ -254,14 +256,14 @@ public class SplitFieldToRowsMeta extends BaseStepMeta implements StepMetaInterf
       remarks.add( cr );
     }
 
-    if ( Const.isEmpty( newFieldname ) ) {
+    if ( Utils.isEmpty( newFieldname ) ) {
       cr =
         new CheckResult( CheckResult.TYPE_RESULT_ERROR, BaseMessages.getString(
           PKG, "SplitFieldToRowsMeta.CheckResult.NewFieldNameIsNull" ), stepMeta );
       remarks.add( cr );
     }
     if ( includeRowNumber ) {
-      if ( Const.isEmpty( transMeta.environmentSubstitute( rowNumberField ) ) ) {
+      if ( Utils.isEmpty( transMeta.environmentSubstitute( rowNumberField ) ) ) {
         cr =
           new CheckResult( CheckResult.TYPE_RESULT_ERROR, BaseMessages.getString(
             PKG, "SplitFieldToRowsMeta.CheckResult.RowNumberFieldMissing" ), stepMeta );

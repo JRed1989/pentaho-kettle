@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -33,6 +33,7 @@ import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.events.ShellAdapter;
 import org.eclipse.swt.events.ShellEvent;
 import org.eclipse.swt.layout.FormAttachment;
@@ -47,6 +48,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.i18n.BaseMessages;
@@ -92,6 +94,7 @@ public class MemoryGroupByDialog extends BaseStepDialog implements StepDialogInt
     inputFields = new HashMap<String, Integer>();
   }
 
+  @Override
   public String open() {
     Shell parent = getParent();
     Display display = parent.getDisplay();
@@ -101,7 +104,14 @@ public class MemoryGroupByDialog extends BaseStepDialog implements StepDialogInt
     setShellImage( shell, input );
 
     ModifyListener lsMod = new ModifyListener() {
+      @Override
       public void modifyText( ModifyEvent e ) {
+        input.setChanged();
+      }
+    };
+    SelectionListener lsSel = new SelectionAdapter() {
+      @Override
+      public void widgetSelected( SelectionEvent arg0 ) {
         input.setChanged();
       }
     };
@@ -156,6 +166,7 @@ public class MemoryGroupByDialog extends BaseStepDialog implements StepDialogInt
     fdAlwaysAddResult.top = new FormAttachment( wStepname, margin );
     fdAlwaysAddResult.right = new FormAttachment( 100, 0 );
     wAlwaysAddResult.setLayoutData( fdAlwaysAddResult );
+    wAlwaysAddResult.addSelectionListener( lsSel );
 
     wlGroup = new Label( shell, SWT.NONE );
     wlGroup.setText( BaseMessages.getString( PKG, "MemoryGroupByDialog.Group.Label" ) );
@@ -241,6 +252,7 @@ public class MemoryGroupByDialog extends BaseStepDialog implements StepDialogInt
     // Search the fields in the background
 
     final Runnable runnable = new Runnable() {
+      @Override
       public void run() {
         StepMeta stepMeta = transMeta.findStep( stepname );
         if ( stepMeta != null ) {
@@ -277,21 +289,25 @@ public class MemoryGroupByDialog extends BaseStepDialog implements StepDialogInt
 
     // Add listeners
     lsOK = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         ok();
       }
     };
     lsGet = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         get();
       }
     };
     lsGetAgg = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         getAgg();
       }
     };
     lsCancel = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         cancel();
       }
@@ -303,6 +319,7 @@ public class MemoryGroupByDialog extends BaseStepDialog implements StepDialogInt
     wCancel.addListener( SWT.Selection, lsCancel );
 
     lsDef = new SelectionAdapter() {
+      @Override
       public void widgetDefaultSelected( SelectionEvent e ) {
         ok();
       }
@@ -312,6 +329,7 @@ public class MemoryGroupByDialog extends BaseStepDialog implements StepDialogInt
 
     // Detect X or ALT-F4 or something that kills this window...
     shell.addShellListener( new ShellAdapter() {
+      @Override
       public void shellClosed( ShellEvent e ) {
         cancel();
       }
@@ -399,7 +417,7 @@ public class MemoryGroupByDialog extends BaseStepDialog implements StepDialogInt
   }
 
   private void ok() {
-    if ( Const.isEmpty( wStepname.getText() ) ) {
+    if ( Utils.isEmpty( wStepname.getText() ) ) {
       return;
     }
 

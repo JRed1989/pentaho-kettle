@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -27,6 +27,7 @@ import java.util.List;
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.SQLStatement;
 import org.pentaho.di.core.database.Database;
 import org.pentaho.di.core.database.DatabaseMeta;
@@ -242,12 +243,10 @@ public class DeleteMeta extends BaseStepMeta implements StepMetaInterface {
 
     retval.allocate( nrkeys );
 
-    for ( int i = 0; i < nrkeys; i++ ) {
-      retval.keyStream[i] = keyStream[i];
-      retval.keyLookup[i] = keyLookup[i];
-      retval.keyCondition[i] = keyCondition[i];
-      retval.keyStream2[i] = keyStream2[i];
-    }
+    System.arraycopy( keyStream, 0, retval.keyStream, 0, nrkeys );
+    System.arraycopy( keyLookup, 0, retval.keyLookup, 0, nrkeys );
+    System.arraycopy( keyCondition, 0, retval.keyCondition, 0, nrkeys );
+    System.arraycopy( keyStream2, 0, retval.keyStream2, 0, nrkeys );
 
     return retval;
   }
@@ -300,7 +299,7 @@ public class DeleteMeta extends BaseStepMeta implements StepMetaInterface {
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 500 );
+    StringBuilder retval = new StringBuilder( 500 );
 
     retval
       .append( "    " ).append(
@@ -400,7 +399,7 @@ public class DeleteMeta extends BaseStepMeta implements StepMetaInterface {
       try {
         db.connect();
 
-        if ( !Const.isEmpty( tableName ) ) {
+        if ( !Utils.isEmpty( tableName ) ) {
           cr =
             new CheckResult( CheckResultInterface.TYPE_RESULT_OK, BaseMessages.getString(
               PKG, "DeleteMeta.CheckResult.TablenameOK" ), stepMeta );
@@ -538,7 +537,7 @@ public class DeleteMeta extends BaseStepMeta implements StepMetaInterface {
 
     if ( databaseMeta != null ) {
       if ( prev != null && prev.size() > 0 ) {
-        if ( !Const.isEmpty( tableName ) ) {
+        if ( !Utils.isEmpty( tableName ) ) {
           Database db = new Database( loggingObject, databaseMeta );
           db.shareVariablesWith( transMeta );
           try {

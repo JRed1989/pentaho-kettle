@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -45,6 +45,7 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.DBCache;
 import org.pentaho.di.core.Props;
 import org.pentaho.di.core.database.Database;
@@ -339,7 +340,7 @@ public class SQLEditor {
       return;
     }
 
-    StringBuffer message = new StringBuffer();
+    StringBuilder message = new StringBuilder();
 
     Database db = new Database( loggingObject, ci );
     boolean first = true;
@@ -355,7 +356,7 @@ public class SQLEditor {
       try {
         db.connect( partitionId );
         String sqlScript =
-          Const.isEmpty( wScript.getSelectionText() ) ? wScript.getText() : wScript.getSelectionText();
+          Utils.isEmpty( wScript.getSelectionText() ) ? wScript.getText() : wScript.getSelectionText();
 
         // Multiple statements in the script need to be split into individual
         // executable statements

@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -93,7 +93,8 @@ public class EnvUtil {
       Thread.currentThread().setContextClassLoader( ClassLoader.getSystemClassLoader() );
     }
 
-    Map<?, ?> kettleProperties = EnvUtil.readProperties( Const.KETTLE_PROPERTIES );
+    Map<Object, Object> kettleProperties = EnvUtil.readProperties( Const.KETTLE_PROPERTIES );
+    insertDefaultValues( kettleProperties );
     applyKettleProperties( kettleProperties );
 
     // Also put some default values for obscure environment variables in there...
@@ -109,6 +110,14 @@ public class EnvUtil {
     System.getProperties().put( Const.INTERNAL_VARIABLE_STEP_PARTITION_NR, "0" );
     System.getProperties().put( Const.INTERNAL_VARIABLE_STEP_UNIQUE_COUNT, "1" );
     System.getProperties().put( Const.INTERNAL_VARIABLE_STEP_UNIQUE_NUMBER, "0" );
+  }
+
+  private static void insertDefaultValues( Map<Object, Object> kettleProperties ) {
+    // If user didn't set value for USER_DIR_IS_ROOT set it to "false".
+    // See PDI-14522, PDI-14821
+    if ( !kettleProperties.containsKey( Const.VFS_USER_DIR_IS_ROOT ) ) {
+      kettleProperties.put( Const.VFS_USER_DIR_IS_ROOT, "false" );
+    }
   }
 
   public static void applyKettleProperties( Map<?, ?> kettleProperties ) {
@@ -135,8 +144,8 @@ public class EnvUtil {
       //
       if ( variable.equals( Const.KETTLE_PLUGIN_CLASSES ) || variable.equals( Const.KETTLE_PLUGIN_PACKAGES ) ) {
         String jvmValue = System.getProperty( variable );
-        if ( !Const.isEmpty( jvmValue ) ) {
-          if ( !Const.isEmpty( value ) ) {
+        if ( !Utils.isEmpty( jvmValue ) ) {
+          if ( !Utils.isEmpty( value ) ) {
             value += "," + jvmValue;
           } else {
             value = jvmValue;
@@ -281,7 +290,7 @@ public class EnvUtil {
    */
   public static Locale createLocale( String localeCode ) {
     Locale resultLocale = null;
-    if ( localeCode != null ) {
+    if ( !Utils.isEmpty( localeCode ) ) {
       StringTokenizer parser = new StringTokenizer( localeCode, "_" );
       if ( parser.countTokens() == 2 ) {
         resultLocale = new Locale( parser.nextToken(), parser.nextToken() );
@@ -295,7 +304,7 @@ public class EnvUtil {
   public static TimeZone createTimeZone( String timeZoneId ) {
 
     TimeZone resultTimeZone = null;
-    if ( !Const.isEmpty( timeZoneId ) ) {
+    if ( !Utils.isEmpty( timeZoneId ) ) {
       return TimeZone.getTimeZone( timeZoneId );
     } else {
       resultTimeZone = TimeZone.getDefault();

@@ -114,6 +114,16 @@ case `uname -s` in
 
 
 	Linux)
+
+            HASWEBKITGTK=`ldconfig -p | grep webkitgtk-1.0`
+            if [ -z "$HASWEBKITGTK" ]; then
+              echo "#######################################################################"
+              echo "WARNING:  no libwebkitgtk-1.0 detected, some features will be unavailable"
+              echo "    Consider installing the package with apt-get or yum."
+              echo "    e.g. 'sudo apt-get install libwebkitgtk-1.0-0'"
+              echo "#######################################################################"
+            fi
+
 	    ARCH=`uname -m`
 		case $ARCH in
 			x86_64)
@@ -190,12 +200,12 @@ export LIBPATH
 
 # ******************************************************************
 # ** Set java runtime options                                     **
-# ** Change 512m to higher values in case you run out of memory   **
+# ** Change 2048m to higher values in case you run out of memory  **
 # ** or set the PENTAHO_DI_JAVA_OPTIONS environment variable      **
 # ******************************************************************
 
 if [ -z "$PENTAHO_DI_JAVA_OPTIONS" ]; then
-    PENTAHO_DI_JAVA_OPTIONS="-Xmx512m -XX:MaxPermSize=256m"
+    PENTAHO_DI_JAVA_OPTIONS="-Xms1024m -Xmx2048m -XX:MaxPermSize=256m"
 fi
 
 OPT="$OPT $PENTAHO_DI_JAVA_OPTIONS -Dhttps.protocols=TLSv1,TLSv1.1,TLSv1.2 -Djava.library.path=$LIBPATH -DKETTLE_HOME=$KETTLE_HOME -DKETTLE_REPOSITORY=$KETTLE_REPOSITORY -DKETTLE_USER=$KETTLE_USER -DKETTLE_PASSWORD=$KETTLE_PASSWORD -DKETTLE_PLUGIN_PACKAGES=$KETTLE_PLUGIN_PACKAGES -DKETTLE_LOG_SIZE_LIMIT=$KETTLE_LOG_SIZE_LIMIT -DKETTLE_JNDI_ROOT=$KETTLE_JNDI_ROOT"
@@ -206,15 +216,20 @@ OPT="$OPT $PENTAHO_DI_JAVA_OPTIONS -Dhttps.protocols=TLSv1,TLSv1.1,TLSv1.2 -Djav
 # ***************
 # ** Run...    **
 # ***************
+inputtoexitstatus() {
+  read exitstatus
+  return $exitstatus
+}
+
 OS=`uname -s | tr '[:upper:]' '[:lower:]'`
 if [ $OS = "linux" ]; then
-    "$_PENTAHO_JAVA" $OPT -jar "$STARTUP" -lib $LIBPATH "${1+$@}" 2>&1 | grep -viE "Gtk-WARNING|GLib-GObject|GLib-CRITICAL|^$"
+    (((("$_PENTAHO_JAVA" $OPT -jar "$STARTUP" -lib $LIBPATH "${1+$@}"  2>&1; echo $? >&3 ) | grep -viE "Gtk-WARNING|GLib-GObject|GLib-CRITICAL|^$" >&4 ) 3>&1)| inputtoexitstatus ) 4>&1
 else
     "$_PENTAHO_JAVA" $OPT -jar "$STARTUP" -lib $LIBPATH "${1+$@}"
 fi
 EXIT_CODE=$?
 
 # return to the catalog from which spoon.sh has been started
-cd $INITIALDIR
+cd "$INITIALDIR"
 
 exit $EXIT_CODE

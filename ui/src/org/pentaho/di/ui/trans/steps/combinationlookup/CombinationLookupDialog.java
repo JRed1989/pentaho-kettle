@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -55,6 +55,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.SQLStatement;
 import org.pentaho.di.core.database.Database;
 import org.pentaho.di.core.database.DatabaseMeta;
@@ -694,7 +695,7 @@ public class CombinationLookupDialog extends BaseStepDialog implements StepDialo
           for ( ColumnInfo colInfo : tableFieldColumns ) {
             colInfo.setComboValues( new String[] {} );
           }
-          if ( !Const.isEmpty( tableName ) ) {
+          if ( !Utils.isEmpty( tableName ) ) {
             DatabaseMeta ci = transMeta.findDatabase( connectionName );
             if ( ci != null ) {
               Database db = new Database( loggingObject, ci );
@@ -719,6 +720,15 @@ public class CombinationLookupDialog extends BaseStepDialog implements StepDialo
                 }
                 // ignore any errors here. drop downs will not be
                 // filled, but no problem for the user
+              } finally {
+                try {
+                  if ( db != null ) {
+                    db.disconnect();
+                  }
+                } catch ( Exception ignored ) {
+                  // ignore any errors here.
+                  db = null;
+                }
               }
             }
           }
@@ -860,7 +870,7 @@ public class CombinationLookupDialog extends BaseStepDialog implements StepDialo
   }
 
   private void ok() {
-    if ( Const.isEmpty( wStepname.getText() ) ) {
+    if ( Utils.isEmpty( wStepname.getText() ) ) {
       return;
     }
 

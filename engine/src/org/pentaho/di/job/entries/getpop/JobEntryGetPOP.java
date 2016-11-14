@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,13 +22,9 @@
 
 package org.pentaho.di.job.entries.getpop;
 
-import static org.pentaho.di.job.entry.validator.AbstractFileValidator.putVariableSpace;
-import static org.pentaho.di.job.entry.validator.AndValidator.putValidators;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.andValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.fileExistsValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.integerValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notBlankValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notNullValidator;
+import org.pentaho.di.job.entry.validator.AbstractFileValidator;
+import org.pentaho.di.job.entry.validator.AndValidator;
+import org.pentaho.di.job.entry.validator.JobEntryValidatorUtils;
 
 import java.io.IOException;
 import java.text.DateFormat;
@@ -45,6 +41,7 @@ import org.apache.commons.vfs2.FileType;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.encryption.Encr;
@@ -188,7 +185,7 @@ public class JobEntryGetPOP extends JobEntryBase implements Cloneable, JobEntryI
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer();
+    StringBuilder retval = new StringBuilder( 550 );
     retval.append( super.getXML() );
     retval.append( "      " ).append( XMLHandler.addTagValue( "servername", servername ) );
     retval.append( "      " ).append( XMLHandler.addTagValue( "username", username ) );
@@ -255,7 +252,7 @@ public class JobEntryGetPOP extends JobEntryBase implements Cloneable, JobEntryI
       sslport = XMLHandler.getTagValue( entrynode, "sslport" );
       outputdirectory = XMLHandler.getTagValue( entrynode, "outputdirectory" );
       filenamepattern = XMLHandler.getTagValue( entrynode, "filenamepattern" );
-      if ( Const.isEmpty( filenamepattern ) ) {
+      if ( Utils.isEmpty( filenamepattern ) ) {
         filenamepattern = DEFAULT_FILE_NAME_PATTERN;
       }
       retrievemails = Const.toInt( XMLHandler.getTagValue( entrynode, "retrievemails" ), -1 );
@@ -266,14 +263,14 @@ public class JobEntryGetPOP extends JobEntryBase implements Cloneable, JobEntryI
         Const.NVL( XMLHandler.getTagValue( entrynode, "protocol" ), MailConnectionMeta.PROTOCOL_STRING_POP3 );
 
       String sm = XMLHandler.getTagValue( entrynode, "savemessage" );
-      if ( Const.isEmpty( sm ) ) {
+      if ( Utils.isEmpty( sm ) ) {
         savemessage = true;
       } else {
         savemessage = "Y".equalsIgnoreCase( sm );
       }
 
       String sa = XMLHandler.getTagValue( entrynode, "saveattachment" );
-      if ( Const.isEmpty( sa ) ) {
+      if ( Utils.isEmpty( sa ) ) {
         saveattachment = true;
       } else {
         saveattachment = "Y".equalsIgnoreCase( sa );
@@ -341,7 +338,7 @@ public class JobEntryGetPOP extends JobEntryBase implements Cloneable, JobEntryI
       sslport = rep.getJobEntryAttributeString( id_jobentry, "sslport" ); // backward compatible.
       outputdirectory = rep.getJobEntryAttributeString( id_jobentry, "outputdirectory" );
       filenamepattern = rep.getJobEntryAttributeString( id_jobentry, "filenamepattern" );
-      if ( Const.isEmpty( filenamepattern ) ) {
+      if ( Utils.isEmpty( filenamepattern ) ) {
         filenamepattern = DEFAULT_FILE_NAME_PATTERN;
       }
       retrievemails = (int) rep.getJobEntryAttributeInteger( id_jobentry, "retrievemails" );
@@ -352,18 +349,18 @@ public class JobEntryGetPOP extends JobEntryBase implements Cloneable, JobEntryI
         Const.NVL(
           rep.getJobEntryAttributeString( id_jobentry, "protocol" ), MailConnectionMeta.PROTOCOL_STRING_POP3 );
 
-      String sv = rep.getStepAttributeString( id_jobentry, "savemessage" );
-      if ( Const.isEmpty( sv ) ) {
+      String sv = rep.getJobEntryAttributeString( id_jobentry, "savemessage" );
+      if ( Utils.isEmpty( sv ) ) {
         savemessage = true;
       } else {
-        savemessage = rep.getStepAttributeBoolean( id_jobentry, "savemessage" );
+        savemessage = rep.getJobEntryAttributeBoolean( id_jobentry, "savemessage" );
       }
 
-      String sa = rep.getStepAttributeString( id_jobentry, "saveattachment" );
-      if ( Const.isEmpty( sa ) ) {
+      String sa = rep.getJobEntryAttributeString( id_jobentry, "saveattachment" );
+      if ( Utils.isEmpty( sa ) ) {
         saveattachment = true;
       } else {
-        saveattachment = rep.getStepAttributeBoolean( id_jobentry, "saveattachment" );
+        saveattachment = rep.getJobEntryAttributeBoolean( id_jobentry, "saveattachment" );
       }
 
       usedifferentfolderforattachment =
@@ -719,12 +716,20 @@ public class JobEntryGetPOP extends JobEntryBase implements Cloneable, JobEntryI
     return password;
   }
 
+  /**
+   * @return Returns resolved decrypted password or null
+   * in case of {@link #getPassword()} returns null.
+   */
   public String getRealPassword() {
-    return environmentSubstitute( getPassword() );
+    return Utils.resolvePassword( variables, getPassword() );
   }
 
   public String getAttachmentFolder() {
     return attachmentfolder;
+  }
+
+  public String getRealAttachmentFolder() {
+    return environmentSubstitute( getAttachmentFolder() );
   }
 
   public void setAttachmentFolder( String foldername ) {
@@ -864,7 +869,7 @@ public class JobEntryGetPOP extends JobEntryBase implements Cloneable, JobEntryI
         && ( getActionType() == MailConnectionMeta.ACTION_TYPE_MOVE )
         || ( getActionType() == MailConnectionMeta.ACTION_TYPE_GET
         && getAfterGetIMAP() == MailConnectionMeta.AFTER_GET_IMAP_MOVE ) ) {
-        if ( Const.isEmpty( realMoveToIMAPFolder ) ) {
+        if ( Utils.isEmpty( realMoveToIMAPFolder ) ) {
           throw new KettleException( BaseMessages
             .getString( PKG, "JobGetMailsFromPOP.Error.MoveToIMAPFolderEmpty" ) );
         }
@@ -878,7 +883,7 @@ public class JobEntryGetPOP extends JobEntryBase implements Cloneable, JobEntryI
         case MailConnectionMeta.CONDITION_DATE_GREATER:
         case MailConnectionMeta.CONDITION_DATE_SMALLER:
           String realBeginDate = environmentSubstitute( getReceivedDate1() );
-          if ( Const.isEmpty( realBeginDate ) ) {
+          if ( Utils.isEmpty( realBeginDate ) ) {
             throw new KettleException( BaseMessages.getString(
               PKG, "JobGetMailsFromPOP.Error.ReceivedDateSearchTermEmpty" ) );
           }
@@ -886,13 +891,13 @@ public class JobEntryGetPOP extends JobEntryBase implements Cloneable, JobEntryI
           break;
         case MailConnectionMeta.CONDITION_DATE_BETWEEN:
           realBeginDate = environmentSubstitute( getReceivedDate1() );
-          if ( Const.isEmpty( realBeginDate ) ) {
+          if ( Utils.isEmpty( realBeginDate ) ) {
             throw new KettleException( BaseMessages.getString(
               PKG, "JobGetMailsFromPOP.Error.ReceivedDatesSearchTermEmpty" ) );
           }
           beginDate = df.parse( realBeginDate );
           String realEndDate = environmentSubstitute( getReceivedDate2() );
-          if ( Const.isEmpty( realEndDate ) ) {
+          if ( Utils.isEmpty( realEndDate ) ) {
             throw new KettleException( BaseMessages.getString(
               PKG, "JobGetMailsFromPOP.Error.ReceivedDatesSearchTermEmpty" ) );
           }
@@ -927,22 +932,22 @@ public class JobEntryGetPOP extends JobEntryBase implements Cloneable, JobEntryI
 
       // apply search term?
       String realSearchSender = environmentSubstitute( getSenderSearchTerm() );
-      if ( !Const.isEmpty( realSearchSender ) ) {
+      if ( !Utils.isEmpty( realSearchSender ) ) {
         // apply FROM
         mailConn.setSenderTerm( realSearchSender, isNotTermSenderSearch() );
       }
       String realSearchReceipient = environmentSubstitute( getReceipientSearch() );
-      if ( !Const.isEmpty( realSearchReceipient ) ) {
+      if ( !Utils.isEmpty( realSearchReceipient ) ) {
         // apply TO
         mailConn.setReceipientTerm( realSearchReceipient );
       }
       String realSearchSubject = environmentSubstitute( getSubjectSearch() );
-      if ( !Const.isEmpty( realSearchSubject ) ) {
+      if ( !Utils.isEmpty( realSearchSubject ) ) {
         // apply Subject
         mailConn.setSubjectTerm( realSearchSubject, isNotTermSubjectSearch() );
       }
       String realSearchBody = environmentSubstitute( getBodySearch() );
-      if ( !Const.isEmpty( realSearchBody ) ) {
+      if ( !Utils.isEmpty( realSearchBody ) ) {
         // apply body
         mailConn.setBodyTerm( realSearchBody, isNotTermBodySearch() );
       }
@@ -1067,7 +1072,7 @@ public class JobEntryGetPOP extends JobEntryBase implements Cloneable, JobEntryI
     String realFilenamePattern, int nbrmailtoretrieve, SimpleDateFormat df ) throws KettleException {
     try {
       // if it is not pop3 and we have non-default imap folder...
-      if ( !usePOP3 && !Const.isEmpty( realIMAPFolder ) ) {
+      if ( !usePOP3 && !Utils.isEmpty( realIMAPFolder ) ) {
         mailConn.openFolder( realIMAPFolder, true );
       } else {
         mailConn.openFolder( true );
@@ -1244,7 +1249,7 @@ public class JobEntryGetPOP extends JobEntryBase implements Cloneable, JobEntryI
     if ( aString == null ) {
       return null;
     }
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     String rest = aString;
 
     // search for closing string
@@ -1276,28 +1281,33 @@ public class JobEntryGetPOP extends JobEntryBase implements Cloneable, JobEntryI
     // Attachment wildcard
     attachementPattern = null;
     String realAttachmentWildcard = environmentSubstitute( getAttachmentWildcard() );
-    if ( !Const.isEmpty( realAttachmentWildcard ) ) {
+    if ( !Utils.isEmpty( realAttachmentWildcard ) ) {
       attachementPattern = Pattern.compile( realAttachmentWildcard );
     }
   }
 
   public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
-    andValidator().validate( this, "serverName", remarks, putValidators( notBlankValidator() ) );
-    andValidator().validate( this, "userName", remarks, putValidators( notBlankValidator() ) );
-    andValidator().validate( this, "password", remarks, putValidators( notNullValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "serverName", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "userName", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "password", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notNullValidator() ) );
 
     ValidatorContext ctx = new ValidatorContext();
-    putVariableSpace( ctx, getVariables() );
-    putValidators( ctx, notBlankValidator(), fileExistsValidator() );
-    andValidator().validate( this, "outputDirectory", remarks, ctx );
+    AbstractFileValidator.putVariableSpace( ctx, getVariables() );
+    AndValidator.putValidators( ctx, JobEntryValidatorUtils.notBlankValidator(),
+        JobEntryValidatorUtils.fileExistsValidator() );
+    JobEntryValidatorUtils.andValidator().validate( this, "outputDirectory", remarks, ctx );
 
-    andValidator().validate( this, "SSLPort", remarks, putValidators( integerValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "SSLPort", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.integerValidator() ) );
   }
 
   public List<ResourceReference> getResourceDependencies( JobMeta jobMeta ) {
     List<ResourceReference> references = super.getResourceDependencies( jobMeta );
-    if ( !Const.isEmpty( servername ) ) {
+    if ( !Utils.isEmpty( servername ) ) {
       String realServername = jobMeta.environmentSubstitute( servername );
       ResourceReference reference = new ResourceReference( this );
       reference.getEntries().add( new ResourceEntry( realServername, ResourceType.SERVER ) );
@@ -1313,18 +1323,18 @@ public class JobEntryGetPOP extends JobEntryBase implements Cloneable, JobEntryI
     String folderName = "";
     switch ( folderType ) {
       case JobEntryGetPOP.FOLDER_OUTPUT:
-        folderName = getOutputDirectory();
+        folderName = getRealOutputDirectory();
         break;
       case JobEntryGetPOP.FOLDER_ATTACHMENTS:
         if ( isSaveAttachment() && isDifferentFolderForAttachment() ) {
-          folderName = getAttachmentFolder();
+          folderName = getRealAttachmentFolder();
         } else {
-          folderName = getOutputDirectory();
+          folderName = getRealOutputDirectory();
         }
         break;
     }
-    if ( Const.isEmpty( folderName ) ) {
-      switch( folderType ) {
+    if ( Utils.isEmpty( folderName ) ) {
+      switch ( folderType ) {
         case JobEntryGetPOP.FOLDER_OUTPUT:
           throw new KettleException( BaseMessages
             .getString( PKG, "JobGetMailsFromPOP.Error.OutputFolderEmpty" ) );
@@ -1336,7 +1346,7 @@ public class JobEntryGetPOP extends JobEntryBase implements Cloneable, JobEntryI
     FileObject folder = KettleVFS.getFileObject( folderName, this );
     if ( folder.exists() ) {
       if ( folder.getType() != FileType.FOLDER ) {
-        switch( folderType ) {
+        switch ( folderType ) {
           case JobEntryGetPOP.FOLDER_OUTPUT:
             throw new KettleException( BaseMessages.getString(
               PKG, "JobGetMailsFromPOP.Error.NotAFolderNot", folderName ) );
@@ -1346,7 +1356,7 @@ public class JobEntryGetPOP extends JobEntryBase implements Cloneable, JobEntryI
         }
       }
       if ( isDebug() ) {
-        switch( folderType ) {
+        switch ( folderType ) {
           case JobEntryGetPOP.FOLDER_OUTPUT:
             logDebug( BaseMessages.getString( PKG, "JobGetMailsFromPOP.Log.OutputFolderExists", folderName ) );
             break;
@@ -1359,7 +1369,7 @@ public class JobEntryGetPOP extends JobEntryBase implements Cloneable, JobEntryI
       if ( isCreateLocalFolder() ) {
         folder.createFolder();
       } else {
-        switch( folderType ) {
+        switch ( folderType ) {
           case JobEntryGetPOP.FOLDER_OUTPUT:
             throw new KettleException( BaseMessages.getString(
               PKG, "JobGetMailsFromPOP.Error.OutputFolderNotExist", folderName ) );

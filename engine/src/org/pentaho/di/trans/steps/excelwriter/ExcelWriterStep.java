@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -25,7 +25,6 @@ package org.pentaho.di.trans.steps.excelwriter;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 
 import org.apache.commons.vfs2.FileObject;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
@@ -50,10 +49,12 @@ import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.ResultFile;
 import org.pentaho.di.core.exception.KettleException;
-import org.pentaho.di.core.row.ValueMeta;
+import org.pentaho.di.core.row.RowMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaString;
 import org.pentaho.di.core.vfs.KettleVFS;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.Trans;
@@ -63,6 +64,7 @@ import org.pentaho.di.trans.step.StepDataInterface;
 import org.pentaho.di.trans.step.StepInterface;
 import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaInterface;
+import org.pentaho.di.workarounds.BufferedOutputStreamWithCloseDetection;
 
 public class ExcelWriterStep extends BaseStep implements StepInterface {
 
@@ -77,6 +79,7 @@ public class ExcelWriterStep extends BaseStep implements StepInterface {
     super( s, stepDataInterface, c, t, dis );
   }
 
+  @Override
   public boolean processRow( StepMetaInterface smi, StepDataInterface sdi ) throws KettleException {
 
     meta = (ExcelWriterStepMeta) smi;
@@ -86,71 +89,92 @@ public class ExcelWriterStep extends BaseStep implements StepInterface {
     Object[] r = getRow();
 
     // first row initialization
-    if ( first && r != null ) {
+    if ( first ) {
 
       first = false;
-      data.outputRowMeta = getInputRowMeta().clone();
-      data.inputRowMeta = getInputRowMeta().clone();
+      if ( r == null ) {
+        data.outputRowMeta = new RowMeta();
+        data.inputRowMeta = new RowMeta();
+      } else {
+        data.outputRowMeta = getInputRowMeta().clone();
+        data.inputRowMeta = getInputRowMeta().clone();
+      }
 
-      // if we are supposed to init the file dalayed, here we go
-      if ( r != null && meta.isDoNotOpenNewFileInit() ) {
+      // if we are supposed to init the file up front, here we go
+      if ( !meta.isDoNotOpenNewFileInit() ) {
         data.firstFileOpened = true;
-        prepareNextOutputFile();
-      }
 
-      // remember where the output fields are in the input row
-      data.fieldnrs = new int[ meta.getOutputFields().length ];
-      for ( int i = 0; i < meta.getOutputFields().length; i++ ) {
-        data.fieldnrs[ i ] = data.inputRowMeta.indexOfValue( meta.getOutputFields()[ i ].getName() );
-        if ( data.fieldnrs[ i ] < 0 ) {
-          logError( "Field [" + meta.getOutputFields()[ i ].getName() + "] couldn't be found in the input stream!" );
-          setErrors( 1 );
+        try {
+          prepareNextOutputFile();
+        } catch ( KettleException e ) {
+          logError( BaseMessages.getString( PKG, "ExcelWriterStep.Exception.CouldNotPrepareFile",
+            environmentSubstitute( meta.getFileName() ) ) );
+          setErrors( 1L );
           stopAll();
           return false;
         }
       }
 
-      // remember where the comment fields are in the input row
-      data.commentfieldnrs = new int[ meta.getOutputFields().length ];
-      for ( int i = 0; i < meta.getOutputFields().length; i++ ) {
-        data.commentfieldnrs[ i ] = data.inputRowMeta.indexOfValue( meta.getOutputFields()[ i ].getCommentField() );
-        if ( data.commentfieldnrs[ i ] < 0 && !Const.isEmpty( meta.getOutputFields()[ i ].getCommentField() ) ) {
-          logError( "Comment Field ["
-            + meta.getOutputFields()[ i ].getCommentField() + "] couldn't be found in the input stream!" );
-          setErrors( 1 );
-          stopAll();
-          return false;
+      if ( r != null ) {
+        // if we are supposed to init the file delayed, here we go
+        if ( meta.isDoNotOpenNewFileInit() ) {
+          data.firstFileOpened = true;
+          prepareNextOutputFile();
+        }
+
+        // remember where the output fields are in the input row
+        data.fieldnrs = new int[meta.getOutputFields().length];
+        for ( int i = 0; i < meta.getOutputFields().length; i++ ) {
+          data.fieldnrs[i] = data.inputRowMeta.indexOfValue( meta.getOutputFields()[i].getName() );
+          if ( data.fieldnrs[i] < 0 ) {
+            logError( "Field [" + meta.getOutputFields()[i].getName() + "] couldn't be found in the input stream!" );
+            setErrors( 1 );
+            stopAll();
+            return false;
+          }
+        }
+
+        // remember where the comment fields are in the input row
+        data.commentfieldnrs = new int[meta.getOutputFields().length];
+        for ( int i = 0; i < meta.getOutputFields().length; i++ ) {
+          data.commentfieldnrs[i] = data.inputRowMeta.indexOfValue( meta.getOutputFields()[i].getCommentField() );
+          if ( data.commentfieldnrs[i] < 0 && !Utils.isEmpty( meta.getOutputFields()[i].getCommentField() ) ) {
+            logError( "Comment Field ["
+              + meta.getOutputFields()[i].getCommentField() + "] couldn't be found in the input stream!" );
+            setErrors( 1 );
+            stopAll();
+            return false;
+          }
+        }
+
+        // remember where the comment author fields are in the input row
+        data.commentauthorfieldnrs = new int[meta.getOutputFields().length];
+        for ( int i = 0; i < meta.getOutputFields().length; i++ ) {
+          data.commentauthorfieldnrs[i] =
+            data.inputRowMeta.indexOfValue( meta.getOutputFields()[i].getCommentAuthorField() );
+          if ( data.commentauthorfieldnrs[i] < 0
+            && !Utils.isEmpty( meta.getOutputFields()[i].getCommentAuthorField() ) ) {
+            logError( "Comment Author Field ["
+              + meta.getOutputFields()[i].getCommentAuthorField() + "] couldn't be found in the input stream!" );
+            setErrors( 1 );
+            stopAll();
+            return false;
+          }
+        }
+
+        // remember where the link fields are in the input row
+        data.linkfieldnrs = new int[meta.getOutputFields().length];
+        for ( int i = 0; i < meta.getOutputFields().length; i++ ) {
+          data.linkfieldnrs[i] = data.inputRowMeta.indexOfValue( meta.getOutputFields()[i].getHyperlinkField() );
+          if ( data.linkfieldnrs[i] < 0 && !Utils.isEmpty( meta.getOutputFields()[i].getHyperlinkField() ) ) {
+            logError( "Link Field ["
+              + meta.getOutputFields()[i].getHyperlinkField() + "] couldn't be found in the input stream!" );
+            setErrors( 1 );
+            stopAll();
+            return false;
+          }
         }
       }
-
-      // remember where the comment author fields are in the input row
-      data.commentauthorfieldnrs = new int[ meta.getOutputFields().length ];
-      for ( int i = 0; i < meta.getOutputFields().length; i++ ) {
-        data.commentauthorfieldnrs[ i ] =
-          data.inputRowMeta.indexOfValue( meta.getOutputFields()[ i ].getCommentAuthorField() );
-        if ( data.commentauthorfieldnrs[ i ] < 0
-          && !Const.isEmpty( meta.getOutputFields()[ i ].getCommentAuthorField() ) ) {
-          logError( "Comment Author Field ["
-            + meta.getOutputFields()[ i ].getCommentAuthorField() + "] couldn't be found in the input stream!" );
-          setErrors( 1 );
-          stopAll();
-          return false;
-        }
-      }
-
-      // remember where the link fields are in the input row
-      data.linkfieldnrs = new int[ meta.getOutputFields().length ];
-      for ( int i = 0; i < meta.getOutputFields().length; i++ ) {
-        data.linkfieldnrs[ i ] = data.inputRowMeta.indexOfValue( meta.getOutputFields()[ i ].getHyperlinkField() );
-        if ( data.linkfieldnrs[ i ] < 0 && !Const.isEmpty( meta.getOutputFields()[ i ].getHyperlinkField() ) ) {
-          logError( "Link Field ["
-            + meta.getOutputFields()[ i ].getHyperlinkField() + "] couldn't be found in the input stream!" );
-          setErrors( 1 );
-          stopAll();
-          return false;
-        }
-      }
-
     }
 
     if ( r != null ) {
@@ -185,12 +209,9 @@ public class ExcelWriterStep extends BaseStep implements StepInterface {
         closeOutputFile();
       }
       setOutputDone();
-
       clearWorkbookMem();
-
       return false;
     }
-
   }
 
   // clears all memory that POI may hold
@@ -229,7 +250,8 @@ public class ExcelWriterStep extends BaseStep implements StepInterface {
         recalculateAllWorkbookFormulas();
       }
 
-      BufferedOutputStream out = new BufferedOutputStream( KettleVFS.getOutputStream( data.file, false ) );
+      BufferedOutputStreamWithCloseDetection out =
+          new BufferedOutputStreamWithCloseDetection( KettleVFS.getOutputStream( data.file, false ) );
       data.wb.write( out );
       out.close();
     } catch ( IOException e ) {
@@ -350,7 +372,7 @@ public class ExcelWriterStep extends BaseStep implements StepInterface {
     String sheetName = cellRef.getSheetName();
 
     Sheet sheet = data.sheet;
-    if ( !Const.isEmpty( sheetName ) ) {
+    if ( !Utils.isEmpty( sheetName ) ) {
       sheet = data.wb.getSheet( sheetName );
     }
 
@@ -369,8 +391,9 @@ public class ExcelWriterStep extends BaseStep implements StepInterface {
 
   }
 
-  private void writeField( Object v, ValueMetaInterface vMeta, ExcelWriterStepField excelField, Row xlsRow,
-                           int posX, Object[] row, int fieldNr, boolean isTitle ) throws KettleException {
+  //VisibleForTesting
+  void writeField( Object v, ValueMetaInterface vMeta, ExcelWriterStepField excelField, Row xlsRow,
+    int posX, Object[] row, int fieldNr, boolean isTitle ) throws KettleException {
 
     try {
 
@@ -394,10 +417,10 @@ public class ExcelWriterStep extends BaseStep implements StepInterface {
 
             // determine correct cell for title or data rows
             String styleRef = null;
-            if ( !isTitle && !Const.isEmpty( excelField.getStyleCell() ) ) {
+            if ( !isTitle && !Utils.isEmpty( excelField.getStyleCell() ) ) {
 
               styleRef = excelField.getStyleCell();
-            } else if ( isTitle && !Const.isEmpty( excelField.getTitleStyleCell() ) ) {
+            } else if ( isTitle && !Utils.isEmpty( excelField.getTitleStyleCell() ) ) {
               styleRef = excelField.getTitleStyleCell();
             }
 
@@ -411,7 +434,7 @@ public class ExcelWriterStep extends BaseStep implements StepInterface {
 
           // set cell format as specified, specific format overrides cell specification
           if ( !isTitle
-            && excelField != null && !Const.isEmpty( excelField.getFormat() )
+            && excelField != null && !Utils.isEmpty( excelField.getFormat() )
             && !excelField.getFormat().startsWith( "Image" ) ) {
             setDataFormat( excelField.getFormat(), cell );
           }
@@ -429,7 +452,7 @@ public class ExcelWriterStep extends BaseStep implements StepInterface {
         String link =
           data.inputRowMeta.getValueMeta( data.linkfieldnrs[ fieldNr ] ).getString(
             row[ data.linkfieldnrs[ fieldNr ] ] );
-        if ( !Const.isEmpty( link ) ) {
+        if ( !Utils.isEmpty( link ) ) {
 
           CreationHelper ch = data.wb.getCreationHelper();
           // set the link on the cell depending on link type
@@ -487,7 +510,7 @@ public class ExcelWriterStep extends BaseStep implements StepInterface {
         String comment =
           data.inputRowMeta.getValueMeta( data.commentfieldnrs[ fieldNr ] ).getString(
             row[ data.commentfieldnrs[ fieldNr ] ] );
-        if ( !Const.isEmpty( comment ) ) {
+        if ( !Utils.isEmpty( comment ) ) {
           String author =
             data.commentauthorfieldnrs[ fieldNr ] >= 0
               ? data.inputRowMeta.getValueMeta( data.commentauthorfieldnrs[ fieldNr ] ).getString(
@@ -502,7 +525,7 @@ public class ExcelWriterStep extends BaseStep implements StepInterface {
         cell.setCellFormula( vMeta.getString( v ) );
       } else {
         // static content case
-        switch( vMeta.getType() ) {
+        switch ( vMeta.getType() ) {
           case ValueMetaInterface.TYPE_DATE:
             if ( v != null && vMeta.getDate( v ) != null ) {
               cell.setCellValue( vMeta.getDate( v ) );
@@ -559,6 +582,7 @@ public class ExcelWriterStep extends BaseStep implements StepInterface {
     DataFormat format = data.wb.createDataFormat();
     short formatIndex = format.getFormat( excelFieldFormat );
     CellStyle style = data.wb.createCellStyle();
+    style.cloneStyleFrom( cell.getCellStyle() );
     style.setDataFormat( formatIndex );
     cell.setCellStyle( style );
   }
@@ -700,7 +724,8 @@ public class ExcelWriterStep extends BaseStep implements StepInterface {
           // handle fresh file case, just create a fresh workbook
 
           Workbook wb = meta.getExtension().equalsIgnoreCase( "xlsx" ) ? new XSSFWorkbook() : new HSSFWorkbook();
-          OutputStream out = KettleVFS.getOutputStream( data.file, false );
+          BufferedOutputStreamWithCloseDetection out =
+              new BufferedOutputStreamWithCloseDetection( KettleVFS.getOutputStream( data.file, false ) );
           wb.createSheet( data.realSheetname );
           wb.write( out );
           out.close();
@@ -741,12 +766,17 @@ public class ExcelWriterStep extends BaseStep implements StepInterface {
           Sheet ts = data.wb.getSheet( data.realTemplateSheetName );
           // if template sheet is missing, break
           if ( ts == null ) {
-            throw new KettleException( "Tempate Sheet: " + data.realTemplateSheetName + " not found, aborting" );
+            throw new KettleException(
+              BaseMessages.getString( PKG, "ExcelWriterStep.Exception.TemplateNotFound",
+                data.realTemplateSheetName ) );
           }
           data.sheet = data.wb.cloneSheet( data.wb.getSheetIndex( ts ) );
           data.wb.setSheetName( data.wb.getSheetIndex( data.sheet ), data.realSheetname );
           // unhide sheet in case it was hidden
           data.wb.setSheetHidden( data.wb.getSheetIndex( data.sheet ), false );
+          if ( meta.isTemplateSheetHidden() ) {
+            data.wb.setSheetHidden( data.wb.getSheetIndex( ts ), true );
+          }
         } else {
           // no template to use, simply create a new sheet
 
@@ -783,7 +813,7 @@ public class ExcelWriterStep extends BaseStep implements StepInterface {
       data.startingRow = 0;
       data.startingCol = 0;
 
-      if ( !Const.isEmpty( data.realStartingCell ) ) {
+      if ( !Utils.isEmpty( data.realStartingCell ) ) {
         CellReference cellRef = new CellReference( data.realStartingCell );
         data.startingRow = cellRef.getRow();
         data.startingCol = cellRef.getCol();
@@ -859,10 +889,10 @@ public class ExcelWriterStep extends BaseStep implements StepInterface {
       if ( meta.getOutputFields() != null && meta.getOutputFields().length > 0 ) {
         for ( int i = 0; i < meta.getOutputFields().length; i++ ) {
           String fieldName =
-            !Const.isEmpty( meta.getOutputFields()[ i ].getTitle() ) ? meta.getOutputFields()[ i ].getTitle() : meta
+            !Utils.isEmpty( meta.getOutputFields()[ i ].getTitle() ) ? meta.getOutputFields()[ i ].getTitle() : meta
               .getOutputFields()[ i ].getName();
 
-          ValueMetaInterface vMeta = new ValueMeta( fieldName, ValueMetaInterface.TYPE_STRING );
+          ValueMetaInterface vMeta = new ValueMetaString( fieldName );
 
           writeField( fieldName, vMeta, meta.getOutputFields()[ i ], xlsRow, posX++, null, -1, true );
         }
@@ -870,7 +900,7 @@ public class ExcelWriterStep extends BaseStep implements StepInterface {
       } else if ( data.inputRowMeta != null ) {
         for ( int i = 0; i < data.inputRowMeta.size(); i++ ) {
           String fieldName = data.inputRowMeta.getFieldNames()[ i ];
-          ValueMetaInterface vMeta = new ValueMeta( fieldName, ValueMetaInterface.TYPE_STRING );
+          ValueMetaInterface vMeta = new ValueMetaString( fieldName );
           writeField( fieldName, vMeta, null, xlsRow, posX++, null, -1, true );
         }
       }
@@ -890,39 +920,24 @@ public class ExcelWriterStep extends BaseStep implements StepInterface {
    * @see org.pentaho.di.trans.step.BaseStep#init(org.pentaho.di.trans.step.StepMetaInterface,
    * org.pentaho.di.trans.step.StepDataInterface)
    */
+  @Override
   public boolean init( StepMetaInterface smi, StepDataInterface sdi ) {
     meta = (ExcelWriterStepMeta) smi;
     data = (ExcelWriterStepData) sdi;
 
     if ( super.init( smi, sdi ) ) {
-
       data.splitnr = 0;
       data.datalines = 0;
       data.realSheetname = environmentSubstitute( meta.getSheetname() );
       data.realTemplateSheetName = environmentSubstitute( meta.getTemplateSheetName() );
       data.realTemplateFileName = environmentSubstitute( meta.getTemplateFileName() );
       data.realStartingCell = environmentSubstitute( meta.getStartingCell() );
-      data.realPassword = environmentSubstitute( meta.getPassword() );
+      data.realPassword = Utils.resolvePassword( variables, meta.getPassword() );
       data.realProtectedBy = environmentSubstitute( meta.getProtectedBy() );
 
       data.shiftExistingCells = ExcelWriterStepMeta.ROW_WRITE_PUSH_DOWN.equals( meta.getRowWritingMethod() );
       data.createNewSheet = ExcelWriterStepMeta.IF_SHEET_EXISTS_CREATE_NEW.equals( meta.getIfSheetExists() );
       data.createNewFile = ExcelWriterStepMeta.IF_FILE_EXISTS_CREATE_NEW.equals( meta.getIfFileExists() );
-
-      // if we are supposed to init the file up front, here we go
-      if ( !meta.isDoNotOpenNewFileInit() ) {
-        data.firstFileOpened = true;
-
-        try {
-          prepareNextOutputFile();
-        } catch ( KettleException e ) {
-          e.printStackTrace();
-          logError( "Couldn't prepare output file " + environmentSubstitute( meta.getFileName() ) );
-          setErrors( 1L );
-          stopAll();
-
-        }
-      }
       return true;
     }
 
@@ -936,6 +951,7 @@ public class ExcelWriterStep extends BaseStep implements StepInterface {
    * @see org.pentaho.di.trans.step.BaseStep#dispose(org.pentaho.di.trans.step.StepMetaInterface,
    * org.pentaho.di.trans.step.StepDataInterface)
    */
+  @Override
   public void dispose( StepMetaInterface smi, StepDataInterface sdi ) {
     meta = (ExcelWriterStepMeta) smi;
     data = (ExcelWriterStepData) sdi;
@@ -955,5 +971,4 @@ public class ExcelWriterStep extends BaseStep implements StepInterface {
       sheet.protectSheet( password );
     }
   }
-
 }

@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -32,6 +32,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.ResultFile;
 import org.pentaho.di.core.RowSet;
@@ -56,7 +57,7 @@ import org.pentaho.di.trans.step.errorhandling.FileErrorHandlerMissingFiles;
 
 /**
  * This class contains base functionality for file-based input steps.
- * 
+ *
  * @author Alexander Buloichik
  */
 public abstract class BaseFileInputStep<M extends BaseFileInputStepMeta, D extends BaseFileInputStepData> extends
@@ -115,7 +116,7 @@ public abstract class BaseFileInputStep<M extends BaseFileInputStepMeta, D exten
     }
 
     String clusterSize = getVariable( Const.INTERNAL_VARIABLE_CLUSTER_SIZE );
-    if ( !Const.isEmpty( clusterSize ) && Integer.valueOf( clusterSize ) > 1 ) {
+    if ( !Utils.isEmpty( clusterSize ) && Integer.valueOf( clusterSize ) > 1 ) {
       // TODO: add metadata to configure this.
       String nr = getVariable( Const.INTERNAL_VARIABLE_SLAVE_SERVER_NUMBER );
       if ( log.isDetailed() ) {
@@ -129,7 +130,7 @@ public abstract class BaseFileInputStep<M extends BaseFileInputStepMeta, D exten
 
   /**
    * Open next VFS file for processing.
-   * 
+   *
    * This method will support different parallelization methods later.
    */
   protected boolean openNextFile() {
@@ -257,7 +258,7 @@ public abstract class BaseFileInputStep<M extends BaseFileInputStepMeta, D exten
 
   /**
    * Initialize error handling.
-   * 
+   *
    * TODO: should we set charset for error files from content meta ? What about case for automatic charset ?
    */
   private void initErrorHandling() {
@@ -427,9 +428,14 @@ public abstract class BaseFileInputStep<M extends BaseFileInputStepMeta, D exten
     data.path = KettleVFS.getFilename( file.getParent() );
     data.hidden = file.isHidden();
     data.extension = file.getName().getExtension();
-    data.lastModificationDateTime = new Date( file.getContent().getLastModifiedTime() );
     data.uriName = file.getName().getURI();
     data.rootUriName = file.getName().getRootURI();
-    data.size = file.getContent().getSize();
+    if ( file.getType().hasContent() ) {
+      data.lastModificationDateTime = new Date( file.getContent().getLastModifiedTime() );
+      data.size = file.getContent().getSize();
+    } else {
+      data.lastModificationDateTime = null;
+      data.size = null;
+    }
   }
 }

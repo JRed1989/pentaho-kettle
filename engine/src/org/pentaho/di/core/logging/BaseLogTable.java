@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.variables.VariableSpace;
@@ -197,10 +198,10 @@ public abstract class BaseLogTable {
    */
   public String getActualConnectionName() {
     String name = space.environmentSubstitute( connectionName );
-    if ( Const.isEmpty( name ) ) {
+    if ( Utils.isEmpty( name ) ) {
       name = space.getVariable( getConnectionNameVariable() );
     }
-    if ( Const.isEmpty( name ) ) {
+    if ( Utils.isEmpty( name ) ) {
       return null;
     } else {
       return name;
@@ -211,12 +212,12 @@ public abstract class BaseLogTable {
    * @return the schemaName
    */
   public String getActualSchemaName() {
-    if ( !Const.isEmpty( schemaName ) ) {
+    if ( !Utils.isEmpty( schemaName ) ) {
       return space.environmentSubstitute( schemaName );
     }
 
     String name = space.getVariable( getSchemaNameVariable() );
-    if ( Const.isEmpty( name ) ) {
+    if ( Utils.isEmpty( name ) ) {
       return null;
     } else {
       return name;
@@ -239,12 +240,12 @@ public abstract class BaseLogTable {
    * @return the tableName
    */
   public String getActualTableName() {
-    if ( !Const.isEmpty( tableName ) ) {
+    if ( !Utils.isEmpty( tableName ) ) {
       return space.environmentSubstitute( tableName );
     }
 
     String name = space.getVariable( getTableNameVariable() );
-    if ( Const.isEmpty( name ) ) {
+    if ( Utils.isEmpty( name ) ) {
       return null;
     } else {
       return name;
@@ -412,20 +413,20 @@ public abstract class BaseLogTable {
   }
 
   protected String getFieldsXML() {
-    StringBuffer retval = new StringBuffer();
+    StringBuilder retval = new StringBuilder();
 
     for ( LogTableField field : fields ) {
-      retval.append( XMLHandler.openTag( XML_TAG ) );
+      retval.append( "        " ).append( XMLHandler.openTag( XML_TAG ) ).append( Const.CR );
 
-      retval.append( XMLHandler.addTagValue( "id", field.getId(), false ) );
-      retval.append( XMLHandler.addTagValue( "enabled", field.isEnabled(), false ) );
-      retval.append( XMLHandler.addTagValue( "name", field.getFieldName(), false ) );
+      retval.append( "          " ).append( XMLHandler.addTagValue( "id", field.getId() ) );
+      retval.append( "          " ).append( XMLHandler.addTagValue( "enabled", field.isEnabled() ) );
+      retval.append( "          " ).append( XMLHandler.addTagValue( "name", field.getFieldName() ) );
       if ( field.isSubjectAllowed() ) {
-        retval.append( XMLHandler.addTagValue( "subject", field.getSubject() == null ? null : field
-          .getSubject().toString(), false ) );
+        retval.append( "          " ).append( XMLHandler.addTagValue( "subject",
+          field.getSubject() == null ? null : field.getSubject().toString() ) );
       }
 
-      retval.append( XMLHandler.closeTag( XML_TAG ) );
+      retval.append( "        " ).append( XMLHandler.closeTag( XML_TAG ) ).append( Const.CR );
     }
 
     return retval.toString();
@@ -448,7 +449,7 @@ public abstract class BaseLogTable {
   }
 
   public boolean isDefined() {
-    return getDatabaseMeta() != null && !Const.isEmpty( getActualTableName() );
+    return getDatabaseMeta() != null && !Utils.isEmpty( getActualTableName() );
   }
 
   /**
@@ -485,16 +486,16 @@ public abstract class BaseLogTable {
 
     StringBuffer buffer = KettleLogStore.getAppender().getBuffer( logChannelId, true );
 
-    if ( Const.isEmpty( limit ) ) {
+    if ( Utils.isEmpty( limit ) ) {
       String defaultLimit = space.getVariable( Const.KETTLE_LOG_SIZE_LIMIT, null );
-      if ( !Const.isEmpty( defaultLimit ) ) {
+      if ( !Utils.isEmpty( defaultLimit ) ) {
         limit = defaultLimit;
       }
     }
 
     // See if we need to limit the amount of rows
     //
-    int nrLines = Const.isEmpty( limit ) ? -1 : Const.toInt( space.environmentSubstitute( limit ), -1 );
+    int nrLines = Utils.isEmpty( limit ) ? -1 : Const.toInt( space.environmentSubstitute( limit ), -1 );
 
     if ( nrLines > 0 ) {
       int start = buffer.length() - 1;
@@ -528,4 +529,22 @@ public abstract class BaseLogTable {
       && ( tName == null ? blt.getActualTableName() == null : tName.equals( blt.getActualTableName() ) ) );
   }
 
+  public void setAllGlobalParametersToNull() {
+    schemaName = isGlobalParameter( schemaName ) ? null : schemaName;
+    connectionName = isGlobalParameter( connectionName ) ? null : connectionName;
+    tableName = isGlobalParameter( tableName ) ? null : tableName;
+    timeoutInDays = isGlobalParameter( timeoutInDays ) ? null : timeoutInDays;
+  }
+
+  protected boolean isGlobalParameter( String parameter ) {
+    if ( parameter == null ) {
+      return false;
+    }
+
+    if ( parameter.startsWith( "${" ) && parameter.endsWith( "}" ) ) {
+      return System.getProperty( parameter.substring( 2, parameter.length() - 1 ) ) != null;
+    }
+
+    return false;
+  }
 }

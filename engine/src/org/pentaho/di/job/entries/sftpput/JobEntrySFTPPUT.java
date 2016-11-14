@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,12 +22,8 @@
 
 package org.pentaho.di.job.entries.sftpput;
 
-import static org.pentaho.di.job.entry.validator.AndValidator.putValidators;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.andValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.fileExistsValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.integerValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notBlankValidator;
-import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notNullValidator;
+import org.pentaho.di.job.entry.validator.AndValidator;
+import org.pentaho.di.job.entry.validator.JobEntryValidatorUtils;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -41,6 +37,7 @@ import org.apache.commons.vfs2.FileType;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.ResultFile;
 import org.pentaho.di.core.RowMetaAndData;
@@ -147,7 +144,7 @@ public class JobEntrySFTPPUT extends JobEntryBase implements Cloneable, JobEntry
   }
 
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 300 );
+    StringBuilder retval = new StringBuilder( 300 );
 
     retval.append( super.getXML() );
 
@@ -643,7 +640,7 @@ public class JobEntrySFTPPUT extends JobEntryBase implements Cloneable, JobEntry
 
           // Get file names
           String file_previous = resultRow.getString( 0, null );
-          if ( !Const.isEmpty( file_previous ) ) {
+          if ( !Utils.isEmpty( file_previous ) ) {
             FileObject file = KettleVFS.getFileObject( file_previous, this );
             if ( !file.exists() ) {
               logError( BaseMessages.getString( PKG, "JobSFTPPUT.Log.FilefromPreviousNotFound", file_previous ) );
@@ -717,7 +714,7 @@ public class JobEntrySFTPPUT extends JobEntryBase implements Cloneable, JobEntry
       // Let's perform some checks before starting
 
       if ( getAfterFTPS() == AFTER_FTPSPUT_MOVE ) {
-        if ( Const.isEmpty( realDestinationFolder ) ) {
+        if ( Utils.isEmpty( realDestinationFolder ) ) {
           logError( BaseMessages.getString( PKG, "JobSSH2PUT.Log.DestinatFolderMissing" ) );
           result.setNrErrors( 1 );
           return result;
@@ -754,7 +751,7 @@ public class JobEntrySFTPPUT extends JobEntryBase implements Cloneable, JobEntry
       if ( isUseKeyFile() ) {
         // We must have here a private keyfilename
         realKeyFilename = environmentSubstitute( getKeyFilename() );
-        if ( Const.isEmpty( realKeyFilename ) ) {
+        if ( Utils.isEmpty( realKeyFilename ) ) {
           // Error..Missing keyfile
           logError( BaseMessages.getString( PKG, "JobSFTP.Error.KeyFileMissing" ) );
           result.setNrErrors( 1 );
@@ -784,7 +781,7 @@ public class JobEntrySFTPPUT extends JobEntryBase implements Cloneable, JobEntry
 
       // Set proxy?
       String realProxyHost = environmentSubstitute( getProxyHost() );
-      if ( !Const.isEmpty( realProxyHost ) ) {
+      if ( !Utils.isEmpty( realProxyHost ) ) {
         // Set proxy
         sftpclient.setProxy(
           realProxyHost, environmentSubstitute( getProxyPort() ), environmentSubstitute( getProxyUsername() ),
@@ -797,7 +794,7 @@ public class JobEntrySFTPPUT extends JobEntryBase implements Cloneable, JobEntry
       // logDetailed("logged in using password "+realPassword); // Logging this seems a bad idea! Oh well.
 
       // move to spool dir ...
-      if ( !Const.isEmpty( realSftpDirString ) ) {
+      if ( !Utils.isEmpty( realSftpDirString ) ) {
         boolean existfolder = sftpclient.folderExists( realSftpDirString );
         if ( !existfolder ) {
           if ( !isCreateRemoteFolder() ) {
@@ -858,7 +855,7 @@ public class JobEntrySFTPPUT extends JobEntryBase implements Cloneable, JobEntry
 
       Pattern pattern = null;
       if ( !copyprevious && !copypreviousfiles ) {
-        if ( !Const.isEmpty( realWildcard ) ) {
+        if ( !Utils.isEmpty( realWildcard ) ) {
           pattern = Pattern.compile( realWildcard );
         }
       }
@@ -965,7 +962,7 @@ public class JobEntrySFTPPUT extends JobEntryBase implements Cloneable, JobEntry
 
   public List<ResourceReference> getResourceDependencies( JobMeta jobMeta ) {
     List<ResourceReference> references = super.getResourceDependencies( jobMeta );
-    if ( !Const.isEmpty( serverName ) ) {
+    if ( !Utils.isEmpty( serverName ) ) {
       String realServerName = jobMeta.environmentSubstitute( serverName );
       ResourceReference reference = new ResourceReference( this );
       reference.getEntries().add( new ResourceEntry( realServerName, ResourceType.SERVER ) );
@@ -977,12 +974,17 @@ public class JobEntrySFTPPUT extends JobEntryBase implements Cloneable, JobEntry
   @Override
   public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
-    andValidator().validate( this, "serverName", remarks, putValidators( notBlankValidator() ) );
-    andValidator().validate(
-      this, "localDirectory", remarks, putValidators( notBlankValidator(), fileExistsValidator() ) );
-    andValidator().validate( this, "userName", remarks, putValidators( notBlankValidator() ) );
-    andValidator().validate( this, "password", remarks, putValidators( notNullValidator() ) );
-    andValidator().validate( this, "serverPort", remarks, putValidators( integerValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "serverName", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate(
+      this, "localDirectory", remarks, AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator(),
+          JobEntryValidatorUtils.fileExistsValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "userName", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notBlankValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "password", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.notNullValidator() ) );
+    JobEntryValidatorUtils.andValidator().validate( this, "serverPort", remarks,
+        AndValidator.putValidators( JobEntryValidatorUtils.integerValidator() ) );
   }
 
 }

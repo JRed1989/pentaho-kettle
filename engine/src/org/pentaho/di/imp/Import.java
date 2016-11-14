@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -33,6 +33,7 @@ import java.util.Date;
 import java.util.List;
 
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.KettleEnvironment;
 import org.pentaho.di.core.Props;
 import org.pentaho.di.core.exception.KettleException;
@@ -42,7 +43,7 @@ import org.pentaho.di.core.logging.LogChannel;
 import org.pentaho.di.core.logging.LogChannelInterface;
 import org.pentaho.di.core.plugins.PluginRegistry;
 import org.pentaho.di.core.plugins.RepositoryPluginType;
-import org.pentaho.di.core.row.ValueMeta;
+import org.pentaho.di.core.row.value.ValueMetaString;
 import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.imp.rule.ImportRuleInterface;
@@ -162,30 +163,30 @@ public class Import {
 
     List<String> args = pickupCmdArguments( a );
 
-    StringBuffer optionRepname, optionUsername, optionPassword, optionDirname;
-    StringBuffer optionLimitDir, optionFilename, optionRules, optionComment;
-    StringBuffer optionReplace, optionContinueOnError, optionVersion, optionFileDir, optionNoRules;
+    StringBuilder optionRepname, optionUsername, optionPassword, optionDirname;
+    StringBuilder optionLimitDir, optionFilename, optionRules, optionComment;
+    StringBuilder optionReplace, optionContinueOnError, optionVersion, optionFileDir, optionNoRules;
 
     CommandLineOption[] options =
       new CommandLineOption[] {
         // Basic options
         //
-        createOption( "rep", "Import.CmdLine.RepName", optionRepname = new StringBuffer() ),
-        createOption( "user", "Import.CmdLine.RepUsername", optionUsername = new StringBuffer() ),
-        createOption( "pass", "Import.CmdLine.RepPassword", optionPassword = new StringBuffer() ),
-        createOption( "dir", "Import.CmdLine.RepDir", optionDirname = new StringBuffer() ),
-        createOption( "limitdir", "Import.CmdLine.LimitDir", optionLimitDir = new StringBuffer() ),
-        createOption( "file", "Import.CmdLine.File", optionFilename = new StringBuffer() ),
-        createOption( "filedir", "Import.CmdLine.FileDir", optionFileDir = new StringBuffer() ),
-        createOption( "rules", "Import.CmdLine.RulesFile", optionRules = new StringBuffer() ),
-        createOption( "norules", "Import.CmdLine.NoRules", optionNoRules = new StringBuffer(), true, false ),
-        createOption( "comment", "Import.CmdLine.Comment", optionComment = new StringBuffer(), true, false ),
-        createOption( "replace", "Import.CmdLine.Replace", optionReplace = new StringBuffer(), true, false ),
-        createOption( "coe", "Import.CmdLine.ContinueOnError", optionContinueOnError = new StringBuffer(), true, false ),
-        createOption( "version", "Import.CmdLine.Version", optionVersion = new StringBuffer(), true, false ),
+        createOption( "rep", "Import.CmdLine.RepName", optionRepname = new StringBuilder() ),
+        createOption( "user", "Import.CmdLine.RepUsername", optionUsername = new StringBuilder() ),
+        createOption( "pass", "Import.CmdLine.RepPassword", optionPassword = new StringBuilder() ),
+        createOption( "dir", "Import.CmdLine.RepDir", optionDirname = new StringBuilder() ),
+        createOption( "limitdir", "Import.CmdLine.LimitDir", optionLimitDir = new StringBuilder() ),
+        createOption( "file", "Import.CmdLine.File", optionFilename = new StringBuilder() ),
+        createOption( "filedir", "Import.CmdLine.FileDir", optionFileDir = new StringBuilder() ),
+        createOption( "rules", "Import.CmdLine.RulesFile", optionRules = new StringBuilder() ),
+        createOption( "norules", "Import.CmdLine.NoRules", optionNoRules = new StringBuilder(), true, false ),
+        createOption( "comment", "Import.CmdLine.Comment", optionComment = new StringBuilder(), false, false ),
+        createOption( "replace", "Import.CmdLine.Replace", optionReplace = new StringBuilder(), true, false ),
+        createOption( "coe", "Import.CmdLine.ContinueOnError", optionContinueOnError = new StringBuilder(), true, false ),
+        createOption( "version", "Import.CmdLine.Version", optionVersion = new StringBuilder(), true, false ),
 
         new CommandLineOption(
-          "", BaseMessages.getString( PKG, "Import.CmdLine.ExtraFiles" ), new StringBuffer(), false, true,
+          "", BaseMessages.getString( PKG, "Import.CmdLine.ExtraFiles" ), new StringBuilder(), false, true,
           true ),
       };
 
@@ -202,7 +203,7 @@ public class Import {
     // To that we add the normal filename option
     //
     List<String> filenames = new ArrayList<String>( args );
-    if ( !Const.isEmpty( optionFilename ) ) {
+    if ( !Utils.isEmpty( optionFilename ) ) {
       filenames.add( optionFilename.toString() );
     }
 
@@ -211,18 +212,18 @@ public class Import {
     String kettleUsername = Const.getEnvironmentVariable( "KETTLE_USER", null );
     String kettlePassword = Const.getEnvironmentVariable( "KETTLE_PASSWORD", null );
 
-    if ( !Const.isEmpty( kettleRepname ) ) {
-      optionRepname = new StringBuffer( kettleRepname );
+    if ( !Utils.isEmpty( kettleRepname ) ) {
+      optionRepname = new StringBuilder( kettleRepname );
     }
-    if ( !Const.isEmpty( kettleUsername ) ) {
-      optionUsername = new StringBuffer( kettleUsername );
+    if ( !Utils.isEmpty( kettleUsername ) ) {
+      optionUsername = new StringBuilder( kettleUsername );
     }
-    if ( !Const.isEmpty( kettlePassword ) ) {
-      optionPassword = new StringBuffer( kettlePassword );
+    if ( !Utils.isEmpty( kettlePassword ) ) {
+      optionPassword = new StringBuilder( kettlePassword );
     }
 
 
-    if ( !Const.isEmpty( optionVersion ) ) {
+    if ( !Utils.isEmpty( optionVersion ) ) {
       BuildVersion buildVersion = BuildVersion.getInstance();
       log.logBasic( BaseMessages.getString(
         PKG, "Import.Log.KettleVersion", buildVersion.getVersion(), buildVersion.getRevision(), buildVersion
@@ -235,23 +236,23 @@ public class Import {
 
     // Verify repository options...
     //
-    if ( Const.isEmpty( optionRepname ) ) {
+    if ( Utils.isEmpty( optionRepname ) ) {
       log.logError( BaseMessages.getString( PKG, "Import.Error.NoRepProvided" ) );
       exitJVM( 1 );
     }
 
-    if ( Const.isEmpty( filenames ) ) {
+    if ( Utils.isEmpty( filenames ) ) {
       log.logError( BaseMessages.getString( PKG, "Import.Error.NoExportFileProvided" ) );
       exitJVM( 1 );
     }
 
-    if ( Const.isEmpty( optionDirname ) ) {
+    if ( Utils.isEmpty( optionDirname ) ) {
       log.logError( BaseMessages.getString( PKG, "Import.Error.NoRepositoryDirectoryProvided" ) );
       exitJVM( 1 );
     }
 
-    if ( Const.isEmpty( optionRules )
-      && Const.isEmpty( optionNoRules ) && !"Y".equalsIgnoreCase( optionNoRules.toString() ) ) {
+    if ( Utils.isEmpty( optionRules )
+      && Utils.isEmpty( optionNoRules ) && !"Y".equalsIgnoreCase( optionNoRules.toString() ) ) {
       log.logError( BaseMessages.getString( PKG, "Import.Error.NoRulesFileProvided" ) );
       exitJVM( 1 );
     }
@@ -262,7 +263,7 @@ public class Import {
     ImportRules importRules = new ImportRules();
     String rulesFile = optionRules.toString();
 
-    if ( !Const.isEmpty( rulesFile ) ) {
+    if ( !Utils.isEmpty( rulesFile ) ) {
       try {
         Document document = XMLHandler.loadXMLFile( rulesFile );
         Node rulesNode = XMLHandler.getSubNode( document, ImportRules.XML_TAG );
@@ -281,7 +282,7 @@ public class Import {
     // Get the list of limiting source directories
     //
     List<String> limitDirs;
-    if ( !Const.isEmpty( optionLimitDir ) ) {
+    if ( !Utils.isEmpty( optionLimitDir ) ) {
       String[] directories = optionLimitDir.toString().split( "," );
       limitDirs = Arrays.asList( directories );
     } else {
@@ -291,6 +292,7 @@ public class Import {
     // Find the repository metadata...
     //
     RepositoriesMeta repsinfo = new RepositoriesMeta();
+    repsinfo.getLog().setLogLevel( log.getLogLevel() );
     try {
       repsinfo.readData();
     } catch ( Exception e ) {
@@ -305,7 +307,7 @@ public class Import {
       exitJVM( 1 );
     }
 
-    if ( Const.isEmpty( optionRepname ) ) {
+    if ( Utils.isEmpty( optionRepname ) ) {
       log.logError( BaseMessages.getString( PKG, "Import.Error.NoRepProvided" ) );
       exitJVM( 1 );
     }
@@ -317,6 +319,7 @@ public class Import {
       repository =
         PluginRegistry.getInstance().loadClass( RepositoryPluginType.class, repositoryMeta, Repository.class );
       repository.init( repositoryMeta );
+      repository.getLog().setLogLevel( log.getLogLevel() );
     } catch ( Exception e ) {
       log.logError( BaseMessages.getString( PKG, "Import.Error.UnableToLoadOrInitializeRepository" ) );
       exitJVM( 1 );
@@ -333,9 +336,9 @@ public class Import {
     }
 
     final boolean replace =
-      Const.isEmpty( optionReplace ) ? false : ValueMeta.convertStringToBoolean( optionReplace.toString() );
+      Utils.isEmpty( optionReplace ) ? false : ValueMetaString.convertStringToBoolean( optionReplace.toString() );
     final boolean continueOnError =
-      Const.isEmpty( optionContinueOnError ) ? false : ValueMeta.convertStringToBoolean( optionContinueOnError
+      Utils.isEmpty( optionContinueOnError ) ? false : ValueMetaString.convertStringToBoolean( optionContinueOnError
         .toString() );
 
     // Start the import!
@@ -437,11 +440,11 @@ public class Import {
     return args;
   }
 
-  private static CommandLineOption createOption( String option, String i18nKey, StringBuffer sb ) {
+  private static CommandLineOption createOption( String option, String i18nKey, StringBuilder sb ) {
     return new CommandLineOption( option, BaseMessages.getString( PKG, i18nKey ), sb );
   }
 
-  private static CommandLineOption createOption( String option, String i18nKey, StringBuffer sb, boolean yesNo, boolean hidden  ) {
+  private static CommandLineOption createOption( String option, String i18nKey, StringBuilder sb, boolean yesNo, boolean hidden  ) {
     return new CommandLineOption( option, BaseMessages.getString( PKG, i18nKey ), sb, yesNo, hidden );
   }
 
@@ -457,7 +460,7 @@ public class Import {
    *           Error parsing provided argument as an integer
    */
   protected static int parseIntArgument( final CommandLineOption option, final int def ) throws KettleException {
-    if ( !Const.isEmpty( option.getArgument() ) ) {
+    if ( !Utils.isEmpty( option.getArgument() ) ) {
       try {
         return Integer.parseInt( option.getArgument().toString() );
       } catch ( NumberFormatException ex ) {

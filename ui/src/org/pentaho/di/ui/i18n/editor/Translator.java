@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -49,6 +49,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Props;
 import org.pentaho.di.core.exception.KettleFileException;
 import org.pentaho.di.core.logging.LogChannel;
@@ -398,8 +399,7 @@ public class Translator {
                 boolean systemKey = entry.startsWith( SYSTEM_KEY_PREFIX );
                 String fileContent = "";
 
-                if ( wVerify.getSelection() ) // check existance of keys in java files...
-                {
+                if ( wVerify.getSelection() ) { // check existance of keys in java files...
                   if ( systemKey ) {
                     fileContent = "";
                   } else {
@@ -528,13 +528,13 @@ public class Translator {
   }
 
   private String loadJava( String javaFile, String propertiesFilename, String entry ) throws KettleFileException {
-    if ( Const.isEmpty( entry ) ) {
+    if ( Utils.isEmpty( entry ) ) {
       return "";
     }
 
     try {
       String filename = ROOT + "/" + javaFile;
-      StringBuffer content = new StringBuffer( 5000 );
+      StringBuilder content = new StringBuilder( 5000 );
       FileInputStream stream = new FileInputStream( filename );
 
       try {

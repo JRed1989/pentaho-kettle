@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -32,16 +32,17 @@ import java.util.Map;
 import java.util.Set;
 
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
 import org.pentaho.di.core.exception.KettleValueException;
 import org.pentaho.di.core.row.RowDataUtil;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.core.row.ValueDataUtil;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.core.row.value.ValueMetaBase;
 import org.pentaho.di.core.row.value.ValueMetaDate;
+import org.pentaho.di.core.row.value.ValueMetaInteger;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.Trans;
 import org.pentaho.di.trans.TransMeta;
@@ -53,7 +54,7 @@ import org.pentaho.di.trans.step.StepMetaInterface;
 
 /**
  * Denormalises data based on key-value pairs
- * 
+ *
  * @author Matt
  * @since 17-jan-2006
  */
@@ -75,6 +76,7 @@ public class Denormaliser extends BaseStep implements StepInterface {
     data = (DenormaliserData) stepDataInterface;
   }
 
+  @Override
   public boolean processRow( StepMetaInterface smi, StepDataInterface sdi ) throws KettleException {
     Object[] r = getRow(); // get row!
 
@@ -216,7 +218,7 @@ public class Denormaliser extends BaseStep implements StepInterface {
 
   /**
    * Used for junits in DenormaliserAggregationsTest
-   * 
+   *
    * @param rowMeta
    * @param rowData
    * @return
@@ -268,7 +270,7 @@ public class Denormaliser extends BaseStep implements StepInterface {
           if ( field.getTargetType() != ValueMetaInterface.TYPE_INTEGER ) {
             resultValue =
                 data.outputRowMeta.getValueMeta( outputIndex ).convertData(
-                    new ValueMeta( "num_values_aggregation", ValueMetaInterface.TYPE_INTEGER ), resultValue );
+                    new ValueMetaInteger( "num_values_aggregation" ), resultValue );
           }
           break;
         default:
@@ -296,7 +298,7 @@ public class Denormaliser extends BaseStep implements StepInterface {
 
   /**
    * Initialize a new group...
-   * 
+   *
    * @throws KettleException
    */
   private void newGroup( Object[] r ) throws KettleException {
@@ -328,9 +330,9 @@ public class Denormaliser extends BaseStep implements StepInterface {
   /**
    * This method de-normalizes a single key-value pair. It looks up the key and determines the value name to store it
    * in. It converts it to the right type and stores it in the result row.
-   * 
+   *
    * Used for junits in DenormaliserAggregationsTest
-   * 
+   *
    * @param r
    * @throws KettleValueException
    */
@@ -339,7 +341,7 @@ public class Denormaliser extends BaseStep implements StepInterface {
     Object valueData = rowData[data.keyFieldNr];
 
     String key = valueMeta.getCompatibleString( valueData );
-    if ( Const.isEmpty( key ) ) {
+    if ( Utils.isEmpty( key ) ) {
       return;
     }
     // Get all the indexes for the given key value...
@@ -440,6 +442,7 @@ public class Denormaliser extends BaseStep implements StepInterface {
     }
   }
 
+  @Override
   public boolean init( StepMetaInterface smi, StepDataInterface sdi ) {
     meta = (DenormaliserMeta) smi;
     data = (DenormaliserData) sdi;
@@ -461,13 +464,13 @@ public class Denormaliser extends BaseStep implements StepInterface {
 
   /**
    * Get the metadata used for conversion to date format See related PDI-4019
-   * 
+   *
    * @param mask
    * @return
    */
   private ValueMetaInterface getConversionMeta( String mask ) {
     ValueMetaInterface meta = null;
-    if ( !Const.isEmpty( mask ) ) {
+    if ( !Utils.isEmpty( mask ) ) {
       meta = conversionMetaCache.get( mask );
       if ( meta == null ) {
         meta = new ValueMetaDate();
@@ -480,7 +483,7 @@ public class Denormaliser extends BaseStep implements StepInterface {
 
   /**
    * Used for junits in DenormaliserAggregationsTest
-   * 
+   *
    * @param allNullsAreZero
    *          the allNullsAreZero to set
    */
@@ -490,7 +493,7 @@ public class Denormaliser extends BaseStep implements StepInterface {
 
   /**
    * Used for junits in DenormaliserAggregationsTest
-   * 
+   *
    * @param minNullIsValued
    *          the minNullIsValued to set
    */

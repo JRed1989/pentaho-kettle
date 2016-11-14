@@ -12,7 +12,7 @@
  * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU Lesser General Public License for more details.
  *
- * Copyright (c) 2002-2013 Pentaho Corporation..  All rights reserved.
+ * Copyright (c) 2002-2016 Pentaho Corporation..  All rights reserved.
  */
 
 package org.pentaho.di.job.entries.hl7mllpin;
@@ -20,7 +20,7 @@ package org.pentaho.di.job.entries.hl7mllpin;
 import java.util.List;
 
 import org.pentaho.di.cluster.SlaveServer;
-import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleDatabaseException;
@@ -48,7 +48,7 @@ import ca.uhn.hl7v2.validation.impl.NoValidation;
 
 /**
  * HL7 MLLP Input
- * 
+ *
  * @since 24-03-2011
  * @author matt
  */
@@ -56,6 +56,7 @@ import ca.uhn.hl7v2.validation.impl.NoValidation;
 @org.pentaho.di.core.annotations.JobEntry( id = "HL7MLLPInput",
     categoryDescription = "i18n:org.pentaho.di.job:JobCategory.Category.Utility",
     i18nPackageName = "org.pentaho.di.job.entries.hl7mllpin", image = "mllp-in.svg", name = "HL7MLLPInput.Name",
+    documentationUrl = "http://wiki.pentaho.com/display/EAI/HL7+MLLP+Input",
     description = "HL7MLLPInput.TooltipDesc" )
 public class HL7MLLPInput extends JobEntryBase implements Cloneable, JobEntryInterface {
   private static Class<?> PKG = HL7MLLPInput.class; // for i18n purposes, needed by Translator2!!
@@ -202,10 +203,10 @@ public class HL7MLLPInput extends JobEntryBase implements Cloneable, JobEntryInt
               + structure.getClass().getName() );
         }
 
-        if ( !Const.isEmpty( messageTypeVariable ) ) {
+        if ( !Utils.isEmpty( messageTypeVariable ) ) {
           parentJob.setVariable( messageTypeVariable, messageType );
         }
-        if ( !Const.isEmpty( versionVariable ) ) {
+        if ( !Utils.isEmpty( versionVariable ) ) {
           parentJob.setVariable( versionVariable, version );
         }
       }

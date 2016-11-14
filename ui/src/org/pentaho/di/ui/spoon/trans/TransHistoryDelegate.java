@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -46,6 +46,7 @@ import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.ToolBar;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Props;
 import org.pentaho.di.core.RowMetaAndData;
 import org.pentaho.di.core.database.Database;
@@ -57,6 +58,7 @@ import org.pentaho.di.core.logging.LogTableField;
 import org.pentaho.di.core.logging.LogTableInterface;
 import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaString;
 import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.TransMeta;
@@ -300,9 +302,11 @@ public class TransHistoryDelegate extends SpoonDelegate implements XulEventHandl
    */
   private void refreshHistory( final int index, final Mode fetchMode ) {
     new Thread( new Runnable() {
+      @Override
       public void run() {
         // do gui stuff here
         spoon.getDisplay().syncExec( new Runnable() {
+          @Override
           public void run() {
             setQueryInProgress( true );
             TransHistoryLogTab model = models[index];
@@ -314,6 +318,7 @@ public class TransHistoryDelegate extends SpoonDelegate implements XulEventHandl
 
         // do gui stuff here
         spoon.getDisplay().syncExec( new Runnable() {
+          @Override
           public void run() {
             displayHistoryData( index );
             setQueryInProgress( false );
@@ -348,7 +353,7 @@ public class TransHistoryDelegate extends SpoonDelegate implements XulEventHandl
     LogTableInterface logTable = model.logTable;
     // See if there is a transformation loaded that has a connection table specified.
     //
-    if ( transMeta != null && !Const.isEmpty( transMeta.getName() ) && logTable.isDefined() ) {
+    if ( transMeta != null && !Utils.isEmpty( transMeta.getName() ) && logTable.isDefined() ) {
       Database database = null;
       try {
         DatabaseMeta logConnection = logTable.getDatabaseMeta();
@@ -406,14 +411,14 @@ public class TransHistoryDelegate extends SpoonDelegate implements XulEventHandl
         if ( nameField != null ) {
           if ( transMeta.isUsingAClusterSchema() ) {
             sql.append( " WHERE " ).append( logConnection.quoteField( nameField.getFieldName() ) ).append( " LIKE ?" );
-            params.addValue( new ValueMeta( "transname_literal", ValueMetaInterface.TYPE_STRING ), transMeta.getName() );
+            params.addValue( new ValueMetaString( "transname_literal" ), transMeta.getName() );
 
             sql.append( " OR    " ).append( logConnection.quoteField( nameField.getFieldName() ) ).append( " LIKE ?" );
-            params.addValue( new ValueMeta( "transname_cluster", ValueMetaInterface.TYPE_STRING ), transMeta.getName()
+            params.addValue( new ValueMetaString( "transname_cluster" ), transMeta.getName()
               + " (%" );
           } else {
             sql.append( " WHERE " ).append( logConnection.quoteField( nameField.getFieldName() ) ).append( " = ?" );
-            params.addValue( new ValueMeta( "transname_literal", ValueMetaInterface.TYPE_STRING ), transMeta.getName() );
+            params.addValue( new ValueMetaString( "transname_literal" ), transMeta.getName() );
           }
         }
 
@@ -598,6 +603,7 @@ public class TransHistoryDelegate extends SpoonDelegate implements XulEventHandl
    *
    * @see org.pentaho.ui.xul.impl.XulEventHandler#getData()
    */
+  @Override
   public Object getData() {
     return null;
   }
@@ -607,6 +613,7 @@ public class TransHistoryDelegate extends SpoonDelegate implements XulEventHandl
    *
    * @see org.pentaho.ui.xul.impl.XulEventHandler#getName()
    */
+  @Override
   public String getName() {
     return "transhistory";
   }
@@ -616,6 +623,7 @@ public class TransHistoryDelegate extends SpoonDelegate implements XulEventHandl
    *
    * @see org.pentaho.ui.xul.impl.XulEventHandler#getXulDomContainer()
    */
+  @Override
   public XulDomContainer getXulDomContainer() {
     return null;
   }
@@ -625,6 +633,7 @@ public class TransHistoryDelegate extends SpoonDelegate implements XulEventHandl
    *
    * @see org.pentaho.ui.xul.impl.XulEventHandler#setData(java.lang.Object)
    */
+  @Override
   public void setData( Object data ) {
   }
 
@@ -633,6 +642,7 @@ public class TransHistoryDelegate extends SpoonDelegate implements XulEventHandl
    *
    * @see org.pentaho.ui.xul.impl.XulEventHandler#setName(java.lang.String)
    */
+  @Override
   public void setName( String name ) {
   }
 
@@ -641,6 +651,7 @@ public class TransHistoryDelegate extends SpoonDelegate implements XulEventHandl
    *
    * @see org.pentaho.ui.xul.impl.XulEventHandler#setXulDomContainer(org.pentaho.ui.xul.XulDomContainer)
    */
+  @Override
   public void setXulDomContainer( XulDomContainer xulDomContainer ) {
   }
 
@@ -789,6 +800,7 @@ public class TransHistoryDelegate extends SpoonDelegate implements XulEventHandl
         null, spoon.props );
 
       tableView.table.addSelectionListener( new SelectionAdapter() {
+        @Override
         public void widgetSelected( SelectionEvent arg0 ) {
           showLogEntry();
         }

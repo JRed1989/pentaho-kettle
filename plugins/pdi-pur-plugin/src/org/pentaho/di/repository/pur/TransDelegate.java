@@ -1,30 +1,31 @@
 /*!
-* Copyright 2010 - 2015 Pentaho Corporation.  All rights reserved.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*
-*/
-
+ * Copyright 2010 - 2016 Pentaho Corporation.  All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
 package org.pentaho.di.repository.pur;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 import org.pentaho.di.cluster.ClusterSchema;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.NotePadMeta;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
@@ -203,6 +204,10 @@ public class TransDelegate extends AbstractDelegate implements ITransformer, ISh
 
   static final String NODE_TRANS_PRIVATE_DATABASES = "transPrivateDatabases";
 
+  static final String PROP_TRANS_PRIVATE_DATABASE_NAMES = "PROP_TRANS_PRIVATE_DATABASE_NAMES";
+
+  static final String TRANS_PRIVATE_DATABASE_DELIMITER = "\t";
+
   private static final String EXT_STEP = ".kst";
 
   static final String NODE_STEPS = "steps";
@@ -247,17 +252,29 @@ public class TransDelegate extends AbstractDelegate implements ITransformer, ISh
     throws KettleException {
     TransMeta transMeta = (TransMeta) element;
 
-    List<String> privateTransformationDatabases = null;
+    Set<String> privateDatabases = null;
     // read the private databases
-    DataNode privateDatabases = rootNode.getNode( NODE_TRANS_PRIVATE_DATABASES );
-    //if we have node than we use new format we could remove unexpected node
-    if ( privateDatabases != null ) {
-      privateTransformationDatabases = new ArrayList<String>();
-      for ( DataNode privateDatabase : privateDatabases.getNodes() ) {
-        privateTransformationDatabases.add( privateDatabase.getName() );
+    DataNode privateDbsNode = rootNode.getNode( NODE_TRANS_PRIVATE_DATABASES );
+    // if we have node than we use one of two new formats. The older format that took
+    // too long to save, uses a separate node for each database name, the new format
+    // puts all the database names in the PROP_TRANS_PRIVATE_DATABASE_NAMES property.
+    // BACKLOG-6635
+    if ( privateDbsNode != null ) {
+      privateDatabases = new HashSet<String>();
+      if ( privateDbsNode.hasProperty( PROP_TRANS_PRIVATE_DATABASE_NAMES ) ) {
+        for ( String privateDatabaseName : getString( privateDbsNode, PROP_TRANS_PRIVATE_DATABASE_NAMES ).split(
+            TRANS_PRIVATE_DATABASE_DELIMITER ) ) {
+          if ( !privateDatabaseName.isEmpty() ) {
+            privateDatabases.add( privateDatabaseName );
+          }
+        }
+      } else {
+        for ( DataNode privateDatabase : privateDbsNode.getNodes() ) {
+          privateDatabases.add( privateDatabase.getName() );
+        }
       }
     }
-    transMeta.setPrivateTransformationDatabases( privateTransformationDatabases );
+    transMeta.setPrivateDatabases( privateDatabases );
 
     // read the steps...
     //
@@ -285,7 +302,7 @@ public class TransDelegate extends AbstractDelegate implements ITransformer, ISh
       String copiesString =
           stepNode.getProperty( PROP_STEP_COPIES_STRING ) != null ? stepNode.getProperty( PROP_STEP_COPIES_STRING )
               .getString() : StringUtils.EMPTY;
-      if ( !Const.isEmpty( copiesString ) ) {
+      if ( !Utils.isEmpty( copiesString ) ) {
         stepMeta.setCopiesString( copiesString );
       } else {
         stepMeta.setCopies( copies ); // for backward compatibility
@@ -584,15 +601,15 @@ public class TransDelegate extends AbstractDelegate implements ITransformer, ISh
 
     DataNode rootNode = new DataNode( NODE_TRANS );
 
+    if ( transMeta.getPrivateDatabases() != null ) {
+      // save all private transformations database name http://jira.pentaho.com/browse/PPP-3405
+      String privateDatabaseNames = StringUtils.join( transMeta.getPrivateDatabases(), TRANS_PRIVATE_DATABASE_DELIMITER );
+      DataNode privateDatabaseNode = rootNode.addNode( NODE_TRANS_PRIVATE_DATABASES );
+      privateDatabaseNode.setProperty( PROP_TRANS_PRIVATE_DATABASE_NAMES, privateDatabaseNames );
+    }
+
     DataNode stepsNode = rootNode.addNode( NODE_STEPS );
 
-    if ( transMeta.getPrivateTransformationDatabases() != null ) {
-      //save all private transformations database name http://jira.pentaho.com/browse/PPP-3405
-      DataNode privateDatabaseNode = rootNode.addNode( NODE_TRANS_PRIVATE_DATABASES );
-      for ( String privateDatabase : transMeta.getPrivateTransformationDatabases() ) {
-        privateDatabaseNode.addNode( privateDatabase );
-      }
-    }
     // Also save all the steps in the transformation!
     //
     int stepNr = 0;
@@ -846,7 +863,7 @@ public class TransDelegate extends AbstractDelegate implements ITransformer, ISh
   protected void readClusters( TransMeta transMeta, boolean overWriteShared, List<ClusterSchema> clusterSchemas ) {
     for ( ClusterSchema clusterSchema : clusterSchemas ) {
       if ( overWriteShared || transMeta.findClusterSchema( clusterSchema.getName() ) == null ) {
-        if ( !Const.isEmpty( clusterSchema.getName() ) ) {
+        if ( !Utils.isEmpty( clusterSchema.getName() ) ) {
           clusterSchema.shareVariablesWith( transMeta );
           transMeta.addOrReplaceClusterSchema( clusterSchema );
           if ( !overWriteShared ) {
@@ -869,7 +886,7 @@ public class TransDelegate extends AbstractDelegate implements ITransformer, ISh
       List<PartitionSchema> partitionSchemas ) {
     for ( PartitionSchema partitionSchema : partitionSchemas ) {
       if ( overWriteShared || transMeta.findPartitionSchema( partitionSchema.getName() ) == null ) {
-        if ( !Const.isEmpty( partitionSchema.getName() ) ) {
+        if ( !Utils.isEmpty( partitionSchema.getName() ) ) {
           transMeta.addOrReplacePartitionSchema( partitionSchema );
           if ( !overWriteShared ) {
             partitionSchema.setChanged( false );
@@ -890,7 +907,7 @@ public class TransDelegate extends AbstractDelegate implements ITransformer, ISh
   protected void readSlaves( TransMeta transMeta, boolean overWriteShared, List<SlaveServer> slaveServers ) {
     for ( SlaveServer slaveServer : slaveServers ) {
       if ( overWriteShared || transMeta.findSlaveServer( slaveServer.getName() ) == null ) {
-        if ( !Const.isEmpty( slaveServer.getName() ) ) {
+        if ( !Utils.isEmpty( slaveServer.getName() ) ) {
           slaveServer.shareVariablesWith( transMeta );
           transMeta.addOrReplaceSlaveServer( slaveServer );
           if ( !overWriteShared ) {

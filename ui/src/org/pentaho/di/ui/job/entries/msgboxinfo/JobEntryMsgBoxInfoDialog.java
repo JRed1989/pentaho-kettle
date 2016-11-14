@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -41,6 +41,7 @@ import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Props;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.job.JobMeta;
@@ -72,7 +73,7 @@ public class JobEntryMsgBoxInfoDialog extends JobEntryDialog implements JobEntry
 
   private Label wlBodyMessage;
 
-  private Text wBodyMessage;
+  private TextVar wBodyMessage;
 
   private FormData fdlBodyMessage, fdBodyMessage;
 
@@ -183,7 +184,7 @@ public class JobEntryMsgBoxInfoDialog extends JobEntryDialog implements JobEntry
     fdlBodyMessage.right = new FormAttachment( middle, -margin );
     wlBodyMessage.setLayoutData( fdlBodyMessage );
 
-    wBodyMessage = new Text( shell, SWT.MULTI | SWT.LEFT | SWT.BORDER | SWT.H_SCROLL | SWT.V_SCROLL );
+    wBodyMessage = new TextVar( jobMeta, shell, SWT.MULTI | SWT.LEFT | SWT.BORDER | SWT.H_SCROLL | SWT.V_SCROLL );
     wBodyMessage.setText( BaseMessages.getString( PKG, "MsgBoxInfo.Name.Default" ) );
     props.setLook( wBodyMessage, Props.WIDGET_STYLE_FIXED );
     wBodyMessage.addModifyListener( lsMod );
@@ -267,7 +268,7 @@ public class JobEntryMsgBoxInfoDialog extends JobEntryDialog implements JobEntry
   }
 
   private void ok() {
-    if ( Const.isEmpty( wName.getText() ) ) {
+    if ( Utils.isEmpty( wName.getText() ) ) {
       MessageBox mb = new MessageBox( shell, SWT.OK | SWT.ICON_ERROR );
       mb.setText( BaseMessages.getString( PKG, "System.StepJobEntryNameMissing.Title" ) );
       mb.setMessage( BaseMessages.getString( PKG, "System.JobEntryNameMissing.Msg" ) );

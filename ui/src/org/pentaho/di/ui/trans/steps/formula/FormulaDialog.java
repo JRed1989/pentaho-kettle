@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -47,9 +47,10 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
+import org.pentaho.di.core.row.value.ValueMetaFactory;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.BaseStepMeta;
@@ -91,6 +92,7 @@ public class FormulaDialog extends BaseStepDialog implements StepDialogInterface
     inputFields = new HashMap<String, Integer>();
   }
 
+  @Override
   public String open() {
     Shell parent = getParent();
     Display display = parent.getDisplay();
@@ -100,6 +102,7 @@ public class FormulaDialog extends BaseStepDialog implements StepDialogInterface
     setShellImage( shell, currentMeta );
 
     ModifyListener lsMod = new ModifyListener() {
+      @Override
       public void modifyText( ModifyEvent e ) {
         currentMeta.setChanged();
       }
@@ -153,7 +156,7 @@ public class FormulaDialog extends BaseStepDialog implements StepDialogInterface
           BaseMessages.getString( PKG, "FormulaDialog.Formula.Column" ), ColumnInfo.COLUMN_TYPE_TEXT, false ),
         new ColumnInfo(
           BaseMessages.getString( PKG, "FormulaDialog.ValueType.Column" ), ColumnInfo.COLUMN_TYPE_CCOMBO,
-          ValueMeta.getTypes() ),
+          ValueMetaFactory.getValueMetaNames() ),
         new ColumnInfo(
           BaseMessages.getString( PKG, "FormulaDialog.Length.Column" ), ColumnInfo.COLUMN_TYPE_TEXT, false ),
         new ColumnInfo(
@@ -178,6 +181,7 @@ public class FormulaDialog extends BaseStepDialog implements StepDialogInterface
     // Search the fields in the background
     //
     final Runnable runnable = new Runnable() {
+      @Override
       public void run() {
         StepMeta stepMeta = transMeta.findStep( stepname );
         if ( stepMeta != null ) {
@@ -199,6 +203,7 @@ public class FormulaDialog extends BaseStepDialog implements StepDialogInterface
     new Thread( runnable ).start();
 
     colinf[1].setSelectionAdapter( new SelectionAdapter() {
+      @Override
       public void widgetSelected( SelectionEvent e ) {
         if ( fieldNames == null ) {
           return;
@@ -225,9 +230,11 @@ public class FormulaDialog extends BaseStepDialog implements StepDialogInterface
     } );
 
     wFields.addModifyListener( new ModifyListener() {
+      @Override
       public void modifyText( ModifyEvent arg0 ) {
         // Now set the combo's
         shell.getDisplay().asyncExec( new Runnable() {
+          @Override
           public void run() {
             setComboBoxes();
           }
@@ -247,11 +254,13 @@ public class FormulaDialog extends BaseStepDialog implements StepDialogInterface
 
     // Add listeners
     lsCancel = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         cancel();
       }
     };
     lsOK = new Listener() {
+      @Override
       public void handleEvent( Event e ) {
         ok();
       }
@@ -261,6 +270,7 @@ public class FormulaDialog extends BaseStepDialog implements StepDialogInterface
     wOK.addListener( SWT.Selection, lsOK );
 
     lsDef = new SelectionAdapter() {
+      @Override
       public void widgetDefaultSelected( SelectionEvent e ) {
         ok();
       }
@@ -270,6 +280,7 @@ public class FormulaDialog extends BaseStepDialog implements StepDialogInterface
 
     // Detect X or ALT-F4 or something that kills this window...
     shell.addShellListener( new ShellAdapter() {
+      @Override
       public void shellClosed( ShellEvent e ) {
         cancel();
       }
@@ -299,6 +310,7 @@ public class FormulaDialog extends BaseStepDialog implements StepDialogInterface
     fields.putAll( inputFields );
 
     shell.getDisplay().syncExec( new Runnable() {
+      @Override
       public void run() {
         // Add the newly create fields.
         //
@@ -333,7 +345,7 @@ public class FormulaDialog extends BaseStepDialog implements StepDialogInterface
         TableItem item = wFields.table.getItem( i );
         item.setText( 1, Const.NVL( fn.getFieldName(), "" ) );
         item.setText( 2, Const.NVL( fn.getFormula(), "" ) );
-        item.setText( 3, Const.NVL( ValueMeta.getTypeDesc( fn.getValueType() ), "" ) );
+        item.setText( 3, Const.NVL( ValueMetaFactory.getValueMetaName( fn.getValueType() ), "" ) );
         if ( fn.getValueLength() >= 0 ) {
           item.setText( 4, "" + fn.getValueLength() );
         }
@@ -358,7 +370,7 @@ public class FormulaDialog extends BaseStepDialog implements StepDialogInterface
   }
 
   private void ok() {
-    if ( Const.isEmpty( wStepname.getText() ) ) {
+    if ( Utils.isEmpty( wStepname.getText() ) ) {
       return;
     }
 
@@ -372,7 +384,7 @@ public class FormulaDialog extends BaseStepDialog implements StepDialogInterface
 
       String fieldName = item.getText( 1 );
       String formula = item.getText( 2 );
-      int valueType = ValueMeta.getType( item.getText( 3 ) );
+      int valueType = ValueMetaFactory.getIdForValueMeta( item.getText( 3 ) );
       int valueLength = Const.toInt( item.getText( 4 ), -1 );
       int valuePrecision = Const.toInt( item.getText( 5 ), -1 );
       String replaceField = item.getText( 6 );

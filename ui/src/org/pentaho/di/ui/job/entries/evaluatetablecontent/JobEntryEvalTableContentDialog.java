@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -49,6 +49,7 @@ import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Props;
 import org.pentaho.di.core.database.Database;
 import org.pentaho.di.core.database.DatabaseMeta;
@@ -729,26 +730,26 @@ public class JobEntryEvalTableContentDialog extends JobEntryDialog implements Jo
       wConnection.setText( jobEntry.getDatabase().getName() );
     }
 
-    if ( jobEntry.schemaname != null ) {
-      wSchemaname.setText( jobEntry.schemaname );
+    if ( jobEntry.getSchemaname() != null ) {
+      wSchemaname.setText( jobEntry.getSchemaname() );
     }
-    if ( jobEntry.tablename != null ) {
-      wTablename.setText( jobEntry.tablename );
+    if ( jobEntry.getTablename() != null ) {
+      wTablename.setText( jobEntry.getTablename() );
     }
 
-    wSuccessCondition.setText( JobEntryEvalTableContent.getSuccessConditionDesc( jobEntry.successCondition ) );
-    if ( jobEntry.limit != null ) {
-      wLimit.setText( jobEntry.limit );
+    wSuccessCondition.setText( JobEntryEvalTableContent.getSuccessConditionDesc( jobEntry.getSuccessCondition() ) );
+    if ( jobEntry.getLimit() != null ) {
+      wLimit.setText( jobEntry.getLimit() );
     } else {
       wLimit.setText( "0" );
     }
 
-    wcustomSQL.setSelection( jobEntry.iscustomSQL );
-    wUseSubs.setSelection( jobEntry.isUseVars );
-    wClearResultList.setSelection( jobEntry.isClearResultList );
-    wAddRowsToResult.setSelection( jobEntry.isAddRowsResult );
-    if ( jobEntry.customSQL != null ) {
-      wSQL.setText( jobEntry.customSQL );
+    wcustomSQL.setSelection( jobEntry.isUseCustomSQL() );
+    wUseSubs.setSelection( jobEntry.isUseVars() );
+    wClearResultList.setSelection( jobEntry.isClearResultList() );
+    wAddRowsToResult.setSelection( jobEntry.isAddRowsResult() );
+    if ( jobEntry.getCustomSQL() != null ) {
+      wSQL.setText( jobEntry.getCustomSQL() );
     }
 
     wName.selectAll();
@@ -762,7 +763,7 @@ public class JobEntryEvalTableContentDialog extends JobEntryDialog implements Jo
   }
 
   private void ok() {
-    if ( Const.isEmpty( wName.getText() ) ) {
+    if ( Utils.isEmpty( wName.getText() ) ) {
       MessageBox mb = new MessageBox( shell, SWT.OK | SWT.ICON_ERROR );
       mb.setMessage( "Please give this job entry a name." );
       mb.setText( "Enter the name of the job entry" );
@@ -772,16 +773,16 @@ public class JobEntryEvalTableContentDialog extends JobEntryDialog implements Jo
     jobEntry.setName( wName.getText() );
     jobEntry.setDatabase( jobMeta.findDatabase( wConnection.getText() ) );
 
-    jobEntry.schemaname = wSchemaname.getText();
-    jobEntry.tablename = wTablename.getText();
-    jobEntry.successCondition = JobEntryEvalTableContent.getSuccessConditionByDesc( wSuccessCondition.getText() );
-    jobEntry.limit = wLimit.getText();
-    jobEntry.iscustomSQL = wcustomSQL.getSelection();
-    jobEntry.isUseVars = wUseSubs.getSelection();
-    jobEntry.isAddRowsResult = wAddRowsToResult.getSelection();
-    jobEntry.isClearResultList = wClearResultList.getSelection();
+    jobEntry.setSchemaname( wSchemaname.getText() );
+    jobEntry.setTablename( wTablename.getText() );
+    jobEntry.setSuccessCondition( JobEntryEvalTableContent.getSuccessConditionByDesc( wSuccessCondition.getText() ) );
+    jobEntry.setLimit( wLimit.getText() );
+    jobEntry.setUseCustomSQL( wcustomSQL.getSelection() );
+    jobEntry.setUseVars( wUseSubs.getSelection() );
+    jobEntry.setAddRowsResult( wAddRowsToResult.getSelection() );
+    jobEntry.setClearResultList( wClearResultList.getSelection() );
 
-    jobEntry.customSQL = wSQL.getText();
+    jobEntry.setCustomSQL( wSQL.getText() );
     dispose();
   }
 

@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2015 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -54,6 +54,7 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.ToolBar;
 import org.eclipse.swt.widgets.ToolItem;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Props;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleFileException;
@@ -88,8 +89,8 @@ public class JobEntryCopyFilesDialog extends JobEntryDialog implements JobEntryD
 
   protected static final String[] FILETYPES = new String[] { BaseMessages.getString(
     PKG, "JobCopyFiles.Filetype.All" ) };
-  
-  public static final String LOCAL_ENVIRONMENT = "Local"; 
+
+  public static final String LOCAL_ENVIRONMENT = "Local";
   public static final String STATIC_ENVIRONMENT = "<Static>";
 
   protected Text wName;
@@ -102,7 +103,7 @@ public class JobEntryCopyFilesDialog extends JobEntryDialog implements JobEntryD
   protected Button wAddFileToResult;
   protected Button wDestinationIsAFile;
   protected Button wCreateDestinationFolder;
-  
+
   protected JobEntryCopyFiles jobEntry;
   protected Shell shell;
 
@@ -113,7 +114,7 @@ public class JobEntryCopyFilesDialog extends JobEntryDialog implements JobEntryD
   protected TableView wFields;
 
   private ToolItem deleteToolItem; // Delete
-  
+
   public JobEntryCopyFilesDialog( Shell parent, JobEntryInterface jobEntryInt, Repository rep, JobMeta jobMeta ) {
     super( parent, jobEntryInt, rep, jobMeta );
     jobEntry = (JobEntryCopyFiles) jobEntryInt;
@@ -171,15 +172,15 @@ public class JobEntryCopyFilesDialog extends JobEntryDialog implements JobEntryD
     fdlIcon.top = new FormAttachment( 0, margin * 3 );
     fdlIcon.right = new FormAttachment( 100, -margin );
     wlIcon.setLayoutData( fdlIcon );
-    
+
     Label lTopSeparator = new Label( shell, SWT.HORIZONTAL | SWT.SEPARATOR );
     FormData fdTopSeparator = new FormData();
     fdTopSeparator.top = new FormAttachment( wName, margin * 3 );
     fdTopSeparator.left = new FormAttachment( 0, 0 );
     fdTopSeparator.right = new FormAttachment( 100, 0 );
-    lTopSeparator.setLayoutData( fdTopSeparator );    
-    
-    
+    lTopSeparator.setLayoutData( fdTopSeparator );
+
+
     CTabFolder wTabFolder = new CTabFolder( shell, SWT.BORDER );
     props.setLook( wTabFolder, Props.WIDGET_STYLE_TAB );
 
@@ -189,22 +190,22 @@ public class JobEntryCopyFilesDialog extends JobEntryDialog implements JobEntryD
     fdTabFolder.right = new FormAttachment( 100, 0 );
     fdTabFolder.bottom = new FormAttachment( 100, -60 );
     wTabFolder.setLayoutData( fdTabFolder );
-    
+
     // ///////////////////////////////////////////////////////////
     // / START OF FILES TAB
     // ///////////////////////////////////////////////////////////
-    
+
     CTabItem wFilesTab = new CTabItem( wTabFolder, SWT.NONE );
     wFilesTab.setText( BaseMessages.getString( PKG, "JobCopyFiles.Tab.Files.Label" ) );
 
     Composite wFilesComp = new Composite( wTabFolder, SWT.NONE );
     props.setLook( wFilesComp );
-    
+
     FormLayout filesLayout = new FormLayout();
     filesLayout.marginWidth = 3;
     filesLayout.marginHeight = 3;
     wFilesComp.setLayout( filesLayout );
-    
+
     FormData fdFilesComp = new FormData();
     fdFilesComp.left = new FormAttachment( 0, 0 );
     fdFilesComp.top = new FormAttachment( 0, 0 );
@@ -214,11 +215,11 @@ public class JobEntryCopyFilesDialog extends JobEntryDialog implements JobEntryD
 
     wFilesComp.layout();
     wFilesTab.setControl( wFilesComp );
-    
+
     // ///////////////////////////////////////////////////////////
     // / END OF FILES TAB
-    // ///////////////////////////////////////////////////////////    
-    
+    // ///////////////////////////////////////////////////////////
+
     // ////////////////////////
     // START OF SETTINGS TAB ///
     // ////////////////////////
@@ -239,29 +240,29 @@ public class JobEntryCopyFilesDialog extends JobEntryDialog implements JobEntryD
         jobEntry.setChanged();
       }
     };
-    
-    wIncludeSubfolders = createSettingsButton( 
+
+    wIncludeSubfolders = createSettingsButton(
         wSettingsComp, "JobCopyFiles.IncludeSubfolders.Label", "JobCopyFiles.IncludeSubfolders.Tooltip", null, listener );
 
-    wDestinationIsAFile = createSettingsButton( 
+    wDestinationIsAFile = createSettingsButton(
         wSettingsComp, "JobCopyFiles.DestinationIsAFile.Label", "JobCopyFiles.DestinationIsAFile.Tooltip", wIncludeSubfolders, listener );
 
-    wCopyEmptyFolders = createSettingsButton( 
+    wCopyEmptyFolders = createSettingsButton(
         wSettingsComp, "JobCopyFiles.CopyEmptyFolders.Label", "JobCopyFiles.CopyEmptyFolders.Tooltip", wDestinationIsAFile, listener );
 
-    wCreateDestinationFolder = createSettingsButton( 
+    wCreateDestinationFolder = createSettingsButton(
         wSettingsComp, "JobCopyFiles.CreateDestinationFolder.Label", "JobCopyFiles.CreateDestinationFolder.Tooltip", wCopyEmptyFolders, listener );
 
-    wOverwriteFiles = createSettingsButton( 
+    wOverwriteFiles = createSettingsButton(
         wSettingsComp, "JobCopyFiles.OverwriteFiles.Label", "JobCopyFiles.OverwriteFiles.Tooltip", wCreateDestinationFolder, listener );
-    
-    wRemoveSourceFiles = createSettingsButton( 
+
+    wRemoveSourceFiles = createSettingsButton(
         wSettingsComp, "JobCopyFiles.RemoveSourceFiles.Label", "JobCopyFiles.RemoveSourceFiles.Tooltip", wOverwriteFiles, listener );
 
-    wPrevious = createSettingsButton( 
+    wPrevious = createSettingsButton(
         wSettingsComp, "JobCopyFiles.Previous.Label", "JobCopyFiles.Previous.Tooltip", wRemoveSourceFiles, listener );
-    
-    wAddFileToResult = createSettingsButton( 
+
+    wAddFileToResult = createSettingsButton(
         wSettingsComp, "JobCopyFiles.AddFileToResult.Label", "JobCopyFiles.AddFileToResult.Tooltip", wPrevious, listener );
 
     FormData fdSettingsComp = new FormData();
@@ -277,8 +278,8 @@ public class JobEntryCopyFilesDialog extends JobEntryDialog implements JobEntryD
 
     // ///////////////////////////////////////////////////////////
     // / END OF SETTINGS TAB
-    // ///////////////////////////////////////////////////////////    
-    
+    // ///////////////////////////////////////////////////////////
+
     ToolBar tb = new ToolBar( wFilesComp, SWT.HORIZONTAL | SWT.FLAT );
     props.setLook( tb );
     FormData fdTb = new FormData();
@@ -324,16 +325,16 @@ public class JobEntryCopyFilesDialog extends JobEntryDialog implements JobEntryD
               ColumnInfo.COLUMN_TYPE_CCOMBO, false, true ),
           new ColumnInfo( BaseMessages.getString( PKG, "JobCopyFiles.Fields.DestinationFileFolder.Label" ),
               ColumnInfo.COLUMN_TYPE_TEXT_BUTTON, false ) };
-    
+
     setComboValues( colinf[0] );
-    
+
     TextVarButtonRenderCallback callback = new TextVarButtonRenderCallback() {
       public boolean shouldRenderButton() {
         String envType = wFields.getActiveTableItem().getText( wFields.getActiveTableColumn() - 1 );
         return !STATIC_ENVIRONMENT.equalsIgnoreCase( envType );
       }
     };
-    
+
     colinf[1].setUsingVariables( true );
     colinf[1].setToolTip( BaseMessages.getString( PKG, "JobCopyFiles.Fields.SourceFileFolder.Tooltip" ) );
     colinf[1].setTextVarButtonSelectionListener( getFileSelectionAdapter() );
@@ -343,11 +344,11 @@ public class JobEntryCopyFilesDialog extends JobEntryDialog implements JobEntryD
     colinf[2].setToolTip( BaseMessages.getString( PKG, "JobCopyFiles.Fields.Wildcard.Tooltip" ) );
 
     setComboValues( colinf[3] );
-    
+
     colinf[4].setUsingVariables( true );
     colinf[4].setToolTip( BaseMessages.getString( PKG, "JobCopyFiles.Fields.DestinationFileFolder.Tooltip" ) );
     colinf[4].setTextVarButtonSelectionListener( getFileSelectionAdapter() );
-    
+
     wFields =
       new TableView(
         jobMeta, wFilesComp, SWT.BORDER | SWT.FULL_SELECTION | SWT.MULTI, colinf, FieldsRows, lsMod, props );
@@ -412,9 +413,9 @@ public class JobEntryCopyFilesDialog extends JobEntryDialog implements JobEntryD
 
     getData();
     wTabFolder.setSelection( 0 );
-    
+
   }
-  
+
   public JobEntryInterface open() {
     initUI();
     BaseStepDialog.setSize( shell );
@@ -449,7 +450,7 @@ public class JobEntryCopyFilesDialog extends JobEntryDialog implements JobEntryD
   protected SelectionAdapter getFileSelectionAdapter() {
     return new SelectionAdapter() {
       public void widgetSelected( SelectionEvent e ) {
-        
+
         FileObject selectedFile = null;
 
         try {
@@ -459,7 +460,7 @@ public class JobEntryCopyFilesDialog extends JobEntryDialog implements JobEntryD
           FileObject defaultInitialFile = null;
 
           String original = wFields.getActiveTableItem().getText( wFields.getActiveTableColumn() );
-          
+
           if ( original != null ) {
 
             String fileName = jobMeta.environmentSubstitute( original );
@@ -483,23 +484,23 @@ public class JobEntryCopyFilesDialog extends JobEntryDialog implements JobEntryD
           }
           VfsFileChooserDialog fileChooserDialog = Spoon.getInstance().getVfsFileChooserDialog( rootFile, initialFile );
           fileChooserDialog.defaultInitialFile = defaultInitialFile;
-          
+
           selectedFile =
               fileChooserDialog.open( shell, new String[] { "file" }, "file", true, null, new String[] { "*.*" },
                   FILETYPES, true, VfsFileChooserDialog.VFS_DIALOG_OPEN_FILE_OR_DIRECTORY, false, false );
-          
+
           if ( selectedFile != null ) {
             String url = selectedFile.getURL().toString();
             wFields.getActiveTableItem().setText( wFields.getActiveTableColumn(), url );
           }
-          
+
         } catch ( KettleFileException ex ) {
         } catch ( FileSystemException ex ) {
-        }        
+        }
       }
     };
   }
-  
+
   private void refreshArgFromPrevious() {
     wlFields.setEnabled( !wPrevious.getSelection() );
     wFields.setEnabled( !wPrevious.getSelection() );
@@ -544,7 +545,7 @@ public class JobEntryCopyFilesDialog extends JobEntryDialog implements JobEntryD
         if ( jobEntry.wildcard[i] != null ) {
           ti.setText( 3, jobEntry.wildcard[i] );
         }
-        if ( jobEntry.destination_filefolder[i] != null && !Const.isEmpty( jobEntry.destination_filefolder[i] ) ) {
+        if ( jobEntry.destination_filefolder[i] != null && !Utils.isEmpty( jobEntry.destination_filefolder[i] ) ) {
           String destinationURL = jobEntry.destination_filefolder[i];
           String clusterName = jobEntry.getConfigurationBy( destinationURL );
           ti.setText( 4, STATIC_ENVIRONMENT );
@@ -560,7 +561,7 @@ public class JobEntryCopyFilesDialog extends JobEntryDialog implements JobEntryD
           ti.setText( 5, destinationURL );
         }
       }
-    
+
       wFields.setRowNums();
       wFields.optWidth( true );
     }
@@ -584,7 +585,7 @@ public class JobEntryCopyFilesDialog extends JobEntryDialog implements JobEntryD
   }
 
   protected void ok() {
-    if ( Const.isEmpty( wName.getText() ) ) {
+    if ( Utils.isEmpty( wName.getText() ) ) {
       MessageBox mb = new MessageBox( shell, SWT.OK | SWT.ICON_ERROR );
       mb.setText( BaseMessages.getString( PKG, "System.StepJobEntryNameMissing.Title" ) );
       mb.setMessage( BaseMessages.getString( PKG, "System.JobEntryNameMissing.Msg" ) );
@@ -626,7 +627,7 @@ public class JobEntryCopyFilesDialog extends JobEntryDialog implements JobEntryD
       destNc = destNc.equals( STATIC_ENVIRONMENT ) ? JobEntryCopyFiles.STATIC_DEST_FILE + i : destNc;
       String dest = wFields.getNonEmpty( i ).getText( 5 );
 
-      if ( !Const.isEmpty( source ) && jobEntry.source_filefolder.length > 0 ) {
+      if ( !Utils.isEmpty( source ) && jobEntry.source_filefolder.length > 0 ) {
         jobEntry.source_filefolder[nr] = jobEntry.loadURL( source, sourceNc, getMetaStore(), sourceDestinationMappings );
         jobEntry.destination_filefolder[nr] =
             jobEntry.loadURL( dest, destNc, getMetaStore(), sourceDestinationMappings );
@@ -646,17 +647,17 @@ public class JobEntryCopyFilesDialog extends JobEntryDialog implements JobEntryD
   public boolean isUnconditional() {
     return false;
   }
- 
+
   protected Image getImage() {
-    return GUIResource.getInstance().getImage( "ui/images/CPY.svg", ConstUI.ICON_SIZE, ConstUI.ICON_SIZE );    
+    return GUIResource.getInstance().getImage( "ui/images/CPY.svg", ConstUI.ICON_SIZE, ConstUI.ICON_SIZE );
   }
-  
+
   public boolean showFileButtons() {
     return true;
   }
-  
+
   protected void setComboValues( ColumnInfo colInfo ) {
-    String[] values = { LOCAL_ENVIRONMENT , STATIC_ENVIRONMENT };
+    String[] values = { LOCAL_ENVIRONMENT, STATIC_ENVIRONMENT };
     colInfo.setComboValues( values );
   }
 }

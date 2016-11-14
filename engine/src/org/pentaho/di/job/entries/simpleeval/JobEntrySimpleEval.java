@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -29,13 +29,14 @@ import java.util.regex.Pattern;
 
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.Result;
 import org.pentaho.di.core.RowMetaAndData;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleDatabaseException;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleXMLException;
-import org.pentaho.di.core.row.ValueMeta;
+import org.pentaho.di.core.row.value.ValueMetaString;
 import org.pentaho.di.core.util.StringUtil;
 import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.i18n.BaseMessages;
@@ -175,6 +176,7 @@ public class JobEntrySimpleEval extends JobEntryBase implements Cloneable, JobEn
     this( "" );
   }
 
+  @Override
   public Object clone() {
     JobEntrySimpleEval je = (JobEntrySimpleEval) super.clone();
     return je;
@@ -215,8 +217,9 @@ public class JobEntrySimpleEval extends JobEntryBase implements Cloneable, JobEn
     return successBooleanConditionCode[i];
   }
 
+  @Override
   public String getXML() {
-    StringBuffer retval = new StringBuffer( 300 );
+    StringBuilder retval = new StringBuilder( 300 );
 
     retval.append( super.getXML() );
     retval.append( "      " ).append( XMLHandler.addTagValue( "valuetype", getValueTypeCode( valuetype ) ) );
@@ -339,6 +342,7 @@ public class JobEntrySimpleEval extends JobEntryBase implements Cloneable, JobEn
     return 0;
   }
 
+  @Override
   public void loadXML( Node entrynode, List<DatabaseMeta> databases, List<SlaveServer> slaveServers,
     Repository rep, IMetaStore metaStore ) throws KettleXMLException {
     try {
@@ -367,6 +371,7 @@ public class JobEntrySimpleEval extends JobEntryBase implements Cloneable, JobEn
     }
   }
 
+  @Override
   public void loadRep( Repository rep, IMetaStore metaStore, ObjectId id_jobentry, List<DatabaseMeta> databases,
     List<SlaveServer> slaveServers ) throws KettleException {
     try {
@@ -394,6 +399,7 @@ public class JobEntrySimpleEval extends JobEntryBase implements Cloneable, JobEn
     }
   }
 
+  @Override
   public void saveRep( Repository rep, IMetaStore metaStore, ObjectId id_job ) throws KettleException {
     try {
       rep.saveJobEntryAttribute( id_job, getObjectId(), "valuetype", getValueTypeCode( valuetype ) );
@@ -420,6 +426,7 @@ public class JobEntrySimpleEval extends JobEntryBase implements Cloneable, JobEn
     }
   }
 
+  @Override
   public Result execute( Result previousResult, int nr ) throws KettleException {
     Result result = previousResult;
 
@@ -462,7 +469,7 @@ public class JobEntrySimpleEval extends JobEntryBase implements Cloneable, JobEn
         break;
       case VALUE_TYPE_VARIABLE:
 
-        if ( Const.isEmpty( variablename ) ) {
+        if ( Utils.isEmpty( variablename ) ) {
           logError( BaseMessages.getString( PKG, "JobEntrySimpleEval.Error.VariableMissing" ) );
           return result;
         }
@@ -518,7 +525,7 @@ public class JobEntrySimpleEval extends JobEntryBase implements Cloneable, JobEn
             success = ( sourcevalue.equals( realCompareValue ) );
             if ( valuetype == VALUE_TYPE_VARIABLE && !success ) {
               // make the empty value evaluate to true when compared to a not set variable
-              if ( Const.isEmpty( realCompareValue ) ) {
+              if ( Utils.isEmpty( realCompareValue ) ) {
                 String variableName = StringUtil.getVariableName( variablename );
                 if ( System.getProperty( variableName ) == null ) {
                   success = true;
@@ -775,7 +782,7 @@ public class JobEntrySimpleEval extends JobEntryBase implements Cloneable, JobEn
       case FIELD_TYPE_DATE_TIME:
         String realMask = environmentSubstitute( mask );
         SimpleDateFormat df = new SimpleDateFormat();
-        if ( !Const.isEmpty( realMask ) ) {
+        if ( !Utils.isEmpty( realMask ) ) {
           df.applyPattern( realMask );
         }
 
@@ -942,7 +949,7 @@ public class JobEntrySimpleEval extends JobEntryBase implements Cloneable, JobEn
       case FIELD_TYPE_BOOLEAN:
         boolean valuebool;
         try {
-          valuebool = ValueMeta.convertStringToBoolean( sourcevalue );
+          valuebool = ValueMetaString.convertStringToBoolean( sourcevalue );
         } catch ( Exception e ) {
           logError( BaseMessages.getString( PKG, "JobEntrySimpleEval.Error.UnparsableBoolean", sourcevalue, e
             .getMessage() ) );
@@ -1157,6 +1164,7 @@ public class JobEntrySimpleEval extends JobEntryBase implements Cloneable, JobEn
     return maxvalue;
   }
 
+  @Override
   public boolean evaluates() {
     return true;
   }

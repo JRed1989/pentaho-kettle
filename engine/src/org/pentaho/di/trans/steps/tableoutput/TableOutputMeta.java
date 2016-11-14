@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,13 +22,15 @@
 
 package org.pentaho.di.trans.steps.tableoutput;
 
+import com.google.common.base.Preconditions;
+
 import org.pentaho.di.core.CheckResult;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.ProvidesModelerMeta;
 import org.pentaho.di.core.SQLStatement;
 import org.pentaho.di.core.database.Database;
-import org.pentaho.di.core.database.DatabaseInterface;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleDatabaseException;
 import org.pentaho.di.core.exception.KettleException;
@@ -36,8 +38,8 @@ import org.pentaho.di.core.exception.KettleStepException;
 import org.pentaho.di.core.exception.KettleXMLException;
 import org.pentaho.di.core.row.RowMeta;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMeta;
 import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaInteger;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.i18n.BaseMessages;
@@ -255,21 +257,13 @@ public class TableOutputMeta extends BaseStepMeta implements StepMetaInterface, 
   }
 
   public Object clone() {
+    Preconditions.checkState( fieldStream.length == fieldDatabase.length,
+      "Table fields and stream fields are not of equal length." );
     TableOutputMeta retval = (TableOutputMeta) super.clone();
-
-    int nrStream = fieldStream.length;
-    int nrDatabase = fieldDatabase.length;
-
-    retval.fieldStream = new String[nrStream];
-    retval.fieldDatabase = new String[nrDatabase];
-
-    for ( int i = 0; i < nrStream; i++ ) {
-      retval.fieldStream[i] = fieldStream[i];
-    }
-
-    for ( int i = 0; i < nrDatabase; i++ ) {
-      retval.fieldDatabase[i] = fieldDatabase[i];
-    }
+    int nrRows = fieldStream.length;
+    retval.allocate( nrRows );
+    System.arraycopy( fieldStream, 0, retval.fieldStream, 0, nrRows );
+    System.arraycopy( fieldDatabase, 0, retval.fieldDatabase, 0, nrRows );
 
     return retval;
   }
@@ -297,7 +291,7 @@ public class TableOutputMeta extends BaseStepMeta implements StepMetaInterface, 
   }
 
   /**
-   * @param commitSize
+   * @param commitSizeInt
    *          The commitSize to set.
    */
   public void setCommitSize( int commitSizeInt ) {
@@ -586,7 +580,7 @@ public class TableOutputMeta extends BaseStepMeta implements StepMetaInterface, 
     // Just add the returning key field...
     if ( returningGeneratedKeys && generatedKeyField != null && generatedKeyField.length() > 0 ) {
       ValueMetaInterface key =
-          new ValueMeta( space.environmentSubstitute( generatedKeyField ), ValueMetaInterface.TYPE_INTEGER );
+          new ValueMetaInteger( space.environmentSubstitute( generatedKeyField ) );
       key.setOrigin( origin );
       row.addValueMeta( key );
     }
@@ -611,7 +605,7 @@ public class TableOutputMeta extends BaseStepMeta implements StepMetaInterface, 
             PKG, "TableOutputMeta.CheckResult.ConnectionOk" ), stepMeta );
         remarks.add( cr );
 
-        if ( !Const.isEmpty( tableName ) ) {
+        if ( !Utils.isEmpty( tableName ) ) {
           String schemaTable =
               databaseMeta.getQuotedSchemaTableCombination( db.environmentSubstitute( schemaName ), db
               .environmentSubstitute( tableName ) );
@@ -830,7 +824,7 @@ public class TableOutputMeta extends BaseStepMeta implements StepMetaInterface, 
 
     if ( databaseMeta != null ) {
       if ( prev != null && prev.size() > 0 ) {
-        if ( !Const.isEmpty( tableName ) ) {
+        if ( !Utils.isEmpty( tableName ) ) {
           Database db = new Database( loggingObject, databaseMeta );
           db.shareVariablesWith( transMeta );
           try {
@@ -873,7 +867,7 @@ public class TableOutputMeta extends BaseStepMeta implements StepMetaInterface, 
       try {
         db.connect();
 
-        if ( !Const.isEmpty( realTableName ) ) {
+        if ( !Utils.isEmpty( realTableName ) ) {
           String schemaTable = databaseMeta.getQuotedSchemaTableCombination( realSchemaName, realTableName );
 
           // Check if this table exists...

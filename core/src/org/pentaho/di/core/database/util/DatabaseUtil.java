@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,19 +22,23 @@
 
 package org.pentaho.di.core.database.util;
 
-import org.pentaho.di.core.Const;
+import java.sql.Connection;
+import java.sql.Statement;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
+import javax.sql.DataSource;
+
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.database.DataSourceNamingException;
 import org.pentaho.di.core.database.DataSourceProviderInterface;
 import org.pentaho.di.core.database.Database;
 import org.pentaho.di.i18n.BaseMessages;
 
 import javax.naming.Context;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
-import javax.sql.DataSource;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Provides default implementation for looking data sources up in JNDI.
@@ -62,7 +66,7 @@ public class DatabaseUtil implements DataSourceProviderInterface {
    * @throws NamingException
    */
   protected static DataSource getDataSourceFromJndi( String dsName, Context ctx ) throws NamingException {
-    if ( Const.isEmpty( dsName ) ) {
+    if ( Utils.isEmpty( dsName ) ) {
       throw new NamingException( BaseMessages.getString( PKG, "DatabaseUtil.DSNotFound", String.valueOf( dsName ) ) );
     }
     Object foundDs = FoundDS.get( dsName );
@@ -122,23 +126,69 @@ public class DatabaseUtil implements DataSourceProviderInterface {
     throw new NamingException( BaseMessages.getString( PKG, "DatabaseUtil.DSNotFound", dsName ) );
   }
 
+  public static void closeSilently( Connection[] connections ) {
+    if ( connections == null || connections.length == 0 ) {
+      return;
+    }
+    for ( Connection conn : connections ) {
+      closeSilently( conn );
+    }
+  }
+
+  public static void closeSilently( Connection conn ) {
+    if ( conn == null ) {
+      return;
+    }
+    try {
+      conn.close();
+    } catch ( Throwable e ) {
+      // omit
+    }
+  }
+
+  public static void closeSilently( Statement[] statements ) {
+    if ( statements == null || statements.length == 0 ) {
+      return;
+    }
+    for ( Statement st : statements ) {
+      closeSilently( st );
+    }
+  }
+
+  public static void closeSilently( Statement st ) {
+    if ( st == null ) {
+      return;
+    }
+    try {
+      st.close();
+    } catch ( Throwable e ) {
+      // omit
+    }
+  }
+
+
   /**
    * Implementation of DatasourceProviderInterface.
    */
   @Override
   public DataSource getNamedDataSource( String datasourceName ) throws DataSourceNamingException {
+    ClassLoader original = Thread.currentThread().getContextClassLoader();
     try {
+      Thread.currentThread().setContextClassLoader( getClass().getClassLoader() );
       return DatabaseUtil.getDataSourceFromJndi( datasourceName, new InitialContext() );
     } catch ( NamingException ex ) {
       throw new DataSourceNamingException( ex );
+    } finally {
+      Thread.currentThread().setContextClassLoader( original );
     }
+
   }
 
   @Override
   public DataSource getNamedDataSource( String datasourceName, DatasourceType type )
     throws DataSourceNamingException {
     if ( type != null ) {
-      switch( type ) {
+      switch ( type ) {
         case JNDI:
           return getNamedDataSource( datasourceName );
         case POOLED:

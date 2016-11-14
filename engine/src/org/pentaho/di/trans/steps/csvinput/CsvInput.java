@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,16 +22,10 @@
 
 package org.pentaho.di.trans.steps.csvinput;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.provider.local.LocalFile;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.ResultFile;
 import org.pentaho.di.core.exception.KettleConversionException;
 import org.pentaho.di.core.exception.KettleException;
@@ -51,6 +45,13 @@ import org.pentaho.di.trans.step.StepInterface;
 import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaInterface;
 import org.pentaho.di.trans.steps.textfileinput.EncodingType;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Read a simple CSV file Just output Strings found in the file...
@@ -101,12 +102,12 @@ public class CsvInput extends BaseStep implements StepInterface {
       // Calculate the indexes for the filename and row number fields
       //
       data.filenameFieldIndex = -1;
-      if ( !Const.isEmpty( meta.getFilenameField() ) && meta.isIncludingFilename() ) {
+      if ( !Utils.isEmpty( meta.getFilenameField() ) && meta.isIncludingFilename() ) {
         data.filenameFieldIndex = meta.getInputFields().length;
       }
 
       data.rownumFieldIndex = -1;
-      if ( !Const.isEmpty( meta.getRowNumField() ) ) {
+      if ( !Utils.isEmpty( meta.getRowNumField() ) ) {
         data.rownumFieldIndex = meta.getInputFields().length;
         if ( data.filenameFieldIndex >= 0 ) {
           data.rownumFieldIndex++;
@@ -341,9 +342,10 @@ public class CsvInput extends BaseStep implements StepInterface {
         if ( data.bytesToSkipInFirstFile > 0 ) {
           data.fc.position( data.bytesToSkipInFirstFile );
 
-          // Now, we need to skip the first row, until the first CR that is.
-          //
-          readOneRow( true, true );
+          // evaluate whether there is a need to skip a row
+          if ( needToSkipRow() ) {
+            readOneRow( true, true );
+          }
         }
       }
 
@@ -388,6 +390,50 @@ public class CsvInput extends BaseStep implements StepInterface {
   }
 
   /**
+   * We need to skip row only if a line, that we are currently on is read by the previous step <b>partly</b>.
+   * In other words, we DON'T skip a line if we are just beginning to read it from the first symbol.
+   * We have to do some work for this: read last byte from the previous step and make sure that it is a new line byte.
+   * But it's not enough. There could be a situation, where new line is indicated by '\r\n' construction. And if we are
+   * <b>between</b> this construction, we want to skip last '\n', and don't want to include it in our line.
+   *
+   * So, we DON'T skip line only if the previous char is new line indicator AND we are not between '\r\n'.
+   *
+   */
+  private boolean needToSkipRow() {
+    try {
+      // first we move pointer to the last byte of the previous step
+      data.fc.position( data.fc.position() - 1 );
+      // read data, if not yet
+      data.resizeBufferIfNeeded();
+
+      // check whether the last symbol from the previous step is a new line
+      if ( data.newLineFound() ) {
+        // don't increase bytes read for this step, as it is actually content of another step
+        // and we are reading this just for evaluation.
+        data.moveEndBufferPointer( false );
+        // now we are at the first char of our thread.
+        // there is still a situation we want to avoid: when there is a windows style "/r/n", and we are between two
+        // of this chars. In this case we need to skip a line. Otherwise we don't skip it.
+        return data.newLineFound();
+      } else {
+        // moving to the first char of our line.
+        data.moveEndBufferPointer( false );
+      }
+
+    } catch ( IOException e ) {
+      e.printStackTrace();
+    } finally {
+      try {
+        data.fc.position( data.fc.position() + 1 );
+      } catch ( IOException e ) {
+        // nothing to do here
+      }
+    }
+
+    return true;
+  }
+
+  /**
    * Read a single row of data from the file...
    *
    * @param skipRow          if row should be skipped: header row or part of row in case of parallel read
@@ -425,6 +471,21 @@ public class CsvInput extends BaseStep implements StepInterface {
             // Make certain that at least one record exists before
             // filling the rest of them with null
             if ( outputIndex > 0 ) {
+              // Optionally add the current filename to the mix as well...
+              //
+              if ( meta.isIncludingFilename() && !Utils.isEmpty( meta.getFilenameField() ) ) {
+                if ( meta.isLazyConversionActive() ) {
+                  outputRowData[ data.filenameFieldIndex ] = data.binaryFilename;
+                } else {
+                  outputRowData[ data.filenameFieldIndex ] = data.filenames[ data.filenr - 1 ];
+                }
+              }
+
+              if ( data.isAddingRowNumber ) {
+                outputRowData[data.rownumFieldIndex] = data.rowNumber++;
+              }
+
+              incrementLinesInput();
               return outputRowData;
             }
           }
@@ -442,6 +503,7 @@ public class CsvInput extends BaseStep implements StepInterface {
         boolean enclosureFound = false;
         boolean doubleLineEnd = false;
         int escapedEnclosureFound = 0;
+        boolean ignoreEnclosuresInField = ignoreEnclosures;
         while ( !delimiterFound && !newLineFound && !endOfBuffer ) {
           // If we find the first char, we might find others as well ;-)
           // Single byte delimiters only for now.
@@ -468,42 +530,49 @@ public class CsvInput extends BaseStep implements StepInterface {
               // Found another one, need to skip it later
               doubleLineEnd = true;
             }
-          } else if ( data.enclosureFound() && !ignoreEnclosures ) {
-            // Perhaps we need to skip over an enclosed part?
-            // We always expect exactly one enclosure character
-            // If we find the enclosure doubled, we consider it escaped.
-            // --> "" is converted to " later on.
-            //
-            enclosureFound = true;
-            boolean keepGoing;
-            do {
-              if ( data.moveEndBufferPointer() ) {
-                enclosureFound = false;
-                break;
-              }
-              keepGoing = !data.enclosureFound();
-              if ( !keepGoing ) {
-                // We found an enclosure character.
-                // Read another byte...
+          } else if ( data.enclosureFound() && !ignoreEnclosuresInField ) {
+            int enclosurePosition = data.getEndBuffer();
+            int fieldFirstBytePosition = data.getStartBuffer();
+            if ( fieldFirstBytePosition == enclosurePosition ) {
+              // Perhaps we need to skip over an enclosed part?
+              // We always expect exactly one enclosure character
+              // If we find the enclosure doubled, we consider it escaped.
+              // --> "" is converted to " later on.
+              //
+              enclosureFound = true;
+              boolean keepGoing;
+              do {
                 if ( data.moveEndBufferPointer() ) {
+                  enclosureFound = false;
                   break;
                 }
+                keepGoing = !data.enclosureFound();
+                if ( !keepGoing ) {
+                  // We found an enclosure character.
+                  // Read another byte...
+                  if ( data.moveEndBufferPointer() ) {
+                    break;
+                  }
 
-                // If this character is also an enclosure, we can consider the enclosure "escaped".
-                // As such, if this is an enclosure, we keep going...
-                //
-                keepGoing = data.enclosureFound();
-                if ( keepGoing ) {
-                  escapedEnclosureFound++;
+                  // If this character is also an enclosure, we can consider the enclosure "escaped".
+                  // As such, if this is an enclosure, we keep going...
+                  //
+                  keepGoing = data.enclosureFound();
+                  if ( keepGoing ) {
+                    escapedEnclosureFound++;
+                  }
                 }
-              }
-            } while ( keepGoing );
+              } while ( keepGoing );
 
-            // Did we reach the end of the buffer?
-            //
-            if ( data.endOfBuffer() ) {
-              endOfBuffer = true;
-              break;
+              // Did we reach the end of the buffer?
+              //
+              if ( data.endOfBuffer() ) {
+                endOfBuffer = true;
+                break;
+              }
+            } else {
+              // Ignoring enclosure if it's not at the field start
+              ignoreEnclosuresInField = true;
             }
           } else {
             if ( data.moveEndBufferPointer() ) {
@@ -610,7 +679,7 @@ public class CsvInput extends BaseStep implements StepInterface {
 
       // Optionally add the current filename to the mix as well...
       //
-      if ( meta.isIncludingFilename() && !Const.isEmpty( meta.getFilenameField() ) ) {
+      if ( meta.isIncludingFilename() && !Utils.isEmpty( meta.getFilenameField() ) ) {
         if ( meta.isLazyConversionActive() ) {
           outputRowData[ data.filenameFieldIndex ] = data.binaryFilename;
         } else {
@@ -642,6 +711,7 @@ public class CsvInput extends BaseStep implements StepInterface {
     }
   }
 
+
   public boolean init( StepMetaInterface smi, StepDataInterface sdi ) {
     meta = (CsvInputMeta) smi;
     data = (CsvInputData) sdi;
@@ -657,7 +727,7 @@ public class CsvInput extends BaseStep implements StepInterface {
       if ( getTransMeta().findNrPrevSteps( getStepMeta() ) == 0 ) {
         String filename = environmentSubstitute( meta.getFilename() );
 
-        if ( Const.isEmpty( filename ) ) {
+        if ( Utils.isEmpty( filename ) ) {
           logError( BaseMessages.getString( PKG, "CsvInput.MissingFilename.Message" ) );
           return false;
         }
@@ -677,7 +747,7 @@ public class CsvInput extends BaseStep implements StepInterface {
       try {
         data.delimiter = data.encodingType.getBytes( environmentSubstitute( meta.getDelimiter() ), realEncoding );
 
-        if ( Const.isEmpty( meta.getEnclosure() ) ) {
+        if ( Utils.isEmpty( meta.getEnclosure() ) ) {
           data.enclosure = null;
         } else {
           data.enclosure = data.encodingType.getBytes( environmentSubstitute( meta.getEnclosure() ), realEncoding );
@@ -688,7 +758,7 @@ public class CsvInput extends BaseStep implements StepInterface {
         return false;
       }
 
-      data.isAddingRowNumber = !Const.isEmpty( meta.getRowNumField() );
+      data.isAddingRowNumber = !Utils.isEmpty( meta.getRowNumField() );
 
       // Handle parallel reading capabilities...
       //
@@ -727,7 +797,7 @@ public class CsvInput extends BaseStep implements StepInterface {
         }
       }
 
-      switch( data.encodingType ) {
+      switch ( data.encodingType ) {
         case DOUBLE_BIG_ENDIAN:
           data.crLfMatcher = new MultiByteBigCrLfMatcher();
           break;

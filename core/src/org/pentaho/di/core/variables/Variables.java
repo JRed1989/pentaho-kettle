@@ -2,7 +2,7 @@
  *
  * Pentaho Data Integration
  *
- * Copyright (C) 2002-2013 by Pentaho : http://www.pentaho.com
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
  *
  *******************************************************************************
  *
@@ -22,16 +22,18 @@
 
 package org.pentaho.di.core.variables;
 
-import java.util.Hashtable;
-import java.util.Map;
-import java.util.Set;
-
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.exception.KettleValueException;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.core.row.value.ValueMetaBase;
 import org.pentaho.di.core.util.StringUtil;
 import org.pentaho.di.version.BuildVersion;
+
+import java.util.Hashtable;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * This class is an implementation of VariableSpace
@@ -48,7 +50,7 @@ public class Variables implements VariableSpace {
   private boolean initialized;
 
   public Variables() {
-    properties = new Hashtable<String, String>();
+    properties = new ConcurrentHashMap<>();
     parent = null;
     injection = null;
     initialized = false;
@@ -109,9 +111,9 @@ public class Variables implements VariableSpace {
 
   @Override
   public boolean getBooleanValueOfVariable( String variableName, boolean defaultValue ) {
-    if ( !Const.isEmpty( variableName ) ) {
+    if ( !Utils.isEmpty( variableName ) ) {
       String value = environmentSubstitute( variableName );
-      if ( !Const.isEmpty( value ) ) {
+      if ( !Utils.isEmpty( value ) ) {
         return ValueMetaBase.convertStringToBoolean( value );
       }
     }
@@ -211,7 +213,7 @@ public class Variables implements VariableSpace {
       if ( prop != null ) {
         for ( String key : prop.keySet() ) {
           String value = prop.get( key );
-          if ( !Const.isEmpty( key ) ) {
+          if ( !Utils.isEmpty( key ) ) {
             properties.put( key, Const.NVL( value, "" ) );
           }
         }
@@ -223,7 +225,7 @@ public class Variables implements VariableSpace {
       injection = new Hashtable<String, String>();
       for ( String key : prop.keySet() ) {
         String value = prop.get( key );
-        if ( !Const.isEmpty( key ) ) {
+        if ( !Utils.isEmpty( key ) ) {
           injection.put( key, Const.NVL( value, "" ) );
         }
       }
